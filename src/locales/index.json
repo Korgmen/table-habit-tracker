@@ -1,0 +1,74 @@
+{
+  "ru": {
+    "settings": {
+      "title": "Настройки",
+      "close": "Закрыть настройки",
+      "asInSystem": "Как в системе",
+      "theme": {
+        "title": "Тема",
+        "light": "Светлая",
+        "dark": "Тёмная"
+      },
+      "lang": {
+        "title": "Язык",
+        "russian": "Русский",
+        "english": "Английский"
+      },
+      "expImp": {
+        "title": "Экспорт/Импорт"
+      },
+      "print": {
+        "title": "Печать"
+      }
+    },
+    "control": {
+      "title": "Меню",
+      "newTask": "Новая задача",
+      "erase": "Стереть",
+      "deleteTask": "Удалить",
+      "prevMonth": "Предыдущий месяц",
+      "nextMonth": "Следующий месяц",
+      "hideControl": "Скрыть"
+    },
+    "general": {
+      "allAveragePer": "Общее среднее",
+      "grade": "Оценка"
+    }
+  },
+  "en": {
+    "settings": {
+      "title": "Settings",
+      "close": "Close settings",
+      "asInSystem": "As in system",
+      "theme": {
+        "title": "Theme",
+        "light": "Light",
+        "dark": "Dark"
+      },
+      "lang": {
+        "title": "Language",
+        "russian": "Russian",
+        "english": "English"
+      },
+      "expImp": {
+        "title": "Export/Import"
+      },
+      "print": {
+        "title": "Print"
+      }
+    },
+    "control": {
+      "title": "Control menu",
+      "newTask": "New task",
+      "erase": "Erase",
+      "deleteTask": "Delete task",
+      "prevMonth": "Previous month",
+      "nextMonth": "Next month",
+      "hideControl": "Hide menu"
+    },
+    "general": {
+      "allAveragePer": "General average",
+      "grade": "Grade"
+    }
+  }
+}
