@@ -1,4 +1,6 @@
-# Habit Tracker — Vue 3 + Vite
+# Table — Трекер привычек — Vue 3 + Vite
+
+[English README](./README.en.md)
 
 Многофункциональный трекер привычек с поддержкой задач, подзадач, отметок по дням, экспорта/импорта, смены темы и языка. Современный стек: Vue 3, Vite, Pinia, TailwindCSS, i18n, ESLint, Prettier.
 
