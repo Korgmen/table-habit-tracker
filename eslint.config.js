@@ -3,6 +3,7 @@ import js from '@eslint/js';
 import pluginVue from 'eslint-plugin-vue';
 import pluginPrettier from 'eslint-plugin-prettier';
 import configPrettier from 'eslint-config-prettier';
+import configTailwindcss from 'eslint-plugin-tailwindcss';
 
 export default [
   js.configs.recommended,
@@ -11,6 +12,7 @@ export default [
   {
     plugins: {
       prettier: pluginPrettier,
+      tailwindcss: configTailwindcss,
     },
     languageOptions: {
       globals: {

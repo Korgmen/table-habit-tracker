@@ -9,6 +9,7 @@
   "arrowParens": "avoid",
   "htmlWhitespaceSensitivity": "ignore",
   "vueIndentScriptAndStyle": true,
+  "proseWrap": "always",
   "endOfLine": "auto",
   "plugins": ["prettier-plugin-tailwindcss"]
 }

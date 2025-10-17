@@ -8,6 +8,8 @@ export const useHabitStore = defineStore('habit', {
     const currentMonthKey = `${realDate.getFullYear()}-${String(realDate.getMonth() + 1).padStart(2, '0')}`;
     const savedTheme = localStorage.getItem('theme') || 'system';
     const savedLang = localStorage.getItem('lang') || 'system';
+    const savedWeekStart = localStorage.getItem('weekStart') || 'monday';
+    const savedShowWeekSeparators = localStorage.getItem('showWeekSeparators') !== 'false'; // По умолчанию true
     return {
       realDate,
       currentDate: realDate,
@@ -17,6 +19,8 @@ export const useHabitStore = defineStore('habit', {
       activeMode: null,
       theme: savedTheme,
       lang: savedLang,
+      weekStart: savedWeekStart,
+      showWeekSeparators: savedShowWeekSeparators,
     };
   },
   getters: {
@@ -218,6 +222,8 @@ export const useHabitStore = defineStore('habit', {
       localStorage.setItem('habitArchive', JSON.stringify(this.archive));
       localStorage.setItem('theme', this.theme);
       localStorage.setItem('lang', this.lang);
+      localStorage.setItem('weekStart', this.weekStart);
+      localStorage.setItem('showWeekSeparators', this.showWeekSeparators);
     },
     /**
      * Переход к предыдущему месяцу.
@@ -325,10 +331,23 @@ export const useHabitStore = defineStore('habit', {
       this.theme = newTheme;
       this.saveState();
     },
-
     setLang(newLang) {
       this.lang = newLang;
       localStorage.setItem('lang', newLang);
+    },
+    /**
+     * Устанавливает начало недели.
+     */
+    setWeekStart(newWeekStart) {
+      this.weekStart = newWeekStart;
+      this.saveState();
+    },
+    /**
+     * Устанавливает отображение разделителей недель.
+     */
+    setShowWeekSeparators(newValue) {
+      this.showWeekSeparators = newValue;
+      this.saveState();
     },
     /**
      * Обработка долгого нажатия.

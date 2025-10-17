@@ -19,6 +19,25 @@
       },
       "print": {
         "title": "Печать"
+      },
+      "hotkeys": {
+        "title": "Горячие клавиши",
+        "escape": "Escape: Сброс режимов и закрытие меню/настроек",
+        "e": "E: Переключение режима стирания",
+        "d": "D: Переключение режима удаления",
+        "n": "N: Добавление новой задачи",
+        "arrowLeft": "Стрелка влево: Переключение на предыдущий месяц",
+        "arrowRight": "Стрелка вправо: Переключение на следующий месяц",
+        "s": "S: Переключение настроек"
+      },
+      "showWeek": {
+        "title": "Разделители недель",
+        "checkbox": "Показывать"
+      },
+      "weekStart": {
+        "title": "Неделя начинается с",
+        "monday": "Понедельник",
+        "sunday": "Воскресенье"
       }
     },
     "control": {
@@ -55,6 +74,25 @@
       },
       "print": {
         "title": "Print"
+      },
+      "hotkeys": {
+        "title": "Keyboard Shortcuts",
+        "escape": "Escape: Reset modes and close menus/settings",
+        "e": "E: Toggle eraser mode",
+        "d": "D: Toggle delete mode",
+        "n": "N: Add a new task",
+        "arrowLeft": "Arrow Left: Switch to previous month",
+        "arrowRight": "Arrow Right: Switch to next month",
+        "s": "S: Toggle settings"
+      },
+      "showWeek": {
+        "title": "Week separators",
+        "checkbox": "Show"
+      },
+      "weekStart": {
+        "title": "Week starts on",
+        "monday": "Monday",
+        "sunday": "Sunday"
       }
     },
     "control": {

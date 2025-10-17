@@ -20,6 +20,7 @@
 
   const store = useHabitStore();
   const days = computed(() => Array.from({ length: store.daysInMonth }, (_, i) => i + 1));
+  const weekEndDay = computed(() => (store.weekStart === 'monday' ? 0 : 6));
   const editingTitle = ref('');
   const editInput = ref(null);
   const importInput = ref(null);
@@ -35,6 +36,14 @@
   const getHeaderCircleState = day => {
     if (day > store.today) return 'future';
     return 'completed';
+  };
+
+  /**
+   * Проверяет, является ли день концом недели.
+   */
+  const isEndOfWeek = day => {
+    const date = new Date(store.currentYear, store.currentMonth, day);
+    return store.showWeekSeparators && date.getDay() === weekEndDay.value;
   };
 
   /**
@@ -100,9 +109,9 @@
     const subtask = task.subtasks.find(s => s.id === subtaskId);
     if (!subtask || dayIndex >= store.today) return 'cursor-not-allowed';
     const mark = subtask.marks[dayIndex];
-    if (mark === true) return 'bg-black cursor-pointer';
+    if (mark === true) return 'bg-current cursor-pointer';
     if (mark === false) return 'before:opacity-100 after:opacity-100 cursor-pointer';
-    return 'border-black cursor-pointer';
+    return 'cursor-pointer';
   };
 
   /**
@@ -132,14 +141,35 @@
   };
 
   /**
-   * Обрабатывает нажатие клавиши Escape.
+   * Обрабатывает нажатие клавиш.
    */
   const handleKeydown = event => {
-    if (event.key === 'Escape') {
-      store.activeMode = null;
-      settingsOpen.value = false;
-      menuOpen.value = false;
-    }
+    if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') return;
+
+    const keyActions = {
+      Escape: () => {
+        store.activeMode = null;
+        settingsOpen.value = false;
+        menuOpen.value = false;
+      },
+      KeyE: () => {
+        store.toggleMode('eraser');
+        settingsOpen.value = false;
+      },
+      KeyD: () => {
+        store.toggleMode('delete');
+        settingsOpen.value = false;
+      },
+      KeyN: () => store.addTask(),
+      ArrowLeft: () => store.prevMonth(),
+      ArrowRight: () => canNextMonth.value && store.nextMonth(),
+      KeyS: () => {
+        settingsOpen.value = !settingsOpen.value;
+        store.activeMode = null;
+      },
+    };
+
+    keyActions[event.code]?.();
   };
 
   /**
@@ -215,14 +245,20 @@
 </script>
 
 <template>
-  <div id="app" :class="currentTheme === 'dark' ? 'bg-gray-800 text-white' : 'bg-white text-black'">
+  <div
+    id="app"
+    class="flex min-h-screen justify-center"
+    :class="currentTheme === 'dark' ? 'bg-[#292929] text-[#FFF8F0]' : 'bg-white text-[#12130F]'"
+  >
     <div class="relative mx-auto my-5 flex w-fit flex-col gap-2.5">
       <!-- Настройки -->
       <transition name="fade" mode="out-in">
         <div
           v-if="settingsOpen"
           class="hide-print absolute top-0 right-0 z-50 w-fit border-3 p-4"
-          :class="currentTheme === 'dark' ? 'bg-gray-700 text-white' : 'bg-white text-black'"
+          :class="
+            currentTheme === 'dark' ? 'bg-[#292929] text-[#FFF8F0]' : 'bg-white text-[#12130F]'
+          "
         >
           <button
             class="absolute top-2 right-2 cursor-pointer"
@@ -231,54 +267,92 @@
           >
             <X class="h-5 w-5" />
           </button>
-          <h3 class="mb-2 text-lg font-semibold">{{ t('settings.title') }}</h3>
-          <div class="grid grid-cols-[repeat(2,1fr)] gap-2.5">
-            <div class="flex flex-col gap-1.5">
-              <label class="block">{{ t('settings.theme.title') }}</label>
-              <select
-                v-model="store.theme"
-                class="w-full border-2 p-1"
-                @change="store.setTheme(store.theme)"
-              >
-                <option value="system">{{ t('settings.asInSystem') }}</option>
-                <option value="light">{{ t('settings.theme.light') }}</option>
-                <option value="dark">{{ t('settings.theme.dark') }}</option>
-              </select>
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <label class="block">{{ t('settings.lang.title') }}</label>
-              <select v-model="lang" class="w-full border-2 p-1" @change="changeLang">
-                <option value="system">{{ t('settings.asInSystem') }}</option>
-                <option value="ru">{{ t('settings.lang.russian') }}</option>
-                <option value="en">{{ t('settings.lang.english') }}</option>
-              </select>
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <label class="block">{{ t('settings.expImp.title') }}</label>
-              <div class="flex items-center gap-1.5">
-                <button
-                  class="relative flex h-8 cursor-pointer items-center justify-center border-2 border-green-500 px-1.5 text-green-500"
-                  @click="store.exportData"
+          <div class="flex flex-col gap-5">
+            <div class="grid grid-cols-[repeat(2,1fr)] gap-2.5">
+              <h3 class="col-span-2 text-lg font-semibold">{{ t('settings.title') }}</h3>
+              <div class="flex flex-col gap-1.5">
+                <label class="block">{{ t('settings.theme.title') }}</label>
+                <select
+                  v-model="store.theme"
+                  class="w-full border-2 p-1"
+                  @change="store.setTheme(store.theme)"
                 >
-                  <Upload class="w-5" />
-                </button>
-                <button
-                  class="relative flex h-8 cursor-pointer items-center justify-center border-2 border-purple-500 px-1.5 text-purple-500"
-                  @click="handleImport"
-                >
-                  <Download class="w-5" />
-                </button>
+                  <option value="system">{{ t('settings.asInSystem') }}</option>
+                  <option value="light">{{ t('settings.theme.light') }}</option>
+                  <option value="dark">{{ t('settings.theme.dark') }}</option>
+                </select>
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label class="block">{{ t('settings.lang.title') }}</label>
+                <select v-model="lang" class="w-full border-2 p-1" @change="changeLang">
+                  <option value="system">{{ t('settings.asInSystem') }}</option>
+                  <option value="ru">{{ t('settings.lang.russian') }}</option>
+                  <option value="en">{{ t('settings.lang.english') }}</option>
+                </select>
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label class="block">{{ t('settings.expImp.title') }}</label>
+                <div class="flex items-center gap-1.5">
+                  <button
+                    class="relative flex h-8 cursor-pointer items-center justify-center border-2 border-green-500 px-1.5 text-green-500"
+                    @click="store.exportData"
+                  >
+                    <Upload class="w-5" />
+                  </button>
+                  <button
+                    class="relative flex h-8 cursor-pointer items-center justify-center border-2 border-purple-500 px-1.5 text-purple-500"
+                    @click="handleImport"
+                  >
+                    <Download class="w-5" />
+                  </button>
+                </div>
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label class="block">{{ t('settings.print.title') }}</label>
+                <div class="flex items-center gap-1.5">
+                  <button
+                    class="relative flex h-8 cursor-pointer items-center justify-center border-2 px-1.5"
+                    @click="handlePrint"
+                  >
+                    <Printer class="w-5" />
+                  </button>
+                </div>
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label class="block">{{ t('settings.showWeek.title') }}</label>
+                <label class="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    v-model="store.showWeekSeparators"
+                    @change="store.setShowWeekSeparators(store.showWeekSeparators)"
+                  />
+                  {{ t('settings.showWeek.checkbox') }}
+                </label>
+                <div v-if="store.showWeekSeparators" class="mt-1.5 col-span-2 flex flex-col gap-1.5">
+                  <label class="block">{{ t('settings.weekStart.title') }}</label>
+                  <select
+                    v-model="store.weekStart"
+                    class="w-full border-2 p-1"
+                    @change="store.setWeekStart(store.weekStart)"
+                  >
+                    <option value="monday">{{ t('settings.weekStart.monday') }}</option>
+                    <option value="sunday">{{ t('settings.weekStart.sunday') }}</option>
+                  </select>
+                </div>
               </div>
             </div>
-            <div class="flex flex-col gap-1.5">
-              <label class="block">{{ t('settings.print.title') }}</label>
-              <div class="flex items-center gap-1.5">
-                <button
-                  class="relative flex h-8 cursor-pointer items-center justify-center border-2 px-1.5"
-                  @click="handlePrint"
-                >
-                  <Printer class="w-5" />
-                </button>
+            <div class="flex flex-col gap-2.5">
+              <h3 class="text-lg font-semibold">{{ t('settings.hotkeys.title') }}</h3>
+              <div class="flex flex-col gap-1.5">
+                <ul class="leading-relaxed">
+                  <li>{{ t('settings.hotkeys.escape') }}</li>
+                  <li>{{ t('settings.hotkeys.e') }}</li>
+                  <li>{{ t('settings.hotkeys.d') }}</li>
+                  <li>{{ t('settings.hotkeys.n') }}</li>
+                  <li>{{ t('settings.hotkeys.arrowLeft') }}</li>
+                  <li>{{ t('settings.hotkeys.arrowRight') }}</li>
+                  <li>{{ t('settings.hotkeys.s') }}</li>
+                </ul>
               </div>
             </div>
           </div>
@@ -431,28 +505,33 @@
       <!-- Таблица привычек -->
       <div class="overflow-x-auto">
         <div class="border-3 select-none">
-          <div class="relative flex min-w-[920px] flex-col items-center gap-2.5 p-5">
-            <div class="flex gap-2">
-              <div
-                v-for="day in days"
-                :key="day"
-                class="flex w-5 flex-col items-center gap-[5px] transition-all duration-300 ease-in-out"
-                :class="{ 'opacity-50': getHeaderCircleState(day) === 'future' }"
-              >
-                <p class="text-[18px] font-medium">{{ day }}</p>
+          <div class="relative flex min-w-[960px] flex-col items-center gap-2.5 p-5">
+            <div class="flex items-end-safe gap-2">
+              <template v-for="day in days" :key="day">
                 <div
-                  class="relative flex h-3 w-3 items-center justify-center rounded-[50%] border-2 transition-all duration-300 ease-in-out before:absolute before:h-0.5 before:w-full before:rotate-45 before:bg-black before:opacity-0 before:transition-all before:duration-300 before:ease-in-out after:absolute after:h-0.5 after:w-full after:-rotate-45 after:bg-black after:opacity-0 after:transition-all after:duration-300 after:ease-in-out"
-                  :class="{
-                    'cursor-not-allowed': getHeaderCircleState(day) === 'future',
-                    'cursor-pointer bg-black': getHeaderCircleState(day) === 'completed',
-                    'bg-transparent before:opacity-100 after:opacity-100':
-                      store.tasks.length > 0 &&
-                      store.tasks.every(t => t.subtasks.every(s => s.marks[day - 1] === false)),
-                  }"
-                  @click="handleHeaderClick(day - 1, $event)"
-                  @contextmenu.prevent="handleHeaderClick(day - 1, $event)"
+                  class="flex w-5 flex-col items-center gap-[5px] transition-all duration-300 ease-in-out"
+                  :class="{ 'opacity-50': getHeaderCircleState(day) === 'future' }"
+                >
+                  <p class="text-[18px] font-medium">{{ day }}</p>
+                  <div
+                    class="relative flex h-3 w-3 items-center justify-center rounded-[50%] border-2 transition-all duration-300 ease-in-out before:absolute before:h-0.5 before:w-full before:rotate-45 before:bg-current before:opacity-0 before:transition-all before:duration-300 before:ease-in-out after:absolute after:h-0.5 after:w-full after:-rotate-45 after:bg-current after:opacity-0 after:transition-all after:duration-300 after:ease-in-out"
+                    :class="{
+                      'cursor-not-allowed': getHeaderCircleState(day) === 'future',
+                      'cursor-pointer bg-current': getHeaderCircleState(day) === 'completed',
+                      'bg-transparent before:opacity-100 after:opacity-100':
+                        store.tasks.length > 0 &&
+                        store.tasks.every(t => t.subtasks.every(s => s.marks[day - 1] === false)),
+                    }"
+                    @click="handleHeaderClick(day - 1, $event)"
+                    @contextmenu.prevent="handleHeaderClick(day - 1, $event)"
+                  ></div>
+                </div>
+                <div
+                  v-if="isEndOfWeek(day)"
+                  class="h-4 border-1 bg-current"
+                  :class="{ 'opacity-50': getHeaderCircleState(day) === 'future' }"
                 ></div>
-              </div>
+              </template>
             </div>
           </div>
           <VueDraggableNext
@@ -535,29 +614,34 @@
                     </button>
                   </transition>
                 </div>
-                <div class="flex gap-2">
-                  <div
-                    v-for="(day, index) in days"
-                    :key="day"
-                    class="flex w-5 flex-col items-center gap-[5px] transition-all duration-300 ease-in-out"
-                    :class="{ 'opacity-50': day > store.today }"
-                  >
-                    <p class="text-[18px] font-medium">{{ day }}</p>
-                    <template v-for="subtask in task.subtasks" :key="subtask.id">
-                      <div
-                        class="relative flex h-3 w-3 items-center justify-center rounded-[50%] border-2 transition-all duration-300 ease-in-out before:absolute before:h-0.5 before:w-full before:rotate-45 before:bg-black before:opacity-0 before:transition-all before:duration-300 before:ease-in-out after:absolute after:h-0.5 after:w-full after:-rotate-45 after:bg-black after:opacity-0 after:transition-all after:duration-300 after:ease-in-out"
-                        :class="[
-                          getMarkClass(task.id, subtask.id, index),
-                          { 'cursor-not-allowed': day > store.today },
-                        ]"
-                        @click="handleMarkClick(task.id, subtask.id, index, $event)"
-                        @contextmenu.prevent="handleMarkClick(task.id, subtask.id, index, $event)"
-                        @touchstart="handleTouchStart(task.id, subtask.id, index)"
-                        @touchend="handleTouchEnd(task.id, subtask.id, index)"
-                        @touchcancel="handleTouchEnd(task.id, subtask.id, index)"
-                      ></div>
-                    </template>
-                  </div>
+                <div class="flex items-end-safe gap-2">
+                  <template v-for="(day, index) in days" :key="day">
+                    <div
+                      class="flex w-5 flex-col items-center gap-[5px] transition-all duration-300 ease-in-out"
+                      :class="{ 'opacity-50': day > store.today }"
+                    >
+                      <p class="text-[18px] font-medium">{{ day }}</p>
+                      <template v-for="subtask in task.subtasks" :key="subtask.id">
+                        <div
+                          class="relative flex h-3 w-3 items-center justify-center rounded-[50%] border-2 border-current transition-all duration-300 ease-in-out before:absolute before:h-0.5 before:w-full before:rotate-45 before:bg-current before:opacity-0 before:transition-all before:duration-300 before:ease-in-out after:absolute after:h-0.5 after:w-full after:-rotate-45 after:bg-current after:opacity-0 after:transition-all after:duration-300 after:ease-in-out"
+                          :class="[
+                            getMarkClass(task.id, subtask.id, index),
+                            { 'cursor-not-allowed': day > store.today },
+                          ]"
+                          @click="handleMarkClick(task.id, subtask.id, index, $event)"
+                          @contextmenu.prevent="handleMarkClick(task.id, subtask.id, index, $event)"
+                          @touchstart="handleTouchStart(task.id, subtask.id, index)"
+                          @touchend="handleTouchEnd(task.id, subtask.id, index)"
+                          @touchcancel="handleTouchEnd(task.id, subtask.id, index)"
+                        ></div>
+                      </template>
+                    </div>
+                    <div
+                      v-if="isEndOfWeek(day)"
+                      class="h-4 border-1 bg-current"
+                      :class="{ 'opacity-50': getHeaderCircleState(day) === 'future' }"
+                    ></div>
+                  </template>
                 </div>
               </div>
             </template>
@@ -596,6 +680,7 @@
     #app {
       background: white !important;
       color: black !important;
+      display: block;
     }
 
     * {
