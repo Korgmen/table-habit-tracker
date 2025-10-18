@@ -1,7 +1,14 @@
 # Table — Habit Tracker — Vue 3 + Vite (English)
 
-A multifunctional habit tracker with support for tasks, subtasks, daily marks, data export/import,
-theme and language switching. Modern stack: Vue 3, Vite, Pinia, TailwindCSS, i18n, ESLint, Prettier.
+A multifunctional habit tracker with support for tasks, subtasks, daily marks, data export/import, theme and language switching. Modern stack: Vue 3, Vite, Pinia, TailwindCSS, i18n, ESLint, Prettier.
+
+---
+
+## Multilingual Support
+- Supported languages: Russian, English, Arabic, Spanish, Chinese
+- All interface texts are localized (see `src/locales/index.json`)
+- You can switch the app language in settings
+- To add new languages, extend `src/locales/index.json` and update the language selector
 
 ## Features
 
@@ -10,7 +17,7 @@ theme and language switching. Modern stack: Vue 3, Vite, Pinia, TailwindCSS, i18
 - Month switching, archive view
 - Data export and import (JSON)
 - Theme switching (light/dark/system)
-- Language switching (Russian/English/System)
+- Language switching (Russian/English/Arabic/Spanish/Chinese/System)
 - Drag&Drop for tasks (vue-draggable-next)
 - Responsive design, print support
 - **Week display settings:** week separators, choose week start (Monday/Sunday)
