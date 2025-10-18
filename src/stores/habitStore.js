@@ -32,8 +32,16 @@ export const useHabitStore = defineStore('habit', {
       return new Date(year, month + 1, 0).getDate();
     },
     monthName: state => {
-      const lang =
-        state.lang === 'system' ? (navigator.language.startsWith('ru') ? 'ru' : 'en') : state.lang;
+      let lang = 'en';
+      if (state.lang === 'system') {
+        const navLang = navigator.language.toLowerCase();
+        if (navLang.startsWith('ru')) lang = 'ru';
+        else if (navLang.startsWith('ar')) lang = 'ar';
+        else if (navLang.startsWith('es')) lang = 'es';
+        else if (navLang.startsWith('zh')) lang = 'zh';
+      } else {
+        lang = state.lang;
+      }
       const month = new Date(state.currentYear, state.currentMonth).toLocaleString(lang, {
         month: 'long',
       });
@@ -65,13 +73,35 @@ export const useHabitStore = defineStore('habit', {
   },
   actions: {
     /**
+     * Получает дефолтный заголовок задачи на основе языка.
+     */
+    getDefaultTaskTitle() {
+      let currentLang = this.lang;
+      if (currentLang === 'system') {
+        const navLang = navigator.language.toLowerCase();
+        if (navLang.startsWith('ru')) currentLang = 'ru';
+        else if (navLang.startsWith('ar')) currentLang = 'ar';
+        else if (navLang.startsWith('es')) currentLang = 'es';
+        else if (navLang.startsWith('zh')) currentLang = 'zh';
+        else currentLang = 'en';
+      }
+      const titles = {
+        ru: 'Новая задача',
+        en: 'New task',
+        ar: 'مهمة جديدة',
+        es: 'Nueva tarea',
+        zh: '新任务',
+      };
+      return titles[currentLang] || 'New task';
+    },
+    /**
      * Добавляет новую задачу.
      */
     addTask() {
       const id = Date.now();
       this.tasks.push({
         id,
-        title: 'Новая задача',
+        title: this.getDefaultTaskTitle(),
         subtasks: [{ id: Date.now() + 1, marks: Array(this.daysInMonth).fill(null) }],
         progress: 0.0,
       });
@@ -115,7 +145,7 @@ export const useHabitStore = defineStore('habit', {
                 "'": '&#39;',
               })[s]
           );
-        task.title = escapeHtml(newTitle.trim()) || 'Новая задача';
+        task.title = escapeHtml(newTitle.trim()) || this.getDefaultTaskTitle();
         this.editingTaskId = null;
         this.saveState();
       }

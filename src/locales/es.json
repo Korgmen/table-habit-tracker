@@ -1,0 +1,54 @@
+{
+  "settings": {
+    "title": "Configuración",
+    "close": "Cerrar configuración",
+    "asInSystem": "Como en el sistema",
+    "theme": {
+      "title": "Tema",
+      "light": "Claro",
+      "dark": "Oscuro"
+    },
+    "lang": {
+      "title": "Idioma",
+      "this": "Español"
+    },
+    "expImp": {
+      "title": "Exportar/Importar"
+    },
+    "print": {
+      "title": "Imprimir"
+    },
+    "hotkeys": {
+      "title": "Atajos de teclado",
+      "escape": "Escape: Restablecer modos y cerrar menús/configuración",
+      "e": "E: Alternar modo borrador",
+      "d": "D: Alternar modo eliminar",
+      "n": "N: Añadir nueva tarea",
+      "arrowLeft": "Flecha izquierda: Mes anterior",
+      "arrowRight": "Flecha derecha: Mes siguiente",
+      "s": "S: Alternar configuración"
+    },
+    "showWeek": {
+      "title": "Separadores de semana",
+      "checkbox": "Mostrar"
+    },
+    "weekStart": {
+      "title": "La semana comienza en",
+      "monday": "Lunes",
+      "sunday": "Domingo"
+    }
+  },
+  "control": {
+    "title": "Menú",
+    "newTask": "Nueva tarea",
+    "erase": "Borrar",
+    "deleteTask": "Eliminar tarea",
+    "prevMonth": "Mes anterior",
+    "nextMonth": "Mes siguiente",
+    "hideControl": "Ocultar menú"
+  },
+  "general": {
+    "allAveragePer": "Promedio general",
+    "grade": "Calificación"
+  }
+}

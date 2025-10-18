@@ -1,0 +1,54 @@
+{
+  "settings": {
+    "title": "设置",
+    "close": "关闭设置",
+    "asInSystem": "与系统一致",
+    "theme": {
+      "title": "主题",
+      "light": "浅色",
+      "dark": "深色"
+    },
+    "lang": {
+      "title": "语言",
+      "this": "中文"
+    },
+    "expImp": {
+      "title": "导出/导入"
+    },
+    "print": {
+      "title": "打印"
+    },
+    "hotkeys": {
+      "title": "快捷键",
+      "escape": "Escape: 重置模式并关闭菜单/设置",
+      "e": "E: 切换橡皮擦模式",
+      "d": "D: 切换删除模式",
+      "n": "N: 添加新任务",
+      "arrowLeft": "左箭头: 上个月",
+      "arrowRight": "右箭头: 下个月",
+      "s": "S: 切换设置"
+    },
+    "showWeek": {
+      "title": "周分隔符",
+      "checkbox": "显示"
+    },
+    "weekStart": {
+      "title": "一周开始于",
+      "monday": "星期一",
+      "sunday": "星期天"
+    }
+  },
+  "control": {
+    "title": "菜单",
+    "newTask": "新任务",
+    "erase": "擦除",
+    "deleteTask": "删除任务",
+    "prevMonth": "上个月",
+    "nextMonth": "下个月",
+    "hideControl": "隐藏菜单"
+  },
+  "general": {
+    "allAveragePer": "总平均值",
+    "grade": "评分"
+  }
+}

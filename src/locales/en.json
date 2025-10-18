@@ -1,0 +1,54 @@
+{
+  "settings": {
+    "title": "Settings",
+    "close": "Close settings",
+    "asInSystem": "As in system",
+    "theme": {
+      "title": "Theme",
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "lang": {
+      "title": "Language",
+      "this": "English"
+    },
+    "expImp": {
+      "title": "Export/Import"
+    },
+    "print": {
+      "title": "Print"
+    },
+    "hotkeys": {
+      "title": "Keyboard Shortcuts",
+      "escape": "Escape: Reset modes and close menus/settings",
+      "e": "E: Toggle eraser mode",
+      "d": "D: Toggle delete mode",
+      "n": "N: Add a new task",
+      "arrowLeft": "Arrow Left: Switch to previous month",
+      "arrowRight": "Arrow Right: Switch to next month",
+      "s": "S: Toggle settings"
+    },
+    "showWeek": {
+      "title": "Week separators",
+      "checkbox": "Show"
+    },
+    "weekStart": {
+      "title": "Week starts on",
+      "monday": "Monday",
+      "sunday": "Sunday"
+    }
+  },
+  "control": {
+    "title": "Control menu",
+    "newTask": "New task",
+    "erase": "Erase",
+    "deleteTask": "Delete task",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "hideControl": "Hide menu"
+  },
+  "general": {
+    "allAveragePer": "General average",
+    "grade": "Grade"
+  }
+}

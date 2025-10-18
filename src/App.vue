@@ -224,7 +224,12 @@
    */
   const changeLang = () => {
     store.setLang(lang.value);
-    const systemLang = navigator.language.startsWith('ru') ? 'ru' : 'en';
+    let systemLang = 'en';
+    const navLang = navigator.language.toLowerCase();
+    if (navLang.startsWith('ru')) systemLang = 'ru';
+    else if (navLang.startsWith('ar')) systemLang = 'ar';
+    else if (navLang.startsWith('es')) systemLang = 'es';
+    else if (navLang.startsWith('zh')) systemLang = 'zh';
     locale.value = lang.value === 'system' ? systemLang : lang.value;
   };
 
@@ -286,8 +291,11 @@
                 <label class="block">{{ t('settings.lang.title') }}</label>
                 <select v-model="lang" class="w-full border-2 p-1" @change="changeLang">
                   <option value="system">{{ t('settings.asInSystem') }}</option>
-                  <option value="ru">{{ t('settings.lang.russian') }}</option>
-                  <option value="en">{{ t('settings.lang.english') }}</option>
+                  <option value="ru">Русский</option>
+                  <option value="en">English</option>
+                  <option value="ar">العربية</option>
+                  <option value="es">Español</option>
+                  <option value="zh">导出/导入</option>
                 </select>
               </div>
               <div class="flex flex-col gap-1.5">
@@ -328,7 +336,10 @@
                   />
                   {{ t('settings.showWeek.checkbox') }}
                 </label>
-                <div v-if="store.showWeekSeparators" class="mt-1.5 col-span-2 flex flex-col gap-1.5">
+                <div
+                  v-if="store.showWeekSeparators"
+                  class="col-span-2 mt-1.5 flex flex-col gap-1.5"
+                >
                   <label class="block">{{ t('settings.weekStart.title') }}</label>
                   <select
                     v-model="store.weekStart"
