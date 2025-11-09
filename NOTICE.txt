@@ -1,0 +1,31 @@
+table-habit-tracker
+Copyright 2025 Roman Lebedev (Роман Лебедев)
+
+This product bundles components from the following third-party projects:
+
+────────────────────────────────────
+Vue.js
+Copyright (c) 2018-present, Yuxi (Evan) You
+Licensed under the MIT License.
+
+Vue I18n
+Copyright (c) 2016-present kazuya kawaguchi
+Licensed under the MIT License.
+
+Pinia
+Copyright (c) 2019-present Eduardo San Martin Morote
+Licensed under the MIT License.
+
+Lucide Vue Next
+Copyright (c) 2013-2023 Cole Bemis
+Licensed under the ISC License.
+
+Vue Draggable Next
+Copyright (c) 2016-2019 Anish George
+Licensed under the MIT License.
+
+────────────────────────────────────
+This software is licensed under the Apache License, Version 2.0.
+See 'LICENSE' for the full license text.
+
+Contact: t.me/korgmen
