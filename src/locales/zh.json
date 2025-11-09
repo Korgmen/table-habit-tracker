@@ -41,12 +41,16 @@
   "control": {
     "title": "菜单",
     "newTask": "新任务",
-    "erase": "擦除",
+    "newSubtask": "新子任务",
+    "deleteSubtask": "删除最后一个子任务",
+    "eraseMode": "标记清除模式",
+    "moveTask": "移动任务",
+    "deleteTaskMode": "任务删除模式",
     "deleteTask": "删除任务",
     "prevMonth": "上个月",
     "nextMonth": "下个月",
     "hideControl": "隐藏菜单",
-    "duplicateToCurrent": "复制到当前月"
+    "duplicateToCurrent": "复制所有任务到当前月"
   },
   "general": {
     "allAveragePer": "总平均值",

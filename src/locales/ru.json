@@ -41,10 +41,15 @@
   "control": {
     "title": "Меню",
     "newTask": "Новая задача",
-    "erase": "Стереть",
-    "deleteTask": "Удалить",
+    "newSubtask": "Новая подзадача",
+    "deleteSubtask": "Удалить последнюю подзадачу",
+    "eraseMode": "Режим очистки отметок",
+    "moveTask": "Переместить задачу",
+    "deleteTaskMode": "Режим удаления задач",
+    "deleteTask": "Удалить задачу",
     "prevMonth": "Предыдущий месяц",
     "nextMonth": "Следующий месяц",
+    "hideControl": "Скрыть",
     "duplicateToCurrent": "Дублировать все задачи в текущий месяц"
   },
   "general": {

@@ -45,7 +45,7 @@
         @click="store.toggleMode('eraser')"
       >
         <Eraser class="mr-2 w-5" />
-        {{ t('control.erase') }}
+        {{ t('control.eraseMode') }}
       </button>
       <button
         :class="{
@@ -56,7 +56,7 @@
         @click="store.toggleMode('delete')"
       >
         <Trash2 class="mr-2 w-5" />
-        {{ t('control.deleteTask') }}
+        {{ t('control.deleteTaskMode') }}
       </button>
       <button
         class="flex w-full items-center rounded bg-gray-500 px-3 py-2 text-white"
@@ -93,6 +93,7 @@
         :class="store.activeMode === 'eraser' ? 'bg-yellow-500 text-white' : 'text-yellow-500'"
         class="relative flex h-8 cursor-pointer items-center justify-center border-2 border-yellow-500 px-1.5 transition-all duration-300 ease-in-out"
         @click="store.toggleMode('eraser')"
+        :title="t('control.eraseMode')"
       >
         <Eraser class="w-5" />
       </button>
@@ -100,18 +101,21 @@
         :class="store.activeMode === 'delete' ? 'bg-red-500 text-white' : 'text-red-500'"
         class="relative flex h-8 cursor-pointer items-center justify-center border-2 border-red-500 px-1.5 transition-all duration-300 ease-in-out"
         @click="store.toggleMode('delete')"
+        :title="t('control.deleteTaskMode')"
       >
         <Trash2 class="w-5" />
       </button>
       <button
         class="relative flex h-8 cursor-pointer items-center justify-center border-2 px-1.5"
         @click="handleAddTask"
+        :title="t('control.newTask')"
       >
         <Plus class="w-5" />
       </button>
       <button
         class="relative flex h-8 cursor-pointer items-center justify-center border-2 px-1.5"
         @click="emit('toggle-settings')"
+        :title="t('settings.title')"
       >
         <Settings class="w-5" />
       </button>

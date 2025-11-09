@@ -20,16 +20,16 @@
     },
     "hotkeys": {
       "title": "Atajos de teclado",
-      "escape": "Escape: Restablecer modos y cerrar menús/configuración",
+      "escape": "Escape: Reiniciar modos y cerrar menú/configuración",
       "e": "E: Alternar modo borrador",
       "d": "D: Alternar modo eliminar",
       "n": "N: Añadir nueva tarea",
-      "arrowLeft": "Flecha izquierda: Mes anterior",
-      "arrowRight": "Flecha derecha: Mes siguiente",
+      "arrowLeft": "Flecha izquierda: Cambiar al mes anterior",
+      "arrowRight": "Flecha derecha: Cambiar al mes siguiente",
       "s": "S: Alternar configuración"
     },
     "showWeek": {
-      "title": "Separadores de semana",
+      "title": "Separadores de semanas",
       "checkbox": "Mostrar"
     },
     "weekStart": {
@@ -41,12 +41,16 @@
   "control": {
     "title": "Menú",
     "newTask": "Nueva tarea",
-    "erase": "Borrar",
+    "newSubtask": "Nueva subtarea",
+    "deleteSubtask": "Eliminar la última subtarea",
+    "eraseMode": "Modo de borrado de marcas",
+    "moveTask": "Mover tarea",
+    "deleteTaskMode": "Modo de eliminación de tareas",
     "deleteTask": "Eliminar tarea",
     "prevMonth": "Mes anterior",
     "nextMonth": "Mes siguiente",
-    "hideControl": "Ocultar menú",
-    "duplicateToCurrent": "Duplicar al mes actual"
+    "hideControl": "Ocultar",
+    "duplicateToCurrent": "Duplicar todas las tareas al mes actual"
   },
   "general": {
     "allAveragePer": "Promedio general",

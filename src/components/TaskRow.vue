@@ -2,6 +2,7 @@
 <script setup>
   import { ref, computed, nextTick } from 'vue';
   import { useHabitStore } from '../stores/habitStore';
+  import { useI18n } from 'vue-i18n';
   import { Plus, Trash2, XCircle, GripVertical } from 'lucide-vue-next';
   import TaskDay from './TaskDay.vue';
 
@@ -13,6 +14,7 @@
   });
 
   const store = useHabitStore();
+  const { t } = useI18n();
   const days = computed(() => Array.from({ length: store.daysInMonth }, (_, i) => i + 1));
   const weekEndDay = computed(() => (store.weekStart === 'monday' ? 0 : 6));
   const editingTitle = ref('');
@@ -142,6 +144,7 @@
           'cursor-not-allowed opacity-25': task.subtasks.length >= 8,
         }"
         @click="handleAddSubtask"
+        :title="t('control.newSubtask')"
       >
         <Plus class="h-4 w-4" />
       </button>
@@ -150,6 +153,7 @@
           v-if="task.subtasks.length > 1"
           class="relative flex h-6 cursor-pointer items-center justify-center border-2 px-0.5"
           @click="store.deleteLastSubtask(task.id)"
+          :title="t('control.deleteSubtask')"
         >
           <Trash2 class="h-4 w-4" />
         </button>
@@ -185,6 +189,7 @@
           v-if="store.activeMode !== 'delete'"
           key="normal"
           class="hide-print drag-handle relative ml-1 inline-flex w-5 cursor-move items-center justify-center"
+          :title="t('control.moveTask')"
         >
           <GripVertical class="absolute w-4" />
         </div>
@@ -193,6 +198,7 @@
           key="delete"
           class="hide-print relative ml-1 inline-flex w-5 cursor-pointer items-center justify-center"
           @click="store.deleteTask(task.id)"
+          :title="t('control.deleteTask')"
         >
           <XCircle class="absolute w-5" />
         </button>

@@ -19,13 +19,13 @@
       "title": "Print"
     },
     "hotkeys": {
-      "title": "Keyboard Shortcuts",
-      "escape": "Escape: Reset modes and close menus/settings",
+      "title": "Keyboard shortcuts",
+      "escape": "Escape: Reset modes and close menu/settings",
       "e": "E: Toggle eraser mode",
       "d": "D: Toggle delete mode",
-      "n": "N: Add a new task",
-      "arrowLeft": "Arrow Left: Switch to previous month",
-      "arrowRight": "Arrow Right: Switch to next month",
+      "n": "N: Add new task",
+      "arrowLeft": "Arrow left: Switch to previous month",
+      "arrowRight": "Arrow right: Switch to next month",
       "s": "S: Toggle settings"
     },
     "showWeek": {
@@ -39,17 +39,21 @@
     }
   },
   "control": {
-    "title": "Control menu",
+    "title": "Menu",
     "newTask": "New task",
-    "erase": "Erase",
+    "newSubtask": "New subtask",
+    "deleteSubtask": "Delete last subtask",
+    "eraseMode": "Mark clearing mode",
+    "moveTask": "Move task",
+    "deleteTaskMode": "Task deletion mode",
     "deleteTask": "Delete task",
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
-    "hideControl": "Hide menu",
-    "duplicateToCurrent": "Duplicate to current month"
+    "hideControl": "Hide",
+    "duplicateToCurrent": "Duplicate all tasks to current month"
   },
   "general": {
-    "allAveragePer": "General average",
+    "allAveragePer": "Overall average",
     "grade": "Grade"
   }
 }
