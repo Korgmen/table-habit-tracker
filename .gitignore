@@ -7,7 +7,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-merge_files.sh
+*.command
 pnpm-lock.yaml
 node_modules
 dist
