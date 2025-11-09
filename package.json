@@ -1,7 +1,7 @@
 {
-  "name": "table",
-  "private": true,
-  "version": "0.0.0",
+  "name": "table-habit-tracker",
+  "version": "0.1",
+  "description": "Table – multifunctional habit tracker",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,6 +11,17 @@
     "lint:fix": "eslint . --ext .js,.vue --fix",
     "format": "prettier --write ."
   },
+  "repository": "korgmen/table-habit-tracker",
+  "keywords": [
+    "tracker",
+    "habit tracker"
+  ],
+  "author": "Роман Лебедев (t.me/korgmen)",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/korgmen/table-habit-tracker/issues"
+  },
+  "homepage": "https://github.com/korgmen/table-habit-tracker#readme",
   "dependencies": {
     "lucide-vue-next": "^0.544.0",
     "pinia": "^3.0.3",
