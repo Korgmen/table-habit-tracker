@@ -6,6 +6,7 @@
   import Header from './components/Header.vue';
   import TableHeader from './components/TableHeader.vue';
   import TaskRow from './components/TaskRow.vue';
+  import Modal from './components/Modal.vue';
 
   const store = useHabitStore();
   const importInput = ref(null);
@@ -126,5 +127,6 @@
         @change="store.importData"
       />
     </div>
+    <Modal />
   </div>
 </template>

@@ -55,5 +55,10 @@
   "general": {
     "allAveragePer": "Общее среднее",
     "grade": "Оценка"
+  },
+  "modal": {
+    "confirm": "Подтвердить",
+    "cancel": "Отмена",
+    "ok": "OK"
   }
 }

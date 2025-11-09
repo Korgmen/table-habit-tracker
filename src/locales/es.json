@@ -55,5 +55,10 @@
   "general": {
     "allAveragePer": "Promedio general",
     "grade": "Calificación"
+  },
+  "modal": {
+    "confirm": "Confirmar",
+    "cancel": "Cancelar",
+    "ok": "OK"
   }
 }

@@ -55,5 +55,10 @@
   "general": {
     "allAveragePer": "المتوسط العام",
     "grade": "التقييم"
+  },
+  "modal": {
+    "confirm": "تأكيد",
+    "cancel": "إلغاء",
+    "ok": "موافق"
   }
 }

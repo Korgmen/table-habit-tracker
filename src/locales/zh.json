@@ -55,5 +55,10 @@
   "general": {
     "allAveragePer": "总平均值",
     "grade": "评分"
+  },
+  "modal": {
+    "confirm": "确认",
+    "cancel": "取消",
+    "ok": "确定"
   }
 }

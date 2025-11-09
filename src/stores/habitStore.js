@@ -21,6 +21,14 @@ export const useHabitStore = defineStore('habit', {
       lang: savedLang,
       weekStart: savedWeekStart,
       showWeekSeparators: savedShowWeekSeparators,
+      modal: {
+        isOpen: false,
+        title: '',
+        message: '',
+        type: 'alert',
+        onConfirm: null,
+        onCancel: null,
+      },
     };
   },
   getters: {
@@ -396,35 +404,65 @@ export const useHabitStore = defineStore('habit', {
     },
 
     /**
+     * Показывает модал с опциями.
+     * @param {Object} options - { type: 'alert'|'confirm'|'custom', title, message, onConfirm, onCancel }
+     */
+    showModal(options) {
+      this.modal = {
+        ...this.modal,
+        isOpen: true,
+        ...options,
+      };
+    },
+
+    /**
+     * Закрывает модал и очищает состояние.
+     */
+    closeModal() {
+      this.modal = {
+        isOpen: false,
+        title: '',
+        message: '',
+        type: 'alert',
+        onConfirm: null,
+        onCancel: null,
+      };
+    },
+
+    /**
      * Дублирует задачи текущего месяца в текущий реальный месяц (без отметок).
      * После дублирования переключает приложение на текущий месяц.
      */
     duplicateToCurrentMonth() {
-      const realMonthKey = `${this.realDate.getFullYear()}-${String(this.realDate.getMonth() + 1).padStart(2, '0')}`;
-      const currentMonthKey = `${this.currentYear}-${String(this.currentMonth + 1).padStart(2, '0')}`;
+      this.showModal({
+        type: 'confirm',
+        title: 'Подтвердите дублирование',
+        message: 'Задачи выбранного месяца будут скопированы в текущий (с заменой)',
+        onConfirm: async () => {
+          const realMonthKey = `${this.realDate.getFullYear()}-${String(this.realDate.getMonth() + 1).padStart(2, '0')}`;
+          const currentMonthKey = `${this.currentYear}-${String(this.currentMonth + 1).padStart(2, '0')}`;
 
-      // Если уже в текущем месяце – ничего не делаем
-      if (currentMonthKey === realMonthKey) return;
+          if (currentMonthKey === realMonthKey) return;
 
-      // Копируем задачи без отметок и с новыми id
-      const cleanTasks = this.tasks.map(task => ({
-        ...task,
-        id: Date.now() + Math.random(), // уникальный id
-        subtasks: task.subtasks.map(sub => ({
-          id: Date.now() + Math.random(),
-          marks: Array(this.daysInMonth).fill(null), // чистый массив
-        })),
-      }));
+          const cleanTasks = this.tasks.map(task => ({
+            ...task,
+            id: Date.now() + Math.random(),
+            subtasks: task.subtasks.map(sub => ({
+              id: Date.now() + Math.random(),
+              marks: Array(this.daysInMonth).fill(null),
+            })),
+          }));
 
-      // Сохраняем в текущий реальный месяц
-      this.archive[realMonthKey] = { tasks: cleanTasks };
-      localStorage.setItem('habitArchive', JSON.stringify(this.archive));
+          this.archive[realMonthKey] = { tasks: cleanTasks };
+          localStorage.setItem('habitArchive', JSON.stringify(this.archive));
 
-      // Переключаемся на текущий месяц
-      this.currentDate = new Date(this.realDate);
-      this.tasks = cleanTasks;
-      this.adaptMarksToNewMonth();
-      this.saveState();
+          this.currentDate = new Date(this.realDate);
+          this.tasks = cleanTasks;
+          this.adaptMarksToNewMonth();
+          this.saveState();
+          this.closeModal();
+        },
+      });
     },
   },
 });

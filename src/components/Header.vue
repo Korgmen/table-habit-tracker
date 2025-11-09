@@ -1,6 +1,6 @@
 <!-- src/components/Header.vue -->
 <script setup>
-  import { ref, computed, watch } from 'vue'; // ← ДОБАВЛЕН watch
+  import { ref, watch } from 'vue';
   import { useI18n } from 'vue-i18n';
   import SettingsModal from './SettingsModal.vue';
   import MonthHeader from './MonthHeader.vue';
@@ -14,7 +14,6 @@
 
   const emit = defineEmits(['update:settingsOpen', 'import', 'print']);
 
-  const { t } = useI18n();
   const localSettingsOpen = ref(props.settingsOpen);
 
   // Синхронизация с родительским v-model
