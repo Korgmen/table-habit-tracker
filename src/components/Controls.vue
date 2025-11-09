@@ -1,9 +1,9 @@
 <!-- src/components/Controls.vue -->
 <script setup>
-  import { ref } from 'vue';
+  import { ref, computed } from 'vue';
   import { useHabitStore } from '../stores/habitStore';
   import { useI18n } from 'vue-i18n';
-  import { Plus, Trash2, Eraser, Settings } from 'lucide-vue-next';
+  import { Plus, Trash2, Eraser, Settings, Copy } from 'lucide-vue-next';
 
   const store = useHabitStore();
   const { t } = useI18n();
@@ -13,6 +13,17 @@
   const handleAddTask = () => {
     store.addTask();
   };
+
+  const duplicateToCurrentMonth = () => {
+    store.duplicateToCurrentMonth();
+  };
+
+  const isCurrentMonth = computed(() => {
+    return (
+      store.currentMonth === store.realDate.getMonth() &&
+      store.currentYear === store.realDate.getFullYear()
+    );
+  });
 </script>
 
 <template>
@@ -55,6 +66,14 @@
         {{ t('settings.title') }}
       </button>
       <button
+        v-if="!isCurrentMonth"
+        class="flex w-full items-center rounded bg-indigo-500 px-3 py-2 text-white"
+        @click="duplicateToCurrentMonth"
+      >
+        <Copy class="mr-2 w-5" />
+        {{ t('control.duplicateToCurrent') }}
+      </button>
+      <button
         class="flex w-full items-center rounded bg-red-500 px-3 py-2 text-white"
         @click="menuOpen = false"
       >
@@ -95,6 +114,14 @@
         @click="emit('toggle-settings')"
       >
         <Settings class="w-5" />
+      </button>
+      <button
+        v-if="!isCurrentMonth"
+        class="relative flex h-8 cursor-pointer items-center justify-center border-2 px-1.5"
+        @click="duplicateToCurrentMonth"
+        :title="t('control.duplicateToCurrent')"
+      >
+        <Copy class="w-5" />
       </button>
     </div>
   </div>

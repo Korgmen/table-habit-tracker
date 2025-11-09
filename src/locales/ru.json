@@ -45,7 +45,7 @@
     "deleteTask": "Удалить",
     "prevMonth": "Предыдущий месяц",
     "nextMonth": "Следующий месяц",
-    "hideControl": "Скрыть"
+    "duplicateToCurrent": "Дублировать все задачи в текущий месяц"
   },
   "general": {
     "allAveragePer": "Общее среднее",

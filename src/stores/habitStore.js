@@ -394,5 +394,37 @@ export const useHabitStore = defineStore('habit', {
         }
       }
     },
+
+    /**
+     * Дублирует задачи текущего месяца в текущий реальный месяц (без отметок).
+     * После дублирования переключает приложение на текущий месяц.
+     */
+    duplicateToCurrentMonth() {
+      const realMonthKey = `${this.realDate.getFullYear()}-${String(this.realDate.getMonth() + 1).padStart(2, '0')}`;
+      const currentMonthKey = `${this.currentYear}-${String(this.currentMonth + 1).padStart(2, '0')}`;
+
+      // Если уже в текущем месяце – ничего не делаем
+      if (currentMonthKey === realMonthKey) return;
+
+      // Копируем задачи без отметок и с новыми id
+      const cleanTasks = this.tasks.map(task => ({
+        ...task,
+        id: Date.now() + Math.random(), // уникальный id
+        subtasks: task.subtasks.map(sub => ({
+          id: Date.now() + Math.random(),
+          marks: Array(this.daysInMonth).fill(null), // чистый массив
+        })),
+      }));
+
+      // Сохраняем в текущий реальный месяц
+      this.archive[realMonthKey] = { tasks: cleanTasks };
+      localStorage.setItem('habitArchive', JSON.stringify(this.archive));
+
+      // Переключаемся на текущий месяц
+      this.currentDate = new Date(this.realDate);
+      this.tasks = cleanTasks;
+      this.adaptMarksToNewMonth();
+      this.saveState();
+    },
   },
 });

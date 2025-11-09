@@ -45,7 +45,8 @@
     "deleteTask": "Eliminar tarea",
     "prevMonth": "Mes anterior",
     "nextMonth": "Mes siguiente",
-    "hideControl": "Ocultar menú"
+    "hideControl": "Ocultar menú",
+    "duplicateToCurrent": "Duplicar al mes actual"
   },
   "general": {
     "allAveragePer": "Promedio general",

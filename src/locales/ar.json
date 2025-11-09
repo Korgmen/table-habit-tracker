@@ -45,7 +45,8 @@
     "deleteTask": "حذف المهمة",
     "prevMonth": "الشهر السابق",
     "nextMonth": "الشهر التالي",
-    "hideControl": "إخفاء القائمة"
+    "hideControl": "إخفاء القائمة",
+    "duplicateToCurrent": "نسخ إلى الشهر الحالي"
   },
   "general": {
     "allAveragePer": "المتوسط العام",

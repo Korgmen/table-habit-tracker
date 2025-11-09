@@ -45,7 +45,8 @@
     "deleteTask": "删除任务",
     "prevMonth": "上个月",
     "nextMonth": "下个月",
-    "hideControl": "隐藏菜单"
+    "hideControl": "隐藏菜单",
+    "duplicateToCurrent": "复制到当前月"
   },
   "general": {
     "allAveragePer": "总平均值",

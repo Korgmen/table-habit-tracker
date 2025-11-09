@@ -45,7 +45,8 @@
     "deleteTask": "Delete task",
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
-    "hideControl": "Hide menu"
+    "hideControl": "Hide menu",
+    "duplicateToCurrent": "Duplicate to current month"
   },
   "general": {
     "allAveragePer": "General average",
