@@ -8,7 +8,7 @@
 </script>
 
 <template>
-  <div class="flex items-center">
+  <div class="hide-print flex items-center">
     <p
       class="-mr-0.5 flex h-8 w-fit cursor-default items-center justify-center self-start border-2 px-3 py-1.5 font-semibold italic"
     >
@@ -20,7 +20,7 @@
       {{ store.overallProgress }}%
     </p>
   </div>
-  <div class="flex items-center">
+  <div class="hide-print flex items-center">
     <p
       class="-mr-0.5 flex h-8 w-fit cursor-default items-center justify-center self-start border-2 px-3 py-1.5 font-semibold italic"
     >
