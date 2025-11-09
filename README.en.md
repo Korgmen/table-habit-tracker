@@ -6,12 +6,10 @@ A multifunctional habit tracker with support for tasks, subtasks, daily marks, d
 
 ## Multilingual Support
 - Supported languages: Russian, English, Arabic, Spanish, Chinese
-- All interface texts are localized (see `src/locales/index.json`)
+- All interface texts are localized (see `src/locales/`)
 - You can switch the app language in settings
-- To add new languages, extend `src/locales/index.json` and update the language selector
 
 ## Features
-
 - Add, edit, delete tasks and subtasks
 - Daily marks for each task/subtask
 - Month switching, archive view
@@ -20,24 +18,20 @@ A multifunctional habit tracker with support for tasks, subtasks, daily marks, d
 - Language switching (Russian/English/Arabic/Spanish/Chinese/System)
 - Drag&Drop for tasks (vue-draggable-next)
 - Responsive design, print support
-- **Week display settings:** week separators, choose week start (Monday/Sunday)
-- **Keyboard shortcuts** for quick control
+- Week display settings: week separators, choose week start (Monday/Sunday)
+- Keyboard shortcuts for quick control
 - All settings are saved between sessions
 
 ## Project Structure
-
 - `src/App.vue` — main application component
 - `src/main.js` — Vue, Pinia, i18n initialization
-- `src/stores/habitStore.js` — Pinia store: logic for tasks, progress, theme, language,
-  export/import, week settings
-- `src/locales/index.json` — localizations (ru, en)
-- `src/components/` — additional components (if any)
+- `src/stores/habitStore.js` — Pinia store: logic for tasks, progress, theme, language, export/import, week settings
+- `src/locales/` — localization files
+- `src/components/` — app components
 - `src/style.css` — TailwindCSS and global styles
-- `public/` — static files
 - Configs: `vite.config.js`, `eslint.config.js`, `.prettierrc`
 
 ## Quick Start
-
 ```sh
 pnpm install         # Install dependencies
 pnpm run dev         # Start development server
@@ -47,7 +41,6 @@ pnpm run format      # Format code
 ```
 
 ## Main dependencies
-
 - [Vue 3](https://vuejs.org/) — framework
 - [Vite](https://vitejs.dev/) — build tool
 - [Pinia](https://pinia.vuejs.org/) — state management
@@ -57,16 +50,13 @@ pnpm run format      # Format code
 - [lucide-vue-next](https://lucide.dev/) — icons
 
 ## Architecture & Logic
-
 - All task and mark data is stored in localStorage (archive by month)
-- Pinia store (`habitStore.js`) manages tasks, subtasks, progress, theme, language, export/import,
-  week settings
-- Localization via vue-i18n, translations in `src/locales/index.json`
+- Pinia store (`habitStore.js`) manages tasks, subtasks, progress, theme, language, export/import, week settings
+- Localization via vue-i18n, translations in `src/locales/`
 - Theme, language, week settings are persistent
 - Drag&Drop implemented via vue-draggable-next
 
 ## Keyboard Shortcuts
-
 - Escape — reset modes, close menu/settings
 - E — toggle eraser mode
 - D — toggle delete mode
@@ -75,12 +65,10 @@ pnpm run format      # Format code
 - S — open/close settings
 
 ## Contribution
-
 - Follow code style (Prettier, ESLint)
 - Use existing components and store
-- For new languages — add translations to `src/locales/index.json`
+- For new languages — add translations to `src/locales/`
 - Before pull request: `pnpm run lint && pnpm run format`
 
 ## License
-
-MIT
+Apache-2.0 – [LICENSE.txt](./LICENSE.txt)

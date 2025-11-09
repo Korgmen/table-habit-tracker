@@ -1,4 +1,4 @@
-## Table — 习惯追踪器 — Vue 3 + Vite
+## Table — 习惯追踪器 — Vue 3 + Vite (中文)
 
 多功能习惯追踪应用，支持任务、子任务、每日标记、数据导入导出、主题和语言切换。现代技术栈：Vue 3、Vite、Pinia、TailwindCSS、i18n、ESLint、Prettier。
 
@@ -6,9 +6,8 @@
 
 ## 多语言支持
 - 支持语言：俄语、英语、阿拉伯语、西班牙语、中文
-- 所有界面文本均已本地化（见 `src/locales/index.json`）
+- 所有界面文本均已本地化（见 `src/locales/`）
 - 可在设置中切换应用语言
-- 如需添加新语言，请扩展 `src/locales/index.json` 并更新语言选择器
 
 ## 功能
 - 添加、编辑、删除任务和子任务
@@ -27,10 +26,9 @@
 - `src/App.vue` — 应用主组件
 - `src/main.js` — Vue、Pinia、i18n 初始化
 - `src/stores/habitStore.js` — Pinia store：任务、进度、主题、语言、导入导出、周设置逻辑
-- `src/locales/index.json` — 本地化（ru, en, ar, es, zh）
-- `src/components/` — 其他组件（如有）
+- `src/locales/` — 本地化文件
+- `src/components/` — 应用组件
 - `src/style.css` — TailwindCSS 和全局样式
-- `public/` — 静态文件
 - 配置：`vite.config.js`、`eslint.config.js`、`.prettierrc`
 
 ## 快速开始
@@ -54,7 +52,7 @@ pnpm run format      # 代码格式化
 ## 架构与逻辑
 - 所有任务和标记数据存储在 localStorage（按月归档）
 - Pinia store (`habitStore.js`) 管理任务、子任务、进度、主题、语言、导入导出、周设置
-- 通过 vue-i18n 实现本地化，翻译在 `src/locales/index.json`
+- 通过 vue-i18n 实现本地化，翻译在 `src/locales/`
 - 主题、语言和周设置会持久化
 - 拖拽通过 vue-draggable-next 实现
 
@@ -69,8 +67,8 @@ pnpm run format      # 代码格式化
 ## 贡献
 - 遵循代码风格（Prettier, ESLint）
 - 使用现有组件和 store
-- 新语言请在 `src/locales/index.json` 添加翻译
+- 新语言请在 `src/locales/` 添加翻译
 - Pull request 前请运行：`pnpm run lint && pnpm run format`
 
 ## 许可证
-MIT
+Apache-2.0 – [LICENSE.txt](./LICENSE.txt)

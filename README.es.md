@@ -1,4 +1,4 @@
-## Table — Rastreador de hábitos — Vue 3 + Vite
+## Table — Rastreador de hábitos — Vue 3 + Vite (Español)
 
 Aplicación multifuncional para seguimiento de hábitos con soporte para tareas, subtareas, marcas diarias, exportación/importación de datos y cambio de tema e idioma. Stack moderno: Vue 3, Vite, Pinia, TailwindCSS, i18n, ESLint, Prettier.
 
@@ -6,9 +6,8 @@ Aplicación multifuncional para seguimiento de hábitos con soporte para tareas,
 
 ## Soporte multilingüe
 - Idiomas soportados: ruso, inglés, árabe, español, chino
-- Todos los textos de la interfaz están localizados (ver `src/locales/index.json`)
+- Todos los textos de la interfaz están localizados (ver `src/locales/`)
 - Puedes cambiar el idioma de la app en la configuración
-- Para agregar nuevos idiomas, extiende `src/locales/index.json` y actualiza el selector de idioma
 
 ## Características
 - Añadir, editar, eliminar tareas y subtareas
@@ -27,10 +26,9 @@ Aplicación multifuncional para seguimiento de hábitos con soporte para tareas,
 - `src/App.vue` — componente principal de la aplicación
 - `src/main.js` — inicialización de Vue, Pinia, i18n
 - `src/stores/habitStore.js` — Pinia store: lógica de tareas, progreso, tema, idioma, exportación/importación, configuración de semanas
-- `src/locales/index.json` — localizaciones (ru, en, ar, es, zh)
-- `src/components/` — componentes adicionales (si los hay)
+- `src/locales/` — archivos de localización
+- `src/components/` — componentes de la aplicación
 - `src/style.css` — TailwindCSS y estilos globales
-- `public/` — archivos estáticos
 - Configuración: `vite.config.js`, `eslint.config.js`, `.prettierrc`
 
 ## Inicio rápido
@@ -54,7 +52,7 @@ pnpm run format      # Formatear código
 ## Arquitectura y lógica
 - Todos los datos de tareas y marcas se almacenan en localStorage (archivo por mes)
 - Pinia store (`habitStore.js`) gestiona tareas, subtareas, progreso, tema, idioma, exportación/importación, configuración de semanas
-- Localización vía vue-i18n, traducciones en `src/locales/index.json`
+- Localización vía vue-i18n, traducciones en `src/locales/`
 - Tema, idioma y configuración de semanas son persistentes
 - Drag&Drop implementado con vue-draggable-next
 
@@ -69,8 +67,8 @@ pnpm run format      # Formatear código
 ## Contribución
 - Sigue el estilo de código (Prettier, ESLint)
 - Usa los componentes y store existentes
-- Para nuevos idiomas — añade traducciones en `src/locales/index.json`
+- Para nuevos idiomas — añade traducciones en `src/locales/`
 - Antes de pull request: `pnpm run lint && pnpm run format`
 
 ## Licencia
-MIT
+Apache-2.0 – [LICENSE.txt](./LICENSE.txt)
