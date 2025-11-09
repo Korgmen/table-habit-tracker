@@ -74,7 +74,7 @@
             <option value="en">English</option>
             <option value="ar">العربية</option>
             <option value="es">Español</option>
-            <option value="zh">导出/导入</option>
+            <option value="zh">中文</option>
           </select>
         </div>
         <div class="flex flex-col gap-1.5">
