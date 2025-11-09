@@ -128,38 +128,3 @@
     </div>
   </div>
 </template>
-
-<style scoped>
-  .fade-enter-active,
-  .fade-leave-active {
-    transition: opacity 0.25s;
-  }
-
-  .fade-enter-from,
-  .fade-leave-to {
-    opacity: 0;
-  }
-
-  .fade-enter-to,
-  .fade-leave-from {
-    opacity: 1;
-  }
-
-  @media print {
-    body,
-    #app {
-      background: white !important;
-      color: black !important;
-      display: block;
-    }
-
-    * {
-      opacity: 100% !important;
-    }
-
-    /* Скрыть все элементы управления, кроме таблицы и месяца/года */
-    .hide-print {
-      display: none !important;
-    }
-  }
-</style>
