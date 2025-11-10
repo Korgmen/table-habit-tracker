@@ -15,11 +15,6 @@
     'toggle-settings',
   ]);
 
-  /** Добавляет новую задачу */
-  const handleAddTask = () => {
-    store.addTask();
-  };
-
   /**
    * Проверяет, отображается ли текущий реальный месяц.
    * Если да — кнопка дублирования скрывается.
@@ -30,6 +25,25 @@
       store.currentYear === store.realDate.getFullYear()
     );
   });
+
+  /** Проверка: достигнуто ли максимальное количество задач */
+  const canAddTask = computed(() => store.tasks.length < 20);
+
+  /** Управляет добавлением задач */
+  const tryAddTask = () => {
+    if (canAddTask.value) {
+      /** Добавляет новую задачу */
+      store.addTask();
+    } else {
+      /** Показывает предупреждение, если задач уже 20 */
+      store.showModal({
+        type: 'alert',
+        title: t('modal.warning'),
+        message: t('taskLimit'),
+        onConfirm: () => store.closeModal(),
+      });
+    }
+  };
 </script>
 
 <template>
@@ -38,7 +52,11 @@
     <div v-if="menuOpen" class="grid grid-cols-2 gap-2">
       <button
         class="flex w-full items-center rounded bg-blue-500 px-3 py-2 text-white"
-        @click="handleAddTask"
+        :class="{
+          'cursor-not-allowed opacity-25': !canAddTask,
+          'cursor-pointer': canAddTask,
+        }"
+        @click="tryAddTask"
       >
         <Plus class="mr-2 w-5" />
         {{ t('control.newTask') }}
@@ -124,9 +142,13 @@
       </button>
 
       <button
-        class="relative flex h-8 cursor-pointer items-center justify-center border-2 px-1.5"
-        @click="handleAddTask"
-        :title="t('control.newTask')"
+        class="relative flex h-8 items-center justify-center border-2 px-1.5 transition-all duration-300 ease-in-out"
+        :class="{
+          'cursor-not-allowed opacity-25': !canAddTask,
+          'cursor-pointer': canAddTask,
+        }"
+        :title="canAddTask ? t('control.newTask') : t('taskLimit')"
+        @click="tryAddTask"
       >
         <Plus class="w-5" />
       </button>

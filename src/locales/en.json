@@ -63,6 +63,8 @@
   "modal": {
     "confirm": "Confirm",
     "cancel": "Cancel",
-    "ok": "OK"
-  }
+    "ok": "OK",
+    "warning": "Warning"
+  },
+  "taskLimit": "Maximum number of tasks reached"
 }

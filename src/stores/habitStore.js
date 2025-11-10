@@ -133,6 +133,10 @@ export const useHabitStore = defineStore('habit', {
 
     /** Добавляет новую задачу с одной подзадачей */
     addTask() {
+      if (this.tasks.length >= 20) {
+        return;
+      }
+
       const id = Date.now();
       this.tasks.push({
         id,

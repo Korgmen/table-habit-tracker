@@ -63,6 +63,8 @@
   "modal": {
     "confirm": "确认",
     "cancel": "取消",
-    "ok": "确定"
-  }
+    "ok": "确定",
+    "warning": "警告"
+  },
+  "taskLimit": "已达到最大任务数量"
 }
