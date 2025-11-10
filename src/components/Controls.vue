@@ -1,4 +1,3 @@
-<!-- src/components/Controls.vue -->
 <script setup>
   import { ref, computed } from 'vue';
   import { useHabitStore } from '../stores/habitStore';
@@ -7,13 +6,24 @@
 
   const store = useHabitStore();
   const { t } = useI18n();
-  const menuOpen = ref(false);
-  const emit = defineEmits(['toggle-settings']);
 
+  /** Состояние мобильного меню (открыто/закрыто) */
+  const menuOpen = ref(false);
+
+  const emit = defineEmits([
+    /** Запрос переключения окна настроек */
+    'toggle-settings',
+  ]);
+
+  /** Добавляет новую задачу */
   const handleAddTask = () => {
     store.addTask();
   };
 
+  /**
+   * Проверяет, отображается ли текущий реальный месяц.
+   * Если да — кнопка дублирования скрывается.
+   */
   const isCurrentMonth = computed(() => {
     return (
       store.currentMonth === store.realDate.getMonth() &&
@@ -83,7 +93,7 @@
       </button>
     </div>
 
-    <!-- Кнопка открытия меню (моб.) -->
+    <!-- Кнопка открытия мобильного меню -->
     <button
       v-else
       class="flex items-center rounded bg-blue-500 px-4 py-2 text-white md:hidden"

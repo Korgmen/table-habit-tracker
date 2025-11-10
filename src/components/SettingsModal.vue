@@ -1,4 +1,3 @@
-<!-- src/components/Settings.vue -->
 <script setup>
   import { useHabitStore } from '../stores/habitStore';
   import { ref } from 'vue';
@@ -6,19 +5,28 @@
   import { X, Upload, Download, Printer } from 'lucide-vue-next';
 
   defineProps({
+    /** Открыто ли окно настроек */
     isOpen: Boolean,
+    /** Текущая тема (light/dark) */
     currentTheme: String,
   });
 
-  const emit = defineEmits(['close', 'import', 'print']);
+  const emit = defineEmits([
+    /** Закрытие окна */
+    'close',
+    /** Запрос импорта */
+    'import',
+    /** Запрос печати */
+    'print',
+  ]);
 
   const store = useHabitStore();
   const { t, locale } = useI18n();
+
+  /** Локальная копия выбранного языка для синхронизации с select */
   const lang = ref(store.lang);
 
-  /**
-   * Изменяет язык приложения.
-   */
+  /** Сохраняет выбранный язык и обновляет локаль i18n */
   const changeLang = () => {
     store.setLang(lang.value);
     let systemLang = 'en';
@@ -30,20 +38,24 @@
     locale.value = lang.value === 'system' ? systemLang : lang.value;
   };
 
+  /** Передаёт событие импорта вверх */
   const handleImport = () => {
     emit('import');
   };
 
+  /** Передаёт событие печати вверх */
   const handlePrint = () => {
     emit('print');
   };
 </script>
 
 <template>
+  <!-- Окно настроек -->
   <div
     class="hide-print absolute top-0 right-0 z-50 w-fit border-3 p-4"
     :class="currentTheme === 'dark' ? 'bg-[#292929] text-[#FFF8F0]' : 'bg-white text-[#12130F]'"
   >
+    <!-- Кнопка закрытия -->
     <button
       class="absolute top-2 right-2 cursor-pointer"
       :aria-label="t('settings.close')"
@@ -51,9 +63,13 @@
     >
       <X class="h-5 w-5" />
     </button>
+
     <div class="flex flex-col gap-5">
+      <!-- Основные настройки -->
       <div class="grid grid-cols-[repeat(2,1fr)] gap-2.5">
         <h3 class="col-span-2 text-lg font-semibold">{{ t('settings.title') }}</h3>
+
+        <!-- Выбор темы -->
         <div class="flex flex-col gap-1.5">
           <label class="block">{{ t('settings.theme.title') }}</label>
           <select
@@ -66,6 +82,8 @@
             <option value="dark">{{ t('settings.theme.dark') }}</option>
           </select>
         </div>
+
+        <!-- Выбор языка -->
         <div class="flex flex-col gap-1.5">
           <label class="block">{{ t('settings.lang.title') }}</label>
           <select v-model="lang" class="w-full border-2 p-1" @change="changeLang">
@@ -77,6 +95,8 @@
             <option value="zh">中文</option>
           </select>
         </div>
+
+        <!-- Экспорт/импорт -->
         <div class="flex flex-col gap-1.5">
           <label class="block">{{ t('settings.expImp.title') }}</label>
           <div class="flex items-center gap-1.5">
@@ -94,6 +114,8 @@
             </button>
           </div>
         </div>
+
+        <!-- Печать -->
         <div class="flex flex-col gap-1.5">
           <label class="block">{{ t('settings.print.title') }}</label>
           <div class="flex items-center gap-1.5">
@@ -105,6 +127,8 @@
             </button>
           </div>
         </div>
+
+        <!-- Показ разделителей недель -->
         <div class="flex flex-col gap-1.5">
           <label class="block">{{ t('settings.showWeek.title') }}</label>
           <label class="flex items-center gap-2">
@@ -115,6 +139,8 @@
             />
             {{ t('settings.showWeek.checkbox') }}
           </label>
+
+          <!-- Начало недели (если включены разделители) -->
           <div v-if="store.showWeekSeparators" class="col-span-2 mt-1.5 flex flex-col gap-1.5">
             <label class="block">{{ t('settings.weekStart.title') }}</label>
             <select
@@ -128,6 +154,8 @@
           </div>
         </div>
       </div>
+
+      <!-- Горячие клавиши -->
       <div class="flex flex-col gap-2.5">
         <h3 class="text-lg font-semibold">{{ t('settings.hotkeys.title') }}</h3>
         <div class="flex flex-col gap-1.5">

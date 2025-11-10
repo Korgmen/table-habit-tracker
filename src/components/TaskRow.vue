@@ -1,4 +1,3 @@
-<!-- src/components/TaskRow.vue -->
 <script setup>
   import { ref, computed, nextTick } from 'vue';
   import { useHabitStore } from '../stores/habitStore';
@@ -7,6 +6,7 @@
   import TaskDay from './TaskDay.vue';
 
   const props = defineProps({
+    /** Объект задачи */
     task: {
       type: Object,
       required: true,
@@ -15,23 +15,29 @@
 
   const store = useHabitStore();
   const { t } = useI18n();
+
+  /** Массив дней текущего месяца (1 … daysInMonth) */
   const days = computed(() => Array.from({ length: store.daysInMonth }, (_, i) => i + 1));
+
+  /** День недели, считающийся концом недели (0 – воскресенье, 6 – суббота) */
   const weekEndDay = computed(() => (store.weekStart === 'monday' ? 0 : 6));
+
+  /** Текст редактируемого заголовка задачи */
   const editingTitle = ref('');
+
+  /** Ссылка на input редактирования */
   const editInput = ref(null);
+
+  /** Таймер для обработки долгого нажатия */
   const longPressTimer = ref(null);
 
-  /**
-   * Проверяет, является ли день концом недели.
-   */
+  /** Определяет, является ли указанный день концом недели */
   const isEndOfWeek = day => {
     const date = new Date(store.currentYear, store.currentMonth, day);
     return store.showWeekSeparators && date.getDay() === weekEndDay.value;
   };
 
-  /**
-   * Начинает редактирование задачи.
-   */
+  /** Запускает режим редактирования заголовка задачи */
   const startEditingTask = () => {
     if (store.activeMode !== 'delete') {
       store.startEditing(props.task.id);
@@ -42,36 +48,29 @@
     }
   };
 
+  /** Устанавливает ссылку на input редактирования */
   const setEditInput = el => {
     if (el) editInput.value = el;
   };
 
-  /**
-   * Завершает редактирование задачи.
-   */
+  /** Завершает редактирование заголовка задачи */
   const finishEditingTask = () => {
     store.finishEditing(props.task.id, editingTitle.value);
   };
 
-  /**
-   * Обрабатывает событие blur или Enter для инпута редактирования.
-   */
+  /** Обрабатывает blur или Enter в поле редактирования */
   const handleBlurOrEnter = event => {
     if (event.type === 'blur' || event.key === 'Enter') {
       finishEditingTask();
     }
   };
 
-  /**
-   * Выделяет весь текст в инпуте.
-   */
+  /** Выделяет весь текст в input при получении фокуса */
   const selectAll = event => {
     event.target.select();
   };
 
-  /**
-   * Возвращает CSS-класс для отметки подзадачи.
-   */
+  /** Возвращает CSS-классы для отметки подзадачи в конкретный день */
   const getMarkClass = (subtaskId, dayIndex) => {
     const subtask = props.task.subtasks.find(s => s.id === subtaskId);
     if (!subtask || dayIndex >= store.today) return 'cursor-not-allowed';
@@ -81,9 +80,7 @@
     return 'cursor-pointer';
   };
 
-  /**
-   * Обрабатывает клик по отметке.
-   */
+  /** Обрабатывает клик по отметке дня */
   const handleMarkClick = (subtaskId, dayIndex, event) => {
     if (dayIndex >= store.today) return;
     if (store.activeMode === 'eraser') {
@@ -98,9 +95,7 @@
     }
   };
 
-  /**
-   * Обработка долгого нажатия (touch start).
-   */
+  /** Запускает таймер долгого нажатия (touch) */
   const handleTouchStart = (subtaskId, dayIndex) => {
     if (dayIndex < store.today) {
       longPressTimer.value = setTimeout(() => {
@@ -109,9 +104,7 @@
     }
   };
 
-  /**
-   * Обработка конца touch.
-   */
+  /** Очищает таймер и, при необходимости, обрабатывает обычный клик */
   const handleTouchEnd = (subtaskId, dayIndex) => {
     if (longPressTimer.value) {
       clearTimeout(longPressTimer.value);
@@ -120,9 +113,7 @@
     }
   };
 
-  /**
-   * Добавляет подзадачу.
-   */
+  /** Добавляет новую подзадачу к текущей задаче */
   const handleAddSubtask = () => {
     store.addSubtask(props.task.id);
   };
@@ -130,12 +121,12 @@
 
 <template>
   <div class="relative flex flex-col items-center gap-2.5 border-t-3 px-5 pt-2.5 pb-[15px]">
-    <div
-      class="hide-print absolute top-1.5 right-[5px] text-[12px] font-bold"
-      :rowspan="task.subtasks.length"
-    >
+    <!-- Процент выполнения задачи -->
+    <div class="hide-print absolute top-1.5 right-[5px] text-[12px] font-bold">
       {{ task.progress }}%
     </div>
+
+    <!-- Кнопки добавления/удаления подзадач -->
     <div class="hide-print absolute top-1.5 left-[5px] flex gap-1">
       <button
         class="relative flex h-6 items-center justify-center border-2 px-0.5 transition-all duration-300 ease-in-out"
@@ -148,6 +139,7 @@
       >
         <Plus class="h-4 w-4" />
       </button>
+
       <transition name="fade" mode="out-in">
         <button
           v-if="task.subtasks.length > 1"
@@ -159,7 +151,9 @@
         </button>
       </transition>
     </div>
-    <div class="relative flex items-center" :rowspan="task.subtasks.length">
+
+    <!-- Заголовок задачи -->
+    <div class="relative flex items-center">
       <span
         v-if="store.editingTaskId !== task.id"
         class="cursor-text text-[18px] font-bold"
@@ -167,6 +161,7 @@
       >
         {{ task.title }}
       </span>
+
       <input
         v-if="store.editingTaskId === task.id"
         :ref="setEditInput"
@@ -176,6 +171,8 @@
         @keyup="handleBlurOrEnter"
         @focus="selectAll"
       />
+
+      <!-- Перемещение / удаление задачи -->
       <transition
         mode="out-in"
         enter-active-class="transition ease-out duration-200"
@@ -193,6 +190,7 @@
         >
           <GripVertical class="absolute w-4" />
         </div>
+
         <button
           v-else
           key="delete"
@@ -204,6 +202,8 @@
         </button>
       </transition>
     </div>
+
+    <!-- Дни месяца с отметками подзадач -->
     <div class="flex items-end-safe gap-2">
       <TaskDay
         v-for="(day, index) in days"

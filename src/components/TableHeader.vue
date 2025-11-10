@@ -1,10 +1,11 @@
-<!-- src/components/TableHeader.vue -->
 <script setup>
   import { computed } from 'vue';
   import { useHabitStore } from '../stores/habitStore';
   import HeaderDay from './HeaderDay.vue';
 
   const store = useHabitStore();
+
+  /** Массив всех дней текущего месяца (1 … daysInMonth) */
   const days = computed(() => Array.from({ length: store.daysInMonth }, (_, i) => i + 1));
 </script>
 

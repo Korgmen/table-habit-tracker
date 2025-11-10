@@ -1,10 +1,13 @@
+/** Базовые стили документа */
 body {
   font-family: 'Inter';
   line-height: 1;
 }
 
+/** Подключение Tailwind CSS */
 @import 'tailwindcss';
 
+/** Анимация плавного появления/исчезновения (используется в v-if/v-show) */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.25s;
@@ -20,8 +23,9 @@ body {
   opacity: 1;
 }
 
+/** Стили печати: упрощение интерфейса, удаление фона и лишних элементов */
 @media print {
-
+  /** Принудительно белый фон и чёрный текст */
   body,
   #app {
     background: white !important;
@@ -29,11 +33,12 @@ body {
     display: block;
   }
 
+    /** Все элементы должны быть видимыми (включая те, что были полупрозрачными) */
   * {
     opacity: 100% !important;
   }
 
-  /* Скрыть все элементы управления, кроме таблицы и месяца/года */
+    /** Скрывает все элементы управления, оставляя только таблицу и заголовок месяца/года */
   .hide-print {
     display: none !important;
   }

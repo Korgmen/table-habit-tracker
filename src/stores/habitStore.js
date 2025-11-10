@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 
+/** Хранилище состояния приложения "Трекер привычек" */
 export const useHabitStore = defineStore('habit', {
   state: () => {
     const realDate = new Date();
@@ -9,18 +10,30 @@ export const useHabitStore = defineStore('habit', {
     const savedTheme = localStorage.getItem('theme') || 'system';
     const savedLang = localStorage.getItem('lang') || 'system';
     const savedWeekStart = localStorage.getItem('weekStart') || 'monday';
-    const savedShowWeekSeparators = localStorage.getItem('showWeekSeparators') !== 'false'; // По умолчанию true
+    const savedShowWeekSeparators = localStorage.getItem('showWeekSeparators') !== 'false';
+
     return {
+      /** Реальная текущая дата (не меняется при переключении месяцев) */
       realDate,
+      /** Текущая отображаемая дата (может быть прошлым/будущим месяцем) */
       currentDate: realDate,
+      /** Архив всех месяцев: { 'YYYY-MM': { tasks: [...] } } */
       archive,
+      /** Задачи текущего отображаемого месяца */
       tasks: archive[currentMonthKey]?.tasks || [],
+      /** ID задачи, находящейся в режиме редактирования */
       editingTaskId: null,
+      /** Активный режим взаимодействия: null | 'delete' | 'eraser' */
       activeMode: null,
+      /** Текущая тема: 'light' | 'dark' | 'system' */
       theme: savedTheme,
+      /** Язык интерфейса: 'ru' | 'en' | 'ar' | 'es' | 'zh' | 'system' */
       lang: savedLang,
+      /** День начала недели: 'monday' | 'sunday' */
       weekStart: savedWeekStart,
+      /** Показывать ли вертикальные разделители недель */
       showWeekSeparators: savedShowWeekSeparators,
+      /** Состояние глобального модального окна */
       modal: {
         isOpen: false,
         title: '',
@@ -29,17 +42,26 @@ export const useHabitStore = defineStore('habit', {
         onConfirm: null,
         onCancel: null,
       },
+      /** Флаг: видел ли пользователь приветственное сообщение */
       hasSeenWelcome: localStorage.getItem('hasSeenWelcome') === 'true',
     };
   },
+
   getters: {
+    /** Текущий месяц (0–11) */
     currentMonth: state => state.currentDate.getMonth(),
+
+    /** Текущий год */
     currentYear: state => state.currentDate.getFullYear(),
+
+    /** Количество дней в текущем месяце */
     daysInMonth: state => {
       const year = state.currentYear;
       const month = state.currentMonth;
       return new Date(year, month + 1, 0).getDate();
     },
+
+    /** Название текущего месяца с заглавной буквы */
     monthName: state => {
       let lang = 'en';
       if (state.lang === 'system') {
@@ -56,6 +78,8 @@ export const useHabitStore = defineStore('habit', {
       });
       return month.charAt(0).toUpperCase() + month.slice(1);
     },
+
+    /** Номер текущего дня в месяце (или последний день, если просматриваем прошлый месяц) */
     today: state => {
       const today = state.realDate.getDate();
       return state.currentMonth === state.realDate.getMonth() &&
@@ -63,6 +87,8 @@ export const useHabitStore = defineStore('habit', {
         ? today
         : state.daysInMonth;
     },
+
+    /** Средний процент выполнения всех задач */
     overallProgress: state => {
       if (state.tasks.length === 0) return 0.0;
       const totalProgress = state.tasks.reduce(
@@ -71,6 +97,8 @@ export const useHabitStore = defineStore('habit', {
       );
       return (totalProgress / state.tasks.length).toFixed(1);
     },
+
+    /** Оценка по 5-балльной шкале на основе среднего прогресса */
     overallGrade: state => {
       const progress = parseFloat(state.overallProgress);
       if (isNaN(progress)) return '2';
@@ -80,10 +108,9 @@ export const useHabitStore = defineStore('habit', {
       return '2';
     },
   },
+
   actions: {
-    /**
-     * Получает дефолтный заголовок задачи на основе языка.
-     */
+    /** Возвращает локализованный заголовок по умолчанию для новой задачи */
     getDefaultTaskTitle() {
       let currentLang = this.lang;
       if (currentLang === 'system') {
@@ -103,9 +130,8 @@ export const useHabitStore = defineStore('habit', {
       };
       return titles[currentLang] || 'New task';
     },
-    /**
-     * Добавляет новую задачу.
-     */
+
+    /** Добавляет новую задачу с одной подзадачей */
     addTask() {
       const id = Date.now();
       this.tasks.push({
@@ -116,9 +142,8 @@ export const useHabitStore = defineStore('habit', {
       });
       this.saveState();
     },
-    /**
-     * Добавляет подзадачу к задаче.
-     */
+
+    /** Добавляет подзадачу к указанной задаче (максимум 8) */
     addSubtask(taskId) {
       const task = this.tasks.find(t => t.id === taskId);
       if (task && task.subtasks.length < 8) {
@@ -130,15 +155,13 @@ export const useHabitStore = defineStore('habit', {
         this.saveState();
       }
     },
-    /**
-     * Начинает редактирование задачи.
-     */
+
+    /** Начинает редактирование заголовка задачи */
     startEditing(taskId) {
       this.editingTaskId = taskId;
     },
-    /**
-     * Завершает редактирование задачи с экранированием HTML.
-     */
+
+    /** Завершает редактирование с экранированием HTML и сохранением */
     finishEditing(taskId, newTitle) {
       const task = this.tasks.find(t => t.id === taskId);
       if (task) {
@@ -159,9 +182,8 @@ export const useHabitStore = defineStore('habit', {
         this.saveState();
       }
     },
-    /**
-     * Обновляет прогресс задачи.
-     */
+
+    /** Пересчитывает прогресс задачи на основе отметок подзадач */
     updateTaskProgress(taskId) {
       const task = this.tasks.find(t => t.id === taskId);
       if (task && task.subtasks.length > 0) {
@@ -188,9 +210,8 @@ export const useHabitStore = defineStore('habit', {
       }
       this.saveState();
     },
-    /**
-     * Обновляет отметку подзадачи.
-     */
+
+    /** Обновляет отметку в конкретный день подзадачи */
     updateMark(taskId, subtaskId, dayIndex, state) {
       const task = this.tasks.find(t => t.id === taskId);
       if (task) {
@@ -201,9 +222,8 @@ export const useHabitStore = defineStore('habit', {
         }
       }
     },
-    /**
-     * Обновляет отметки для всех задач в выбранный день.
-     */
+
+    /** Устанавливает одинаковую отметку для всех подзадач в выбранный день */
     updateHeaderDay(dayIndex, state) {
       this.tasks.forEach(task => {
         task.subtasks.forEach(subtask => {
@@ -214,16 +234,14 @@ export const useHabitStore = defineStore('habit', {
       });
       this.tasks.forEach(task => this.updateTaskProgress(task.id));
     },
-    /**
-     * Удаляет задачу.
-     */
+
+    /** Удаляет задачу по ID */
     deleteTask(taskId) {
       this.tasks = this.tasks.filter(t => t.id !== taskId);
       this.saveState();
     },
-    /**
-     * Удаляет последнюю подзадачу.
-     */
+
+    /** Удаляет последнюю подзадачу у задачи */
     deleteLastSubtask(taskId) {
       const task = this.tasks.find(t => t.id === taskId);
       if (task && task.subtasks.length > 1) {
@@ -232,16 +250,14 @@ export const useHabitStore = defineStore('habit', {
         this.saveState();
       }
     },
-    /**
-     * Переключает режим (delete/eraser).
-     */
+
+    /** Переключает активный режим (удаление/стирание) */
     toggleMode(mode) {
       this.activeMode = this.activeMode === mode ? null : mode;
       this.saveState();
     },
-    /**
-     * Стирает отметку.
-     */
+
+    /** Стирает отметку в указанный день */
     eraseMark(taskId, subtaskId, dayIndex) {
       const task = this.tasks.find(t => t.id === taskId);
       if (task && dayIndex < this.today) {
@@ -252,9 +268,8 @@ export const useHabitStore = defineStore('habit', {
         }
       }
     },
-    /**
-     * Сохраняет состояние в localStorage.
-     */
+
+    /** Сохраняет текущее состояние в localStorage */
     saveState() {
       const currentMonthKey = `${this.currentYear}-${String(this.currentMonth + 1).padStart(2, '0')}`;
       this.archive[currentMonthKey] = { tasks: this.tasks };
@@ -264,9 +279,8 @@ export const useHabitStore = defineStore('habit', {
       localStorage.setItem('weekStart', this.weekStart);
       localStorage.setItem('showWeekSeparators', this.showWeekSeparators);
     },
-    /**
-     * Переход к предыдущему месяцу.
-     */
+
+    /** Переход к предыдущему месяцу с сохранением и адаптацией данных */
     prevMonth() {
       const newDate = new Date(this.currentDate);
       newDate.setMonth(this.currentMonth - 1);
@@ -277,9 +291,8 @@ export const useHabitStore = defineStore('habit', {
       this.adaptMarksToNewMonth();
       this.saveState();
     },
-    /**
-     * Переход к следующему месяцу.
-     */
+
+    /** Переход к следующему месяцу (не дальше текущего реального) */
     nextMonth() {
       const newDate = new Date(this.currentDate);
       newDate.setMonth(this.currentMonth + 1);
@@ -292,9 +305,8 @@ export const useHabitStore = defineStore('habit', {
       this.adaptMarksToNewMonth();
       this.saveState();
     },
-    /**
-     * Адаптирует отметки к новому месяцу.
-     */
+
+    /** Адаптирует массивы отметок под новый размер месяца */
     adaptMarksToNewMonth() {
       const newDays = this.daysInMonth;
       this.tasks.forEach(task => {
@@ -309,9 +321,8 @@ export const useHabitStore = defineStore('habit', {
         this.updateTaskProgress(task.id);
       });
     },
-    /**
-     * Экспортирует данные в файл.
-     */
+
+    /** Экспортирует весь архив как JSON-файл */
     exportData() {
       const dataStr =
         'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(this.archive));
@@ -322,9 +333,8 @@ export const useHabitStore = defineStore('habit', {
       downloadAnchorNode.click();
       downloadAnchorNode.remove();
     },
-    /**
-     * Импортирует данные из файла с валидацией.
-     */
+
+    /** Импортирует архив из файла с проверкой размера и структуры */
     importData(event) {
       const file = event.target.files[0];
       if (file) {
@@ -354,43 +364,40 @@ export const useHabitStore = defineStore('habit', {
         event.target.value = '';
       }
     },
-    /**
-     * Валидация структуры архива.
-     */
+
+    /** Проверяет корректность структуры импортируемого архива */
     validateArchive(archive) {
       return (
         typeof archive === 'object' &&
         Object.values(archive).every(month => month.tasks && Array.isArray(month.tasks))
       );
     },
-    /**
-     * Устанавливает тему.
-     */
+
+    /** Устанавливает тему и сохраняет в localStorage */
     setTheme(newTheme) {
       this.theme = newTheme;
       this.saveState();
     },
+
+    /** Устанавливает язык интерфейса */
     setLang(newLang) {
       this.lang = newLang;
       localStorage.setItem('lang', newLang);
     },
-    /**
-     * Устанавливает начало недели.
-     */
+
+    /** Устанавливает день начала недели */
     setWeekStart(newWeekStart) {
       this.weekStart = newWeekStart;
       this.saveState();
     },
-    /**
-     * Устанавливает отображение разделителей недель.
-     */
+
+    /** Включает/выключает отображение разделителей недель */
     setShowWeekSeparators(newValue) {
       this.showWeekSeparators = newValue;
       this.saveState();
     },
-    /**
-     * Обработка долгого нажатия.
-     */
+
+    /** Обрабатывает долгое нажатие — ставит отметку "исключено" */
     handleLongPress(taskId, subtaskId, dayIndex) {
       if (dayIndex < this.today) {
         const task = this.tasks.find(t => t.id === taskId);
@@ -405,7 +412,7 @@ export const useHabitStore = defineStore('habit', {
     },
 
     /**
-     * Показывает модал с опциями.
+     * Открывает модальное окно с заданными параметрами.
      * @param {Object} options - { type: 'alert'|'confirm'|'custom', title, message, onConfirm, onCancel }
      */
     showModal(options) {
@@ -416,9 +423,7 @@ export const useHabitStore = defineStore('habit', {
       };
     },
 
-    /**
-     * Закрывает модал и очищает состояние.
-     */
+    /** Закрывает модальное окно и сбрасывает его состояние */
     closeModal() {
       this.modal = {
         isOpen: false,
@@ -430,10 +435,7 @@ export const useHabitStore = defineStore('habit', {
       };
     },
 
-    /**
-     * Дублирует задачи текущего месяца в текущий реальный месяц (без отметок).
-     * После дублирования переключает приложение на текущий месяц.
-     */
+    /** Дублирует задачи текущего месяца в текущий реальный (без отметок) */
     duplicateToCurrentMonth() {
       this.showModal({
         type: 'confirm',
@@ -465,6 +467,8 @@ export const useHabitStore = defineStore('habit', {
         },
       });
     },
+
+    /** Показывает приветственное сообщение, если пользователь его ещё не видел */
     showWelcomeIfNeeded() {
       if (!this.hasSeenWelcome) {
         this.showModal({

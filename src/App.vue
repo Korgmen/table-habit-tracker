@@ -1,4 +1,3 @@
-<!-- src/App.vue -->
 <script setup>
   import { useHabitStore } from './stores/habitStore';
   import { ref, onMounted, onUnmounted, computed } from 'vue';
@@ -11,11 +10,16 @@
 
   const store = useHabitStore();
   const { t } = useI18n();
+
+  /** Ссылка на скрытый input для импорта файла */
   const importInput = ref(null);
+
+  /** Состояние открытия окна настроек */
   const settingsOpen = ref(false);
 
   /**
-   * Обрабатывает нажатие клавиш.
+   * Обрабатывает глобальные горячие клавиши.
+   * Игнорирует ввод в полях ввода.
    */
   const handleKeydown = event => {
     if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') return;
@@ -45,15 +49,14 @@
     keyActions[event.code]?.();
   };
 
-  /**
-   * Открывает диалог импорта.
-   */
+  /** Открывает системный диалог выбора файла для импорта */
   const handleImport = () => {
     importInput.value.click();
   };
 
   /**
-   * Проверка возможности перехода к следующему месяцу.
+   * Определяет, можно ли перейти к следующему месяцу.
+   * Доступно только для месяцев не позже текущего реального.
    */
   const canNextMonth = computed(() => {
     const newDate = new Date(store.currentDate);
@@ -63,9 +66,7 @@
     return newMonthKey <= realMonthKey;
   });
 
-  /**
-   * Определяет текущую тему.
-   */
+  /** Определяет текущую тему (light/dark) на основе настроек и системных предпочтений */
   const currentTheme = computed(() => {
     if (store.theme === 'system') {
       return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -73,15 +74,16 @@
     return store.theme;
   });
 
-  /**
-   * Открывает окно печати.
-   */
+  /** Инициирует печать страницы */
   const handlePrint = () => {
     window.print();
   };
 
+  /** Подписка на глобальные клавиатурные события */
   onMounted(() => {
     window.addEventListener('keydown', handleKeydown);
+
+    /** Показывает приветственное модальное окно при первом запуске */
     if (!localStorage.getItem('hasSeenWelcome')) {
       store.showModal({
         type: 'alert',
@@ -95,19 +97,21 @@
     }
   });
 
+  /** Очистка глобального обработчика клавиш */
   onUnmounted(() => {
     window.removeEventListener('keydown', handleKeydown);
   });
 </script>
 
 <template>
+  <!-- Корневой контейнер с применением темы -->
   <div
     id="app"
     class="flex min-h-screen justify-center"
     :class="currentTheme === 'dark' ? 'bg-[#292929] text-[#FFF8F0]' : 'bg-white text-[#12130F]'"
   >
     <div class="relative mx-auto my-5 flex w-fit flex-col gap-2.5">
-      <!-- Header с настройками, месяцем, статистикой и контролами -->
+      <!-- Шапка: месяц, статистика, управление -->
       <Header
         :settingsOpen="settingsOpen"
         :currentTheme="currentTheme"
@@ -119,7 +123,10 @@
       <!-- Таблица привычек -->
       <div class="overflow-x-auto">
         <div class="border-3 select-none">
+          <!-- Заголовки дней -->
           <TableHeader />
+
+          <!-- Перетаскиваемый список задач -->
           <VueDraggableNext
             v-model="store.tasks"
             item-key="id"
@@ -132,6 +139,8 @@
           </VueDraggableNext>
         </div>
       </div>
+
+      <!-- Скрытый input для импорта JSON-файла -->
       <input
         ref="importInput"
         type="file"
@@ -140,6 +149,8 @@
         @change="store.importData"
       />
     </div>
+
+    <!-- Глобальное модальное окно -->
     <Modal />
   </div>
 </template>
