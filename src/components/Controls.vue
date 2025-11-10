@@ -7,7 +7,7 @@
 
   const store = useHabitStore();
   const { t } = useI18n();
-  const { showTaskLimit } = useModals(t);
+  const { showTaskLimit, confirmDuplicateToCurrent } = useModals(t);
 
   /** Состояние мобильного меню (открыто/закрыто) */
   const menuOpen = ref(false);
@@ -90,7 +90,7 @@
       <button
         v-if="!isCurrentMonth"
         class="flex w-full items-center rounded bg-indigo-500 px-3 py-2 text-white"
-        @click="store.duplicateToCurrentMonth"
+        @click="confirmDuplicateToCurrent"
       >
         <Copy class="mr-2 w-5" />
         {{ t('control.duplicateToCurrent') }}
@@ -157,7 +157,7 @@
       <button
         v-if="!isCurrentMonth"
         class="relative flex h-8 cursor-pointer items-center justify-center border-2 px-1.5"
-        @click="store.duplicateToCurrentMonth"
+        @click="confirmDuplicateToCurrent"
         :title="t('control.duplicateToCurrent')"
       >
         <Copy class="w-5" />

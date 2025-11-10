@@ -42,8 +42,6 @@ export const useHabitStore = defineStore('habit', {
         onConfirm: null,
         onCancel: null,
       },
-      /** Флаг: видел ли пользователь приветственное сообщение */
-      hasSeenWelcome: localStorage.getItem('hasSeenWelcome') === 'true',
     };
   },
 
@@ -438,55 +436,6 @@ export const useHabitStore = defineStore('habit', {
         onConfirm: null,
         onCancel: null,
       };
-    },
-
-    /** Дублирует задачи текущего месяца в текущий реальный (без отметок) */
-    duplicateToCurrentMonth() {
-      this.showModal({
-        type: 'confirm',
-        title: 'Подтвердите дублирование',
-        message: 'Задачи выбранного месяца будут скопированы в текущий (с заменой)',
-        onConfirm: async () => {
-          const realMonthKey = `${this.realDate.getFullYear()}-${String(this.realDate.getMonth() + 1).padStart(2, '0')}`;
-          const currentMonthKey = `${this.currentYear}-${String(this.currentMonth + 1).padStart(2, '0')}`;
-
-          if (currentMonthKey === realMonthKey) return;
-
-          const cleanTasks = this.tasks.map(task => ({
-            ...task,
-            id: Date.now() + Math.random(),
-            subtasks: task.subtasks.map(sub => ({
-              id: Date.now() + Math.random(),
-              marks: Array(this.daysInMonth).fill(null),
-            })),
-          }));
-
-          this.archive[realMonthKey] = { tasks: cleanTasks };
-          localStorage.setItem('habitArchive', JSON.stringify(this.archive));
-
-          this.currentDate = new Date(this.realDate);
-          this.tasks = cleanTasks;
-          this.adaptMarksToNewMonth();
-          this.saveState();
-          this.closeModal();
-        },
-      });
-    },
-
-    /** Показывает приветственное сообщение, если пользователь его ещё не видел */
-    showWelcomeIfNeeded() {
-      if (!this.hasSeenWelcome) {
-        this.showModal({
-          type: 'alert',
-          title: this.$i18n.t('welcome.title'),
-          message: this.$i18n.t('welcome.message'),
-          onConfirm: () => {
-            this.hasSeenWelcome = true;
-            localStorage.setItem('hasSeenWelcome', 'true');
-            this.closeModal();
-          },
-        });
-      }
     },
   },
 });

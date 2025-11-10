@@ -66,5 +66,9 @@
     "ok": "OK",
     "warning": "Advertencia"
   },
+  "duplicate": {
+    "title": "Confirmar duplicación",
+    "message": "Las tareas del mes seleccionado se copiarán al mes actual (reemplazando las existentes)"
+  },
   "taskLimit": "Se alcanzó el número máximo de tareas"
 }

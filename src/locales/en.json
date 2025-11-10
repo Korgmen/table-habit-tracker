@@ -66,5 +66,9 @@
     "ok": "OK",
     "warning": "Warning"
   },
+  "duplicate": {
+    "title": "Confirm Duplication",
+    "message": "Tasks from the selected month will be copied to the current month (replacing existing ones)"
+  },
   "taskLimit": "Maximum number of tasks reached"
 }

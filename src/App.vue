@@ -13,7 +13,7 @@
   const store = useHabitStore();
   const { currentTheme, canNextMonth } = useHabitUtils();
   const { t } = useI18n();
-  const { showTaskLimit } = useModals(t);
+  const { showTaskLimit, showWelcome } = useModals(t);
 
   /** Ссылка на скрытый input для импорта файла */
   const importInput = ref(null);
@@ -66,19 +66,8 @@
   /** Подписка на глобальные клавиатурные события */
   onMounted(() => {
     window.addEventListener('keydown', handleKeydown);
-
     /** Показывает приветственное модальное окно при первом запуске */
-    if (!localStorage.getItem('hasSeenWelcome')) {
-      store.showModal({
-        type: 'alert',
-        title: t('welcome.title'),
-        message: t('welcome.message'),
-        onConfirm: () => {
-          localStorage.setItem('hasSeenWelcome', 'true');
-          store.closeModal();
-        },
-      });
-    }
+    showWelcome();
   });
 
   /** Очистка глобального обработчика клавиш */
