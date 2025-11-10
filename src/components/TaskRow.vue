@@ -205,7 +205,7 @@
         :handleMarkClick="handleMarkClick"
         :handleTouchStart="handleTouchStart"
         :handleTouchEnd="handleTouchEnd"
-        :isEndOfWeek="isEndOfWeek"
+        :isEndOfWeek="d => isEndOfWeek(d, index === monthDays.length - 1)"
       />
     </div>
   </div>

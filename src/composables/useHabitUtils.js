@@ -8,10 +8,11 @@ export function useHabitUtils() {
   const weekEndDay = computed(() => (store.weekStart === 'monday' ? 0 : 6));
 
   /** Показывать ли вертикальный разделитель конца недели */
-  const isEndOfWeek = day => {
+  const isEndOfWeek = (day, isLastDay = false) => {
     if (!store.showWeekSeparators) return false;
     const date = new Date(store.currentYear, store.currentMonth, day);
-    return date.getDay() === weekEndDay.value;
+    const isWeekEnd = date.getDay() === weekEndDay.value;
+    return isWeekEnd && !isLastDay;
   };
 
   /** Массив дней текущего месяца (1 … daysInMonth) */
