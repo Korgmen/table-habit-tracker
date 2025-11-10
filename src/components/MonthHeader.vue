@@ -40,9 +40,12 @@
 
     <!-- Кнопка перехода к следующему месяцу (отключается, если нельзя) -->
     <button
-      class="hide-print relative flex h-8 cursor-pointer items-center justify-center border-2 px-1.5"
+      class="hide-print relative flex h-8 items-center justify-center border-2 px-1.5"
       :aria-label="t('control.nextMonth')"
-      :class="{ 'cursor-not-allowed opacity-50': !canNextMonth }"
+      :class="{
+        'cursor-not-allowed opacity-25': !canNextMonth,
+        'cursor-pointer': canNextMonth,
+      }"
       @click="canNextMonth && store.nextMonth()"
     >
       <ArrowBigRight class="w-5" />
