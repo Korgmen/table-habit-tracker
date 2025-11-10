@@ -1,4 +1,8 @@
 {
+  "welcome": {
+    "title": "Bienvenido a Table – Rastreador de Hábitos",
+    "message": "Marca los días completados con clic izquierdo, marca como omitidos con clic derecho (o presión prolongada en móvil). Usa el modo borrador (E) para limpiar marcas y el modo eliminar (D) para borrar tareas. Todos los datos se guardan localmente. ¡Disfruta!"
+  },
   "settings": {
     "title": "Configuración",
     "close": "Cerrar configuración",

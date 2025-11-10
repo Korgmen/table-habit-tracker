@@ -29,6 +29,7 @@ export const useHabitStore = defineStore('habit', {
         onConfirm: null,
         onCancel: null,
       },
+      hasSeenWelcome: localStorage.getItem('hasSeenWelcome') === 'true',
     };
   },
   getters: {
@@ -463,6 +464,20 @@ export const useHabitStore = defineStore('habit', {
           this.closeModal();
         },
       });
+    },
+    showWelcomeIfNeeded() {
+      if (!this.hasSeenWelcome) {
+        this.showModal({
+          type: 'alert',
+          title: this.$i18n.t('welcome.title'),
+          message: this.$i18n.t('welcome.message'),
+          onConfirm: () => {
+            this.hasSeenWelcome = true;
+            localStorage.setItem('hasSeenWelcome', 'true');
+            this.closeModal();
+          },
+        });
+      }
     },
   },
 });

@@ -1,4 +1,8 @@
 {
+  "welcome": {
+    "title": "Welcome to Table – Habit Tracker",
+    "message": "Mark completed days with a left click, mark as skipped with a right click (or long press on mobile). Use the eraser (E) to clear marks and the delete mode (D) to remove tasks. All data is saved locally. Enjoy!"
+  },
   "settings": {
     "title": "Settings",
     "close": "Close settings",

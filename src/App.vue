@@ -3,12 +3,14 @@
   import { useHabitStore } from './stores/habitStore';
   import { ref, onMounted, onUnmounted, computed } from 'vue';
   import { VueDraggableNext } from 'vue-draggable-next';
+  import { useI18n } from 'vue-i18n';
   import Header from './components/Header.vue';
   import TableHeader from './components/TableHeader.vue';
   import TaskRow from './components/TaskRow.vue';
   import Modal from './components/Modal.vue';
 
   const store = useHabitStore();
+  const { t } = useI18n();
   const importInput = ref(null);
   const settingsOpen = ref(false);
 
@@ -80,6 +82,17 @@
 
   onMounted(() => {
     window.addEventListener('keydown', handleKeydown);
+    if (!localStorage.getItem('hasSeenWelcome')) {
+      store.showModal({
+        type: 'alert',
+        title: t('welcome.title'),
+        message: t('welcome.message'),
+        onConfirm: () => {
+          localStorage.setItem('hasSeenWelcome', 'true');
+          store.closeModal();
+        },
+      });
+    }
   });
 
   onUnmounted(() => {
