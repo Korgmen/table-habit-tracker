@@ -1,6 +1,6 @@
 <script setup>
-  import { useHabitUtils } from '../composables/useHabitUtils';
-  import HeaderDay from './HeaderDay.vue';
+  import { useHabitUtils } from '@/composables/useHabitUtils';
+  import HeaderDay from '@/components/HeaderDay.vue';
 
   const { isEndOfWeek, monthDays } = useHabitUtils();
 </script>

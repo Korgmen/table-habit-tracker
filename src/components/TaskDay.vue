@@ -1,5 +1,5 @@
 <script setup>
-  import { useHabitStore } from '../stores/habitStore';
+  import { useHabitStore } from '@/stores/habitStore';
 
   const props = defineProps({
     /** Номер дня в месяце */

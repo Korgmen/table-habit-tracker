@@ -1,5 +1,5 @@
 <script setup>
-  import { useHabitStore } from '../stores/habitStore';
+  import { useHabitStore } from '@/stores/habitStore';
   import { useI18n } from 'vue-i18n';
 
   const store = useHabitStore();

@@ -1,5 +1,5 @@
 <script setup>
-  import { useHabitStore } from '../stores/habitStore';
+  import { useHabitStore } from '@/stores/habitStore';
   import { ref } from 'vue';
   import { useI18n } from 'vue-i18n';
   import { X, Upload, Download, Printer } from 'lucide-vue-next';

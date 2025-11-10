@@ -1,9 +1,9 @@
 <script setup>
   import { ref, watch } from 'vue';
-  import SettingsModal from './SettingsModal.vue';
-  import MonthHeader from './MonthHeader.vue';
-  import OverallStats from './OverallStats.vue';
-  import Controls from './Controls.vue';
+  import SettingsModal from '@/components/SettingsModal.vue';
+  import MonthHeader from '@/components/MonthHeader.vue';
+  import OverallStats from '@/components/OverallStats.vue';
+  import Controls from '@/components/Controls.vue';
 
   const props = defineProps({
     /** Открыто ли окно настроек */

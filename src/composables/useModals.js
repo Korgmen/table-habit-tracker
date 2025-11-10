@@ -1,4 +1,4 @@
-import { useHabitStore } from '../stores/habitStore';
+import { useHabitStore } from '@/stores/habitStore';
 
 export function useModals(t) {
   const store = useHabitStore();

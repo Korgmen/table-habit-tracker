@@ -1,5 +1,5 @@
 import { computed } from 'vue';
-import { useHabitStore } from '../stores/habitStore';
+import { useHabitStore } from '@/stores/habitStore';
 
 export function useHabitUtils() {
   const store = useHabitStore();

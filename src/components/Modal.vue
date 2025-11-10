@@ -1,7 +1,7 @@
 <script setup>
   import { watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
-  import { useHabitStore } from '../stores/habitStore';
-  import { useHabitUtils } from '../composables/useHabitUtils';
+  import { useHabitStore } from '@/stores/habitStore';
+  import { useHabitUtils } from '@/composables/useHabitUtils';
   import { useI18n } from 'vue-i18n';
   import { X } from 'lucide-vue-next';
 

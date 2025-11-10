@@ -1,7 +1,7 @@
 <script setup>
   import { ref, nextTick } from 'vue';
-  import { useHabitUtils } from '../composables/useHabitUtils';
-  import { useHabitStore } from '../stores/habitStore';
+  import { useHabitUtils } from '@/composables/useHabitUtils';
+  import { useHabitStore } from '@/stores/habitStore';
   import { useI18n } from 'vue-i18n';
   import { Plus, Trash2, XCircle, GripVertical } from 'lucide-vue-next';
   import TaskDay from './TaskDay.vue';

@@ -1,6 +1,6 @@
 <script setup>
   import { computed } from 'vue';
-  import { useHabitStore } from '../stores/habitStore';
+  import { useHabitStore } from '@/stores/habitStore';
 
   const props = defineProps({
     /** Номер дня в текущем месяце */

@@ -1,7 +1,7 @@
 <script setup>
   import { ref, computed } from 'vue';
-  import { useHabitStore } from '../stores/habitStore';
-  import { useModals } from '../composables/useModals';
+  import { useHabitStore } from '@/stores/habitStore';
+  import { useModals } from '@/composables/useModals';
   import { useI18n } from 'vue-i18n';
   import { Plus, Trash2, Eraser, Settings, Copy } from 'lucide-vue-next';
 
