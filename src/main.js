@@ -1,13 +1,13 @@
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import { createI18n } from 'vue-i18n';
-import './style.css';
-import App from './App.vue';
-import en from './locales/en.json';
-import ru from './locales/ru.json';
-import ar from './locales/ar.json';
-import es from './locales/es.json';
-import zh from './locales/zh.json';
+import '@/style.css';
+import App from '@/App.vue';
+import en from '@/locales/en.json';
+import ru from '@/locales/ru.json';
+import ar from '@/locales/ar.json';
+import es from '@/locales/es.json';
+import zh from '@/locales/zh.json';
 
 /**
  * Определяет активный язык интерфейса.

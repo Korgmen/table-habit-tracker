@@ -1,14 +1,14 @@
 <script setup>
-  import { useHabitStore } from './stores/habitStore';
-  import { useHabitUtils } from './composables/useHabitUtils';
-  import { useModals } from './composables/useModals';
+  import { useHabitStore } from '@/stores/habitStore';
+  import { useHabitUtils } from '@/composables/useHabitUtils';
+  import { useModals } from '@/composables/useModals';
   import { ref, onMounted, onUnmounted } from 'vue';
   import { VueDraggableNext } from 'vue-draggable-next';
   import { useI18n } from 'vue-i18n';
-  import Header from './components/Header.vue';
-  import TableHeader from './components/TableHeader.vue';
-  import TaskRow from './components/TaskRow.vue';
-  import Modal from './components/Modal.vue';
+  import Header from '@/components/Header.vue';
+  import TableHeader from '@/components/TableHeader.vue';
+  import TaskRow from '@/components/TaskRow.vue';
+  import Modal from '@/components/Modal.vue';
 
   const store = useHabitStore();
   const { currentTheme, canNextMonth } = useHabitUtils();
