@@ -1,6 +1,7 @@
 <script setup>
   import { useHabitStore } from './stores/habitStore';
-  import { ref, onMounted, onUnmounted, computed } from 'vue';
+  import { useHabitUtils } from './composables/useHabitUtils';
+  import { ref, onMounted, onUnmounted } from 'vue';
   import { VueDraggableNext } from 'vue-draggable-next';
   import { useI18n } from 'vue-i18n';
   import Header from './components/Header.vue';
@@ -9,6 +10,7 @@
   import Modal from './components/Modal.vue';
 
   const store = useHabitStore();
+  const { currentTheme, canNextMonth } = useHabitUtils();
   const { t } = useI18n();
 
   /** Ссылка на скрытый input для импорта файла */
@@ -50,34 +52,10 @@
   };
 
   /** Открывает системный диалог выбора файла для импорта */
-  const handleImport = () => {
-    importInput.value.click();
-  };
-
-  /**
-   * Определяет, можно ли перейти к следующему месяцу.
-   * Доступно только для месяцев не позже текущего реального.
-   */
-  const canNextMonth = computed(() => {
-    const newDate = new Date(store.currentDate);
-    newDate.setMonth(store.currentMonth + 1);
-    const newMonthKey = `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, '0')}`;
-    const realMonthKey = `${store.realDate.getFullYear()}-${String(store.realDate.getMonth() + 1).padStart(2, '0')}`;
-    return newMonthKey <= realMonthKey;
-  });
-
-  /** Определяет текущую тему (light/dark) на основе настроек и системных предпочтений */
-  const currentTheme = computed(() => {
-    if (store.theme === 'system') {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
-    return store.theme;
-  });
+  const triggerImport = () => importInput.value.click();
 
   /** Инициирует печать страницы */
-  const handlePrint = () => {
-    window.print();
-  };
+  const triggerPrint = () => window.print();
 
   /** Подписка на глобальные клавиатурные события */
   onMounted(() => {
@@ -116,8 +94,8 @@
         :settingsOpen="settingsOpen"
         :currentTheme="currentTheme"
         @update:settingsOpen="settingsOpen = $event"
-        @import="handleImport"
-        @print="handlePrint"
+        @import="triggerImport"
+        @print="triggerPrint"
       />
 
       <!-- Таблица привычек -->

@@ -1,24 +1,18 @@
 <script setup>
-  import { computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
+  import { watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
   import { useHabitStore } from '../stores/habitStore';
+  import { useHabitUtils } from '../composables/useHabitUtils';
   import { useI18n } from 'vue-i18n';
   import { X } from 'lucide-vue-next';
 
   const store = useHabitStore();
+  const { currentTheme } = useHabitUtils();
   const { t } = useI18n();
 
   /** Массив всех фокусируемых элементов внутри модального окна */
   let focusableElements = [];
   let firstFocusable = null;
   let lastFocusable = null;
-
-  /** Определяет текущую тему (light/dark) на основе настроек пользователя */
-  const currentTheme = computed(() => {
-    if (store.theme === 'system') {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
-    return store.theme;
-  });
 
   /** Обрабатывает подтверждение действия в модальном окне */
   const handleConfirm = () => {

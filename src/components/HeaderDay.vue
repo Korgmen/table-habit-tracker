@@ -8,23 +8,19 @@
       type: Number,
       required: true,
     },
+    /** Является ли текущий день концом недели */
+    isEndOfWeek: {
+      type: Function,
+      required: true,
+    },
   });
 
   const store = useHabitStore();
-
-  /** День недели, считающийся концом недели (0 – воскресенье, 6 – суббота) */
-  const weekEndDay = computed(() => (store.weekStart === 'monday' ? 0 : 6));
 
   /** Состояние кружка в заголовке: `future` – день ещё не наступил, `completed` – прошёл */
   const getHeaderCircleState = computed(() => {
     if (props.day > store.today) return 'future';
     return 'completed';
-  });
-
-  /** Показывать ли вертикальный разделитель конца недели */
-  const isEndOfWeek = computed(() => {
-    const date = new Date(store.currentYear, store.currentMonth, props.day);
-    return store.showWeekSeparators && date.getDay() === weekEndDay.value;
   });
 
   /** Все подзадачи в колонке помечены как пропущенные (false) */
@@ -66,7 +62,7 @@
   </div>
 
   <div
-    v-if="isEndOfWeek"
+    v-if="props.isEndOfWeek(props.day)"
     class="h-4 border-1 bg-current"
     :class="{ 'opacity-50': getHeaderCircleState === 'future' }"
   ></div>

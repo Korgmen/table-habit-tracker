@@ -1,5 +1,6 @@
 <script setup>
-  import { ref, computed, nextTick } from 'vue';
+  import { ref, nextTick } from 'vue';
+  import { useHabitUtils } from '../composables/useHabitUtils';
   import { useHabitStore } from '../stores/habitStore';
   import { useI18n } from 'vue-i18n';
   import { Plus, Trash2, XCircle, GripVertical } from 'lucide-vue-next';
@@ -14,13 +15,8 @@
   });
 
   const store = useHabitStore();
+  const { isEndOfWeek, monthDays } = useHabitUtils();
   const { t } = useI18n();
-
-  /** Массив дней текущего месяца (1 … daysInMonth) */
-  const days = computed(() => Array.from({ length: store.daysInMonth }, (_, i) => i + 1));
-
-  /** День недели, считающийся концом недели (0 – воскресенье, 6 – суббота) */
-  const weekEndDay = computed(() => (store.weekStart === 'monday' ? 0 : 6));
 
   /** Текст редактируемого заголовка задачи */
   const editingTitle = ref('');
@@ -30,12 +26,6 @@
 
   /** Таймер для обработки долгого нажатия */
   const longPressTimer = ref(null);
-
-  /** Определяет, является ли указанный день концом недели */
-  const isEndOfWeek = day => {
-    const date = new Date(store.currentYear, store.currentMonth, day);
-    return store.showWeekSeparators && date.getDay() === weekEndDay.value;
-  };
 
   /** Запускает режим редактирования заголовка задачи */
   const startEditingTask = () => {
@@ -206,7 +196,7 @@
     <!-- Дни месяца с отметками подзадач -->
     <div class="flex items-end-safe gap-2">
       <TaskDay
-        v-for="(day, index) in days"
+        v-for="(day, index) in monthDays"
         :key="day"
         :day="day"
         :index="index"
