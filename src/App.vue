@@ -1,6 +1,7 @@
 <script setup>
   import { useHabitStore } from './stores/habitStore';
   import { useHabitUtils } from './composables/useHabitUtils';
+  import { useModals } from './composables/useModals';
   import { ref, onMounted, onUnmounted } from 'vue';
   import { VueDraggableNext } from 'vue-draggable-next';
   import { useI18n } from 'vue-i18n';
@@ -12,6 +13,7 @@
   const store = useHabitStore();
   const { currentTheme, canNextMonth } = useHabitUtils();
   const { t } = useI18n();
+  const { showTaskLimit } = useModals(t);
 
   /** Ссылка на скрытый input для импорта файла */
   const importInput = ref(null);
@@ -39,7 +41,11 @@
         store.toggleMode('delete');
         settingsOpen.value = false;
       },
-      KeyN: () => store.addTask(),
+      KeyN: () => {
+        if (!store.addTask()) {
+          showTaskLimit();
+        }
+      },
       ArrowLeft: () => store.prevMonth(),
       ArrowRight: () => canNextMonth.value && store.nextMonth(),
       KeyS: () => {

@@ -1,11 +1,13 @@
 <script setup>
   import { ref, computed } from 'vue';
   import { useHabitStore } from '../stores/habitStore';
+  import { useModals } from '../composables/useModals';
   import { useI18n } from 'vue-i18n';
   import { Plus, Trash2, Eraser, Settings, Copy } from 'lucide-vue-next';
 
   const store = useHabitStore();
   const { t } = useI18n();
+  const { showTaskLimit } = useModals(t);
 
   /** Состояние мобильного меню (открыто/закрыто) */
   const menuOpen = ref(false);
@@ -31,17 +33,8 @@
 
   /** Управляет добавлением задач */
   const tryAddTask = () => {
-    if (canAddTask.value) {
-      /** Добавляет новую задачу */
-      store.addTask();
-    } else {
-      /** Показывает предупреждение, если задач уже 20 */
-      store.showModal({
-        type: 'alert',
-        title: t('modal.warning'),
-        message: t('taskLimit'),
-        onConfirm: () => store.closeModal(),
-      });
+    if (!store.addTask()) {
+      showTaskLimit();
     }
   };
 </script>

@@ -134,7 +134,7 @@ export const useHabitStore = defineStore('habit', {
     /** Добавляет новую задачу с одной подзадачей */
     addTask() {
       if (this.tasks.length >= 20) {
-        return;
+        return false;
       }
 
       const id = Date.now();
@@ -145,6 +145,7 @@ export const useHabitStore = defineStore('habit', {
         progress: 0.0,
       });
       this.saveState();
+      return true;
     },
 
     /** Добавляет подзадачу к указанной задаче (максимум 8) */
