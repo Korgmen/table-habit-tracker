@@ -67,7 +67,9 @@
   </transition>
 
   <!-- Основная панель: месяц, статистика, управление -->
-  <div class="flex items-center gap-4 select-none">
+  <div
+    class="flex flex-col-reverse items-end-safe gap-1.5 px-1.5 select-none md:flex-row md:items-center md:gap-4 md:px-0 print:flex-row print:items-center print:gap-4 print:px-0"
+  >
     <MonthHeader />
     <OverallStats />
     <Controls @toggle-settings="toggleSettings" />

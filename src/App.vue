@@ -80,10 +80,12 @@
   <!-- Корневой контейнер с применением темы -->
   <div
     id="app"
-    class="flex min-h-screen justify-center"
+    class="flex md:min-h-screen print:min-h-screen"
     :class="currentTheme === 'dark' ? 'bg-[#292929] text-[#FFF8F0]' : 'bg-white text-[#12130F]'"
   >
-    <div class="relative mx-auto my-5 flex w-fit flex-col gap-2.5">
+    <div
+      class="relative mx-auto flex w-full flex-col gap-2.5 max-md:not-print:h-[100dvh] max-md:not-print:flex-col-reverse max-md:not-print:pb-2.5 md:my-5 md:w-fit md:min-w-[960px] print:my-5 print:w-fit print:min-w-[960px]"
+    >
       <!-- Шапка: месяц, статистика, управление -->
       <Header
         :settingsOpen="settingsOpen"
@@ -94,8 +96,12 @@
       />
 
       <!-- Таблица привычек -->
-      <div class="overflow-x-auto">
-        <div class="border-3 select-none">
+      <div
+        class="overscroll-contain max-md:not-print:overflow-x-auto max-md:not-print:overflow-y-auto"
+      >
+        <div
+          class="w-fit border-t-3 border-b-3 select-none md:w-auto md:border-3 print:w-auto print:border-3"
+        >
           <!-- Заголовки дней -->
           <TableHeader />
 

@@ -123,7 +123,7 @@
         >
           <!-- Кнопка закрытия -->
           <button
-            class="absolute top-0 right-0 w-fit cursor-pointer p-2"
+            class="tap-highlight-transparent absolute top-0 right-0 w-fit cursor-pointer touch-manipulation p-2"
             :aria-label="t('settings.close')"
             @click="store.closeModal"
           >
@@ -145,13 +145,13 @@
           <div class="flex justify-end gap-3">
             <button
               v-if="store.modal.type === 'confirm'"
-              class="flex h-8 w-fit cursor-pointer items-center justify-center self-start border-2 px-3 py-1.5 font-semibold"
+              class="tap-highlight-transparent flex h-8 w-fit cursor-pointer touch-manipulation items-center justify-center self-start border-2 px-3 py-1.5 font-semibold"
               @click="handleCancel"
             >
               {{ t('modal.cancel') }}
             </button>
             <button
-              class="flex h-8 w-fit cursor-pointer items-center justify-center self-start border-2 px-3 py-1.5 font-semibold"
+              class="tap-highlight-transparent flex h-8 w-fit cursor-pointer touch-manipulation items-center justify-center self-start border-2 px-3 py-1.5 font-semibold"
               @click="handleConfirm"
             >
               {{ store.modal.type === 'confirm' ? t('modal.confirm') : t('modal.ok') }}

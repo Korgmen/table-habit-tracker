@@ -52,12 +52,12 @@
 <template>
   <!-- Окно настроек -->
   <div
-    class="hide-print absolute top-0 right-0 z-50 w-fit border-3 p-4"
+    class="hide-print absolute top-0 right-0 z-50 w-screen border-3 p-4 md:w-fit print:w-fit"
     :class="currentTheme === 'dark' ? 'bg-[#292929] text-[#FFF8F0]' : 'bg-white text-[#12130F]'"
   >
     <!-- Кнопка закрытия -->
     <button
-      class="absolute top-2 right-2 cursor-pointer"
+      class="tap-highlight-transparent absolute top-2 right-2 cursor-pointer touch-manipulation"
       :aria-label="t('settings.close')"
       @click="emit('close')"
     >
@@ -66,7 +66,7 @@
 
     <div class="flex flex-col gap-5">
       <!-- Основные настройки -->
-      <div class="grid grid-cols-[repeat(2,1fr)] gap-2.5">
+      <div class="flex flex-col gap-2.5 md:grid md:grid-cols-[repeat(2,1fr)] print:grid print:grid-cols-[repeat(2,1fr)]">
         <h3 class="col-span-2 text-lg font-semibold">{{ t('settings.title') }}</h3>
 
         <!-- Выбор темы -->
@@ -101,13 +101,13 @@
           <label class="block">{{ t('settings.expImp.title') }}</label>
           <div class="flex items-center gap-1.5">
             <button
-              class="relative flex h-8 cursor-pointer items-center justify-center border-2 border-green-500 px-1.5 text-green-500"
+              class="tap-highlight-transparent relative flex h-8 cursor-pointer touch-manipulation items-center justify-center border-2 border-green-500 px-1.5 text-green-500"
               @click="store.exportData"
             >
               <Upload class="w-5" />
             </button>
             <button
-              class="relative flex h-8 cursor-pointer items-center justify-center border-2 border-purple-500 px-1.5 text-purple-500"
+              class="tap-highlight-transparent relative flex h-8 cursor-pointer touch-manipulation items-center justify-center border-2 border-purple-500 px-1.5 text-purple-500"
               @click="handleImport"
             >
               <Download class="w-5" />
@@ -120,7 +120,7 @@
           <label class="block">{{ t('settings.print.title') }}</label>
           <div class="flex items-center gap-1.5">
             <button
-              class="relative flex h-8 cursor-pointer items-center justify-center border-2 px-1.5"
+              class="tap-highlight-transparent relative flex h-8 cursor-pointer touch-manipulation items-center justify-center border-2 px-1.5"
               @click="handlePrint"
             >
               <Printer class="w-5" />

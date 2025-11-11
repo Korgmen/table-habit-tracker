@@ -110,91 +110,99 @@
 </script>
 
 <template>
-  <div class="relative flex flex-col items-center gap-2.5 border-t-3 px-5 pt-2.5 pb-[15px]">
-    <!-- Процент выполнения задачи -->
-    <div class="hide-print absolute top-1.5 right-[5px] text-[12px] font-bold">
-      {{ task.progress }}%
-    </div>
+  <div
+    class="relative flex flex-col gap-2.5 border-t-3 px-2 pt-2.5 pb-[15px] md:items-center md:px-5 print:items-center print:px-5"
+  >
+    <div
+      class="max-md:not-print:left-2 max-md:not-print:flex max-md:not-print:w-[calc(100vw-16px)] max-md:not-print:items-center max-md:not-print:gap-3 max-md:not-print:sticky"
+    >
+      <!-- Заголовок задачи -->
+      <div class="relative flex items-center max-md:not-print:flex-1">
+        <span
+          v-if="store.editingTaskId !== task.id"
+          class="cursor-text text-sm leading-none font-bold md:text-lg print:text-lg"
+          @click="startEditingTask"
+        >
+          {{ task.title }}
+        </span>
 
-    <!-- Кнопки добавления/удаления подзадач -->
-    <div class="hide-print absolute top-1.5 left-[5px] flex gap-1">
-      <button
-        class="relative flex h-6 items-center justify-center border-2 px-0.5 transition-all duration-300 ease-in-out"
-        :class="{
-          'cursor-pointer': task.subtasks.length < 8,
-          'cursor-not-allowed opacity-25': task.subtasks.length >= 8,
-        }"
-        @click="handleAddSubtask"
-        :title="t('control.newSubtask')"
+        <input
+          v-if="store.editingTaskId === task.id"
+          :ref="setEditInput"
+          v-model="editingTitle"
+          class="w-full border-2 p-1 text-sm sm:text-base"
+          @blur="finishEditingTask"
+          @keyup="handleBlurOrEnter"
+          @focus="selectAll"
+        />
+
+        <!-- Перемещение / удаление задачи -->
+        <transition
+          mode="out-in"
+          enter-active-class="transition ease-out duration-200"
+          enter-from-class="opacity-0 -translate-y-1"
+          enter-to-class="opacity-100 translate-y-0"
+          leave-active-class="transition ease-in duration-150"
+          leave-from-class="opacity-100 translate-y-0"
+          leave-to-class="opacity-0 -translate-y-1"
+        >
+          <div
+            v-if="store.activeMode !== 'delete'"
+            key="normal"
+            class="hide-print drag-handle relative ml-1 inline-flex w-5 cursor-move items-center justify-center"
+            :title="t('control.moveTask')"
+          >
+            <GripVertical class="absolute w-4" />
+          </div>
+
+          <button
+            v-else
+            key="delete"
+            class="tap-highlight-transparent hide-print relative ml-1 inline-flex w-5 cursor-pointer touch-manipulation items-center justify-center"
+            @click="store.deleteTask(task.id)"
+            :title="t('control.deleteTask')"
+          >
+            <XCircle class="absolute w-5" />
+          </button>
+        </transition>
+      </div>
+
+      <!-- Процент выполнения задачи -->
+      <div class="hide-print top-1.5 right-[5px] text-[12px] font-bold md:absolute print:absolute">
+        {{ task.progress }}%
+      </div>
+
+      <!-- Кнопки добавления/удаления подзадач -->
+      <div
+        class="hide-print top-1.5 left-[5px] flex gap-1 max-md:not-print:flex-row-reverse md:absolute print:absolute"
       >
-        <Plus class="h-4 w-4" />
-      </button>
-
-      <transition name="fade" mode="out-in">
         <button
-          v-if="task.subtasks.length > 1"
-          class="relative flex h-6 cursor-pointer items-center justify-center border-2 px-0.5"
-          @click="store.deleteLastSubtask(task.id)"
-          :title="t('control.deleteSubtask')"
+          class="tap-highlight-transparent relative flex h-6 touch-manipulation items-center justify-center border-2 px-0.5 transition-all duration-300 ease-in-out"
+          :class="{
+            'cursor-pointer': task.subtasks.length < 8,
+            'cursor-not-allowed opacity-25': task.subtasks.length >= 8,
+          }"
+          @click="handleAddSubtask"
+          :title="t('control.newSubtask')"
         >
-          <Trash2 class="h-4 w-4" />
+          <Plus class="h-4 w-4" />
         </button>
-      </transition>
-    </div>
 
-    <!-- Заголовок задачи -->
-    <div class="relative flex items-center">
-      <span
-        v-if="store.editingTaskId !== task.id"
-        class="cursor-text text-[18px] font-bold"
-        @click="startEditingTask"
-      >
-        {{ task.title }}
-      </span>
-
-      <input
-        v-if="store.editingTaskId === task.id"
-        :ref="setEditInput"
-        v-model="editingTitle"
-        class="w-full border-2 p-1 text-sm sm:text-base"
-        @blur="finishEditingTask"
-        @keyup="handleBlurOrEnter"
-        @focus="selectAll"
-      />
-
-      <!-- Перемещение / удаление задачи -->
-      <transition
-        mode="out-in"
-        enter-active-class="transition ease-out duration-200"
-        enter-from-class="opacity-0 -translate-y-1"
-        enter-to-class="opacity-100 translate-y-0"
-        leave-active-class="transition ease-in duration-150"
-        leave-from-class="opacity-100 translate-y-0"
-        leave-to-class="opacity-0 -translate-y-1"
-      >
-        <div
-          v-if="store.activeMode !== 'delete'"
-          key="normal"
-          class="hide-print drag-handle relative ml-1 inline-flex w-5 cursor-move items-center justify-center"
-          :title="t('control.moveTask')"
-        >
-          <GripVertical class="absolute w-4" />
-        </div>
-
-        <button
-          v-else
-          key="delete"
-          class="hide-print relative ml-1 inline-flex w-5 cursor-pointer items-center justify-center"
-          @click="store.deleteTask(task.id)"
-          :title="t('control.deleteTask')"
-        >
-          <XCircle class="absolute w-5" />
-        </button>
-      </transition>
+        <transition name="fade" mode="out-in">
+          <button
+            v-if="task.subtasks.length > 1"
+            class="tap-highlight-transparent relative flex h-6 cursor-pointer touch-manipulation items-center justify-center border-2 px-0.5"
+            @click="store.deleteLastSubtask(task.id)"
+            :title="t('control.deleteSubtask')"
+          >
+            <Trash2 class="h-4 w-4" />
+          </button>
+        </transition>
+      </div>
     </div>
 
     <!-- Дни месяца с отметками подзадач -->
-    <div class="flex items-end-safe gap-2">
+    <div class="flex items-end-safe gap-0.5 md:gap-2 print:gap-2">
       <TaskDay
         v-for="(day, index) in monthDays"
         :key="day"

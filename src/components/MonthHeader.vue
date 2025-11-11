@@ -10,10 +10,10 @@
 </script>
 
 <template>
-  <h1 class="flex flex-auto items-center gap-1.5">
+  <h1 class="flex w-full flex-auto items-center gap-1.5 md:w-fit print:w-fit">
     <!-- Кнопка перехода к предыдущему месяцу -->
     <button
-      class="hide-print relative flex h-8 cursor-pointer items-center justify-center border-2 px-1.5"
+      class="tap-highlight-transparent hide-print relative flex h-8 cursor-pointer touch-manipulation items-center justify-center border-2 px-1.5"
       :aria-label="t('control.prevMonth')"
       @click="store.prevMonth"
     >
@@ -22,14 +22,14 @@
 
     <!-- Название текущего месяца и года -->
     <p
-      class="flex h-8 w-fit cursor-default items-center justify-center self-start border-2 px-3 py-1.5 font-semibold italic"
+      class="flex h-8 w-full cursor-default items-center justify-center self-start border-2 px-3 py-1.5 text-sm font-semibold italic md:w-fit md:text-base print:w-fit print:text-base"
     >
       {{ store.monthName }} {{ store.currentYear }}
     </p>
 
     <!-- Кнопка перехода к следующему месяцу (отключается, если нельзя) -->
     <button
-      class="hide-print relative flex h-8 items-center justify-center border-2 px-1.5"
+      class="tap-highlight-transparent hide-print relative flex h-8 touch-manipulation items-center justify-center border-2 px-1.5"
       :aria-label="t('control.nextMonth')"
       :class="{
         'cursor-not-allowed opacity-25': !canNextMonth,
