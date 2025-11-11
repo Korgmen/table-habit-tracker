@@ -24,8 +24,51 @@
   /** Ссылка на input редактирования */
   const editInput = ref(null);
 
-  /** Таймер для обработки долгого нажатия */
-  const longPressTimer = ref(null);
+  /** Таймер и состояние для двойного тапа */
+  const tapState = ref(new Map());
+  const DOUBLE_TAP_DELAY = 250;
+  const getTapKey = (taskId, subtaskId, dayIndex) => `${taskId}-${subtaskId}-${dayIndex}`;
+
+  /** Общий обработчик тапа */
+  const handleTap = (subtaskId, dayIndex, event) => {
+    const taskId = props.task.id;
+    if (dayIndex >= store.today) return;
+
+    const key = getTapKey(taskId, subtaskId, dayIndex);
+    const now = Date.now();
+
+    let state = tapState.value.get(key) || { lastTap: 0, timeout: null };
+
+    if (state.timeout) {
+      clearTimeout(state.timeout);
+      state.timeout = null;
+    }
+
+    const timeDiff = now - state.lastTap;
+
+    if (timeDiff < DOUBLE_TAP_DELAY && timeDiff > 0) {
+      if (store.activeMode === 'eraser') {
+        store.eraseMark(taskId, subtaskId, dayIndex);
+      } else {
+        store.updateMark(taskId, subtaskId, dayIndex, false);
+      }
+      tapState.value.delete(key);
+    } else {
+      state.lastTap = now;
+      state.timeout = setTimeout(() => {
+        if (store.activeMode === 'eraser') {
+          store.eraseMark(taskId, subtaskId, dayIndex);
+        } else {
+          store.updateMark(taskId, subtaskId, dayIndex, true);
+        }
+        tapState.value.delete(key);
+      }, DOUBLE_TAP_DELAY);
+
+      tapState.value.set(key, state);
+    }
+
+    event.preventDefault();
+  };
 
   /** Запускает режим редактирования заголовка задачи */
   const startEditingTask = () => {
@@ -75,31 +118,9 @@
     if (dayIndex >= store.today) return;
     if (store.activeMode === 'eraser') {
       store.eraseMark(props.task.id, subtaskId, dayIndex);
-    } else if (event.type === 'touchend' && longPressTimer.value) {
-      clearTimeout(longPressTimer.value);
-      store.handleLongPress(props.task.id, subtaskId, dayIndex);
     } else {
-      const isRightClick =
-        event.button === 2 || (event.type === 'touchend' && !longPressTimer.value);
+      const isRightClick = event.button === 2;
       store.updateMark(props.task.id, subtaskId, dayIndex, isRightClick ? false : true);
-    }
-  };
-
-  /** Запускает таймер долгого нажатия (touch) */
-  const handleTouchStart = (subtaskId, dayIndex) => {
-    if (dayIndex < store.today) {
-      longPressTimer.value = setTimeout(() => {
-        store.handleLongPress(props.task.id, subtaskId, dayIndex);
-      }, 500);
-    }
-  };
-
-  /** Очищает таймер и, при необходимости, обрабатывает обычный клик */
-  const handleTouchEnd = (subtaskId, dayIndex) => {
-    if (longPressTimer.value) {
-      clearTimeout(longPressTimer.value);
-      longPressTimer.value = null;
-      handleMarkClick(subtaskId, dayIndex, { type: 'touchend' });
     }
   };
 
@@ -114,7 +135,7 @@
     class="relative flex flex-col gap-2.5 border-t-3 px-2 pt-2.5 pb-[15px] md:items-center md:px-5 print:items-center print:px-5"
   >
     <div
-      class="max-md:not-print:left-2 max-md:not-print:flex max-md:not-print:w-[calc(100vw-16px)] max-md:not-print:items-center max-md:not-print:gap-3 max-md:not-print:sticky"
+      class="max-md:not-print:sticky max-md:not-print:left-2 max-md:not-print:flex max-md:not-print:w-[calc(100vw-16px)] max-md:not-print:items-center max-md:not-print:gap-3"
     >
       <!-- Заголовок задачи -->
       <div class="relative flex items-center max-md:not-print:flex-1">
@@ -211,8 +232,7 @@
         :task="task"
         :getMarkClass="getMarkClass"
         :handleMarkClick="handleMarkClick"
-        :handleTouchStart="handleTouchStart"
-        :handleTouchEnd="handleTouchEnd"
+        :handleTap="handleTap"
         :isEndOfWeek="d => isEndOfWeek(d, index === monthDays.length - 1)"
       />
     </div>

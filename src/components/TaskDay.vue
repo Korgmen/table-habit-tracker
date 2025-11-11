@@ -12,10 +12,8 @@
     getMarkClass: Function,
     /** Обработчик клика по отметке */
     handleMarkClick: Function,
-    /** Обработчик начала долгого нажатия (touch) */
-    handleTouchStart: Function,
-    /** Обработчик окончания нажатия (touch) */
-    handleTouchEnd: Function,
+    /** Обработчик тапа по отметке на мобильных устройствах */
+    handleTap: Function,
     /** Функция определения конца недели */
     isEndOfWeek: Function,
   });
@@ -40,9 +38,7 @@
         ]"
         @click="props.handleMarkClick(subtask.id, props.index, $event)"
         @contextmenu.prevent="props.handleMarkClick(subtask.id, props.index, $event)"
-        @touchstart="props.handleTouchStart(subtask.id, props.index)"
-        @touchend="props.handleTouchEnd(subtask.id, props.index)"
-        @touchcancel="props.handleTouchEnd(subtask.id, props.index)"
+        @touchend.prevent="props.handleTap(subtask.id, props.index, $event)"
       ></div>
     </template>
   </div>
