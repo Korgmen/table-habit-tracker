@@ -223,7 +223,7 @@
     </div>
 
     <!-- Дни месяца с отметками подзадач -->
-    <div class="flex items-end-safe gap-0.5 md:gap-2 print:gap-2">
+    <div class="flex items-end-safe justify-center gap-0.5 md:gap-2 print:gap-2">
       <TaskDay
         v-for="(day, index) in monthDays"
         :key="day"
