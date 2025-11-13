@@ -116,10 +116,13 @@
       >
         <!-- Контейнер модального окна -->
         <div
-          class="modal-container relative w-full max-w-md border-3 p-6 shadow-xl"
-          :class="
-            currentTheme === 'dark' ? 'bg-[#292929] text-[#FFF8F0]' : 'bg-white text-[#12130F]'
-          "
+          class="modal-container relative w-full border-3 p-6 shadow-xl"
+          :class="{
+            'bg-[#292929] text-[#FFF8F0]': currentTheme === 'dark',
+            'bg-white text-[#12130F]': currentTheme === 'light',
+            'max-w-md': store.modal.type !== 'custom',
+            'flex max-h-[90dvh] max-w-2xl flex-col': store.modal.type === 'custom',
+          }"
         >
           <!-- Кнопка закрытия -->
           <button
@@ -134,7 +137,13 @@
           <h3 class="mb-4 text-xl font-semibold">{{ store.modal.title }}</h3>
 
           <!-- Сообщение -->
-          <p class="mb-6 text-base">{{ store.modal.message }}</p>
+          <div
+            class="mb-6 flex flex-col gap-1.5 text-base"
+            v-html="store.modal.message"
+            :class="{
+              'overflow-y-auto': store.modal.type === 'custom',
+            }"
+          ></div>
 
           <!-- Пользовательский контент (для типа custom) -->
           <div v-if="store.modal.type === 'custom'">

@@ -18,7 +18,7 @@ export function useModals(t) {
     if (localStorage.getItem('hasSeenWelcome') === 'true') return;
 
     store.showModal({
-      type: 'alert',
+      type: 'custom',
       title: t('welcome.title'),
       message: t('welcome.message'),
       onConfirm: () => {

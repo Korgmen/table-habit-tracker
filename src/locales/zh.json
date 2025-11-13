@@ -1,7 +1,7 @@
 {
   "welcome": {
     "title": "欢迎使用 Table – 习惯追踪器",
-    "message": "已完成的日子用左键标记，排除的日子用右键（或手机长按）标记。如果未完成则留空。使用橡皮擦模式 (E) 清除标记，使用删除模式 (D) 删除任务。所有数据本地保存。祝好运！"
+    "message": "<p><b>Table</b> 是一个习惯追踪器，它帮助您每天追踪重要任务的完成情况并形成可持续的习惯。</p> <p>您添加需要定期执行的习惯（每天或每周几次）：例如，“准时起床”、“做锻炼”、“去健身”、“学习英语”。</p> <p>每天您标记：</p> <p> <svg class='inline-block ml-2' width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'> <rect x='1' y='1' width='10' height='10' rx='5' fill='currentColor' /> <rect x='1' y='1' width='10' height='10' rx='5' stroke='currentColor' stroke-width='2' /> </svg> — 已完成（填充标记）； </p> <p> <svg class='inline-block ml-2' width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'> <rect x='1' y='1' width='10' height='10' rx='5' stroke='currentColor' stroke-width='2' /> </svg> — 未完成（留空）； </p> <p> <svg class='inline-block ml-2' width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'> <rect x='1' y='1' width='10' height='10' rx='5' stroke='currentColor' stroke-width='2' /> <rect width='12' height='2' transform='translate(1.05025 9.53554) rotate(-45)' fill='currentColor' /> <rect width='12' height='2' transform='translate(2.46446 1.05025) rotate(45)' fill='currentColor' /> </svg> — 跳过（叉号 – 如果任务不需要，该天不算，例如，每隔一天训练）； </p> <p>在月底，应用显示：</p> <ul> <li>– 每个习惯的完成百分比和总体平均值；</li> <li>– 5 分制评分；</li> <li>– 所有过去月份的存档，用于比较进度。</li> </ul> <p><b>方便打印：</b> 表格可以以干净形式打印 — 没有按钮和界面。将它挂在冰箱或墙上，整个月用铅笔标记，并在月底 — 将所有数据输入应用。这样您可以保存存档并获取统计数据。</p> <p><i>正是因为纸质版本，这个应用才出现；我需要存档和统计计算。</i></p> <p>一切都本地保存在浏览器中，您可以导出和导入数据。</p> <p>简单的表格是一种视觉方式，可以看到您在哪里保持节奏，以及哪里需要改进。</p>"
   },
   "settings": {
     "title": "设置",
