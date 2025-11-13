@@ -138,10 +138,12 @@
       class="max-md:not-print:sticky max-md:not-print:left-2 max-md:not-print:flex max-md:not-print:w-[calc(100vw-16px)] max-md:not-print:items-center max-md:not-print:gap-3"
     >
       <!-- Заголовок задачи -->
-      <div class="relative flex items-center max-md:not-print:flex-1">
+      <div
+        class="relative flex max-w-[860px] items-center max-md:not-print:flex-1 md:shrink-0 md:text-center"
+      >
         <span
           v-if="store.editingTaskId !== task.id"
-          class="cursor-text text-sm leading-none font-bold md:text-lg print:text-lg"
+          class="cursor-text text-sm leading-6 font-bold text-balance md:text-lg print:text-lg"
           @click="startEditingTask"
         >
           {{ task.title }}
