@@ -40,6 +40,11 @@
       "title": "يبدأ الأسبوع في",
       "monday": "الاثنين",
       "sunday": "الأحد"
+    },
+    "calculationMode": {
+      "title": "حساب التقدم",
+      "fullMonth": "الشهر الكامل",
+      "passedDays": "الأيام الماضية فقط"
     }
   },
   "control": {

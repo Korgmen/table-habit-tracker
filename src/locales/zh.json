@@ -40,6 +40,11 @@
       "title": "一周开始于",
       "monday": "星期一",
       "sunday": "星期天"
+    },
+    "calculationMode": {
+      "title": "进度计算",
+      "fullMonth": "整个月份",
+      "passedDays": "仅已过日子"
     }
   },
   "control": {

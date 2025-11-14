@@ -11,6 +11,7 @@ export const useHabitStore = defineStore('habit', {
     const savedLang = localStorage.getItem('lang') || 'system';
     const savedWeekStart = localStorage.getItem('weekStart') || 'monday';
     const savedShowWeekSeparators = localStorage.getItem('showWeekSeparators') !== 'false';
+    const savedCalculationMode = localStorage.getItem('calculationMode') || 'fullMonth';
 
     return {
       /** Реальная текущая дата (не меняется при переключении месяцев) */
@@ -33,6 +34,8 @@ export const useHabitStore = defineStore('habit', {
       weekStart: savedWeekStart,
       /** Показывать ли вертикальные разделители недель */
       showWeekSeparators: savedShowWeekSeparators,
+      /** Режим расчёта прогресса: 'fullMonth' | 'passedDays' */
+      calculationMode: savedCalculationMode,
       /** Состояние глобального модального окна */
       modal: {
         isOpen: false,
@@ -186,31 +189,34 @@ export const useHabitStore = defineStore('habit', {
       }
     },
 
-    /** Пересчитывает прогресс задачи на основе отметок подзадач */
+    /** Пересчитывает прогресс задачи на основе отметок подзадач с учётом режима расчёта */
     updateTaskProgress(taskId) {
       const task = this.tasks.find(t => t.id === taskId);
-      if (task && task.subtasks.length > 0) {
-        const subtaskProgresses = task.subtasks.map(subtask => {
-          const completed = subtask.marks.filter(
-            (status, i) => status === true && i < this.today
-          ).length;
-          const excluded = subtask.marks.filter(
-            (status, i) => status === false && i < this.today
-          ).length;
-          const passedDays = this.today;
-          if (excluded === passedDays) {
-            return 100.0;
-          }
-          const totalDays = Math.max(passedDays - excluded, 1);
-          return (completed / totalDays) * 100;
-        });
-        task.progress =
-          (
-            subtaskProgresses.reduce((sum, p) => sum + (p || 0), 0) / subtaskProgresses.length
-          ).toFixed(1) || 0.0;
-      } else if (task) {
+      if (!task || task.subtasks.length === 0) {
         task.progress = 0.0;
+        this.saveState();
+        return;
       }
+
+      let totalValid = 0;
+      let completed = 0;
+
+      const maxDay = this.calculationMode === 'fullMonth' ? this.daysInMonth : this.today;
+
+      task.subtasks.forEach(subtask => {
+        for (let i = 0; i < maxDay; i++) {
+          const mark = subtask.marks[i];
+          if (mark === true) {
+            completed++;
+            totalValid++;
+          } else if (mark === null) {
+            totalValid++;
+          }
+        }
+      });
+
+      task.progress = totalValid > 0 ? ((completed / totalValid) * 100).toFixed(1) : 0.0;
+
       this.saveState();
     },
 
@@ -281,6 +287,7 @@ export const useHabitStore = defineStore('habit', {
       localStorage.setItem('lang', this.lang);
       localStorage.setItem('weekStart', this.weekStart);
       localStorage.setItem('showWeekSeparators', this.showWeekSeparators);
+      localStorage.setItem('calculationMode', this.calculationMode);
     },
 
     /** Переход к предыдущему месяцу с сохранением и адаптацией данных */
@@ -436,6 +443,15 @@ export const useHabitStore = defineStore('habit', {
         onConfirm: null,
         onCancel: null,
       };
+    },
+
+    /** Устанавливает режим расчёта прогресса и пересчитывает все задачи */
+    setCalculationMode(mode) {
+      if (!['fullMonth', 'passedDays'].includes(mode)) return;
+      this.calculationMode = mode;
+      localStorage.setItem('calculationMode', mode);
+      this.tasks.forEach(task => this.updateTaskProgress(task.id));
+      this.saveState();
     },
   },
 });

@@ -40,6 +40,11 @@
       "title": "Week starts on",
       "monday": "Monday",
       "sunday": "Sunday"
+    },
+    "calculationMode": {
+      "title": "Progress Calculation",
+      "fullMonth": "Full Month",
+      "passedDays": "Passed Days Only"
     }
   },
   "control": {

@@ -66,7 +66,9 @@
 
     <div class="flex flex-col gap-5">
       <!-- Основные настройки -->
-      <div class="flex flex-col gap-2.5 md:grid md:grid-cols-[repeat(2,1fr)] print:grid print:grid-cols-[repeat(2,1fr)]">
+      <div
+        class="flex flex-col gap-2.5 md:grid md:grid-cols-[repeat(2,1fr)] print:grid print:grid-cols-[repeat(2,1fr)]"
+      >
         <h3 class="col-span-2 text-lg font-semibold">{{ t('settings.title') }}</h3>
 
         <!-- Выбор темы -->
@@ -152,6 +154,19 @@
               <option value="sunday">{{ t('settings.weekStart.sunday') }}</option>
             </select>
           </div>
+        </div>
+
+        <!-- Режим расчёта прогресса -->
+        <div class="flex flex-col gap-1.5">
+          <label class="block">{{ t('settings.calculationMode.title') }}</label>
+          <select
+            v-model="store.calculationMode"
+            class="w-full border-2 p-1"
+            @change="store.setCalculationMode(store.calculationMode)"
+          >
+            <option value="fullMonth">{{ t('settings.calculationMode.fullMonth') }}</option>
+            <option value="passedDays">{{ t('settings.calculationMode.passedDays') }}</option>
+          </select>
         </div>
       </div>
 

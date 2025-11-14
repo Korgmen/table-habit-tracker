@@ -40,6 +40,11 @@
       "title": "La semana comienza en",
       "monday": "Lunes",
       "sunday": "Domingo"
+    },
+    "calculationMode": {
+      "title": "Cálculo de Progreso",
+      "fullMonth": "Mes Completo",
+      "passedDays": "Solo Días Pasados"
     }
   },
   "control": {
