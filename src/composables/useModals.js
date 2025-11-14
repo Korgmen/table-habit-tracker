@@ -14,15 +14,17 @@ export function useModals(t) {
   };
 
   /** Показывает приветственное сообщение, если пользователь его ещё не видел */
-  const showWelcome = () => {
-    if (localStorage.getItem('hasSeenWelcome') === 'true') return;
+  const showWelcome = (force = false) => {
+    if (!force && localStorage.getItem('hasSeenWelcome') === 'true') return;
 
     store.showModal({
       type: 'custom',
       title: t('welcome.title'),
       message: t('welcome.message'),
       onConfirm: () => {
-        localStorage.setItem('hasSeenWelcome', 'true');
+        if (!force) {
+          localStorage.setItem('hasSeenWelcome', 'true');
+        }
         store.closeModal();
       },
     });

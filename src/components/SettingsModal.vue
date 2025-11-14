@@ -1,5 +1,6 @@
 <script setup>
   import { useHabitStore } from '@/stores/habitStore';
+  import { useModals } from '@/composables/useModals';
   import { ref } from 'vue';
   import { useI18n } from 'vue-i18n';
   import { X, Upload, Download, Printer } from 'lucide-vue-next';
@@ -22,6 +23,7 @@
 
   const store = useHabitStore();
   const { t, locale } = useI18n();
+  const { showWelcome } = useModals(t);
 
   /** Локальная копия выбранного языка для синхронизации с select */
   const lang = ref(store.lang);
@@ -183,6 +185,17 @@
             <li>{{ t('settings.hotkeys.arrowRight') }}</li>
             <li>{{ t('settings.hotkeys.s') }}</li>
           </ul>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <div class="flex items-center gap-1.5">
+          <button
+            class="tap-highlight-transparent relative flex h-8 cursor-pointer touch-manipulation items-center justify-center border-2 px-1.5"
+            @click="showWelcome(true)"
+          >
+            Показать окно приветствия
+          </button>
         </div>
       </div>
     </div>
