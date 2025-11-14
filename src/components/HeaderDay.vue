@@ -1,5 +1,5 @@
 <script setup>
-  import { computed } from 'vue';
+  import { computed, ref } from 'vue';
   import { useHabitStore } from '@/stores/habitStore';
 
   const props = defineProps({
@@ -17,6 +17,10 @@
 
   const store = useHabitStore();
 
+  /** Таймер и состояние для двойного тапа */
+  const tapState = ref(new Map());
+  const DOUBLE_TAP_DELAY = 250;
+
   /** Состояние кружка в заголовке: `future` – день ещё не наступил, `completed` – прошёл */
   const getHeaderCircleState = computed(() => {
     if (props.day > store.today) return 'future';
@@ -31,14 +35,39 @@
   );
 
   /**
-   * Обрабатывает клик по заголовку дня.
-   * Левый клик – снимает отметку, правый – ставит пропуск.
+   * Обрабатывает тапы по кружку дня в шапке таблицы на мобильных.
+   * Одиночный тап — очищает колонку (null), двойной тап — пропускает день (false).
+   * Аналогично десктопу: левый клик → null, правый клик → false.
    */
-  const handleHeaderClick = event => {
+  const handleHeaderTap = event => {
     const dayIndex = props.day - 1;
     if (dayIndex >= store.today) return;
-    const isRightClick = event.button === 2;
-    store.updateHeaderDay(dayIndex, isRightClick ? false : null);
+
+    const key = `header-${props.day}`;
+    const now = Date.now();
+
+    let state = tapState.value.get(key) || { lastTap: 0, timeout: null };
+
+    if (state.timeout) {
+      clearTimeout(state.timeout);
+      state.timeout = null;
+    }
+
+    const timeDiff = now - state.lastTap;
+
+    if (timeDiff > 0 && timeDiff < DOUBLE_TAP_DELAY) {
+      store.updateHeaderDay(dayIndex, false);
+      tapState.value.delete(key);
+    } else {
+      state.lastTap = now;
+      state.timeout = setTimeout(() => {
+        store.updateHeaderDay(dayIndex, null);
+        tapState.value.delete(key);
+      }, DOUBLE_TAP_DELAY);
+      tapState.value.set(key, state);
+    }
+
+    event.preventDefault();
   };
 </script>
 
@@ -50,14 +79,19 @@
     <p class="text-sm leading-none font-medium md:text-lg print:text-lg">{{ day }}</p>
 
     <div
-      class="relative flex h-3 w-3 items-center justify-center rounded-[50%] border-2 transition-all duration-300 ease-in-out before:absolute before:h-0.5 before:w-full before:rotate-45 before:bg-current before:opacity-0 before:transition-all before:duration-300 before:ease-in-out after:absolute after:h-0.5 after:w-full after:-rotate-45 after:bg-current after:opacity-0 after:transition-all after:duration-300 after:ease-in-out"
+      class="tap-highlight-transparent relative flex aspect-square w-9/10 touch-manipulation items-center justify-center rounded-[50%] border-2 border-current transition-all duration-300 ease-in-out before:absolute before:h-0.5 before:w-full before:rotate-45 before:bg-current before:opacity-0 before:transition-all before:duration-300 before:ease-in-out after:absolute after:h-0.5 after:w-full after:-rotate-45 after:bg-current after:opacity-0 after:transition-all after:duration-300 after:ease-in-out md:w-3 print:w-3"
       :class="{
         'cursor-not-allowed': getHeaderCircleState === 'future',
         'cursor-pointer bg-current': getHeaderCircleState === 'completed',
         'bg-transparent before:opacity-100 after:opacity-100': isAllFalse,
       }"
-      @click="handleHeaderClick"
-      @contextmenu.prevent="handleHeaderClick"
+      @click.left.prevent="
+        if (props.day - 1 < store.today) store.updateHeaderDay(props.day - 1, null);
+      "
+      @click.right.prevent="
+        if (props.day - 1 < store.today) store.updateHeaderDay(props.day - 1, false);
+      "
+      @touchend.prevent="handleHeaderTap"
     ></div>
   </div>
 
