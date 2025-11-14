@@ -194,7 +194,7 @@
             class="tap-highlight-transparent relative flex h-8 cursor-pointer touch-manipulation items-center justify-center border-2 px-1.5"
             @click="showWelcome(true)"
           >
-            Показать окно приветствия
+            {{ t('settings.showWelcome') }}
           </button>
         </div>
       </div>

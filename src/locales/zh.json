@@ -45,7 +45,8 @@
       "title": "进度计算",
       "fullMonth": "整个月份",
       "passedDays": "仅已过日子"
-    }
+    },
+    "showWelcome": "显示欢迎窗口"
   },
   "control": {
     "title": "菜单",

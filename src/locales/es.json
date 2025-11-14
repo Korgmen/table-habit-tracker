@@ -45,7 +45,8 @@
       "title": "Cálculo de Progreso",
       "fullMonth": "Mes Completo",
       "passedDays": "Solo Días Pasados"
-    }
+    },
+    "showWelcome": "Mostrar ventana de bienvenida"
   },
   "control": {
     "title": "Menú",
