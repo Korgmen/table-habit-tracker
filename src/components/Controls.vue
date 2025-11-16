@@ -79,7 +79,7 @@
       </button>
 
       <button
-        v-if="!isCurrentMonth"
+        v-if="!isCurrentMonth && store.tasks.length > 0"
         class="tap-highlight-transparent relative flex h-8 cursor-pointer touch-manipulation items-center justify-center border-2 px-1.5"
         @click="confirmDuplicateToCurrent"
         :title="t('control.duplicateToCurrent')"

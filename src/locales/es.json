@@ -76,5 +76,9 @@
     "title": "Confirmar duplicación",
     "message": "Las tareas del mes seleccionado se copiarán al mes actual (reemplazando las existentes)"
   },
+  "noTasks": {
+    "title": "Sin tareas aún",
+    "message": "Haz clic en el botón + o pulsa N para añadir tu primer hábito"
+  },
   "taskLimit": "Se alcanzó el número máximo de tareas"
 }

@@ -107,6 +107,7 @@
 
           <!-- Перетаскиваемый список задач -->
           <VueDraggableNext
+            v-if="store.tasks.length > 0"
             v-model="store.tasks"
             item-key="id"
             handle=".drag-handle"
@@ -116,6 +117,20 @@
               <TaskRow :task="task" />
             </template>
           </VueDraggableNext>
+
+          <!-- Сообщение, если нет задач -->
+          <div v-else class="border-t-3 px-2 py-8 text-center md:px-5 md:py-16 print:hidden">
+            <div
+              class="flex flex-col items-center gap-3 max-md:sticky max-md:left-2 max-md:w-[calc(100vw-16px)] md:gap-6"
+            >
+              <p class="text-2xl font-bold">
+                {{ t('noTasks.title') }}
+              </p>
+              <p class="max-w-md text-lg">
+                {{ t('noTasks.message') }}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 

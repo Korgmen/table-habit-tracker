@@ -76,5 +76,9 @@
     "title": "Confirm Duplication",
     "message": "Tasks from the selected month will be copied to the current month (replacing existing ones)"
   },
+  "noTasks": {
+    "title": "No tasks yet",
+    "message": "Click the + button or press N to add your first habit"
+  },
   "taskLimit": "Maximum number of tasks reached"
 }
