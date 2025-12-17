@@ -3,6 +3,7 @@ import { createPinia } from 'pinia';
 import { createI18n } from 'vue-i18n';
 import '@/style.css';
 import App from '@/App.vue';
+import { useHabitStore } from '@/stores/habitStore';
 import en from '@/locales/en.json';
 import ru from '@/locales/ru.json';
 import ar from '@/locales/ar.json';
@@ -43,4 +44,9 @@ const pinia = createPinia();
 
 app.use(pinia);
 app.use(i18n);
+
+/** Инициализация store и авторизации */
+const store = useHabitStore();
+store.initAuth();
+
 app.mount('#app');

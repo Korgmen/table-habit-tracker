@@ -48,6 +48,10 @@
     },
     "showWelcome": "显示欢迎窗口"
   },
+  "auth": {
+    "login": "通过 Google 登录以同步",
+    "logout": "退出登录"
+  },
   "control": {
     "title": "菜单",
     "newTask": "新任务",

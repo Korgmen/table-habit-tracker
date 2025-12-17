@@ -1,4 +1,7 @@
 import { defineStore } from 'pinia';
+import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+import { auth, provider, db } from '@/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 /** Хранилище состояния приложения "Трекер привычек" */
 export const useHabitStore = defineStore('habit', {
@@ -45,6 +48,9 @@ export const useHabitStore = defineStore('habit', {
         onConfirm: null,
         onCancel: null,
       },
+      /** Авторизация */
+      user: null,
+      isAuthReady: false,
     };
   },
 
@@ -288,6 +294,7 @@ export const useHabitStore = defineStore('habit', {
       localStorage.setItem('weekStart', this.weekStart);
       localStorage.setItem('showWeekSeparators', this.showWeekSeparators);
       localStorage.setItem('calculationMode', this.calculationMode);
+      this.saveToCloud();
     },
 
     /** Переход к предыдущему месяцу с сохранением и адаптацией данных */
@@ -452,6 +459,72 @@ export const useHabitStore = defineStore('habit', {
       localStorage.setItem('calculationMode', mode);
       this.tasks.forEach(task => this.updateTaskProgress(task.id));
       this.saveState();
+    },
+
+    /** Авторизация через гугл */
+    async loginWithGoogle() {
+      await signInWithPopup(auth, provider);
+    },
+
+    /** Логаут */
+    async logout() {
+      await signOut(auth);
+      this.user = null;
+    },
+
+    /** Автовосстановление сессии */
+    initAuth() {
+      onAuthStateChanged(auth, async user => {
+        this.user = user;
+        this.isAuthReady = true;
+
+        if (user) {
+          await this.loadFromCloud();
+        }
+      });
+    },
+
+    /** Сохранение данных в Firestore */
+    async saveToCloud() {
+      if (!this.user || !this.isAuthReady) return;
+
+      const ref = doc(db, 'users', this.user.uid);
+
+      await setDoc(ref, {
+        archive: this.archive,
+        settings: {
+          theme: this.theme,
+          lang: this.lang,
+          weekStart: this.weekStart,
+          showWeekSeparators: this.showWeekSeparators,
+          calculationMode: this.calculationMode,
+        },
+        updatedAt: Date.now(),
+      });
+    },
+
+    /** Загрузку данных из Firestore */
+    async loadFromCloud() {
+      if (!this.user) return;
+
+      const ref = doc(db, 'users', this.user.uid);
+      const snap = await getDoc(ref);
+
+      if (!snap.exists()) {
+        await this.saveToCloud();
+        return;
+      }
+
+      const data = snap.data();
+
+      this.archive = data.archive || {};
+      this.tasks =
+        this.archive[`${this.currentYear}-${String(this.currentMonth + 1).padStart(2, '0')}`]
+          ?.tasks || [];
+
+      Object.assign(this, data.settings || {});
+
+      localStorage.setItem('habitArchive', JSON.stringify(this.archive));
     },
   },
 });
