@@ -1,3 +1,19 @@
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter-Italic-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
 /** Базовые стили документа */
 body {
   font-family: 'Inter';
@@ -25,6 +41,7 @@ body {
 
 /** Стили печати: упрощение интерфейса, удаление фона и лишних элементов */
 @media print {
+
   /** Принудительно белый фон и чёрный текст */
   body,
   #app {
@@ -33,12 +50,12 @@ body {
     display: block;
   }
 
-    /** Все элементы должны быть видимыми (включая те, что были полупрозрачными) */
+  /** Все элементы должны быть видимыми (включая те, что были полупрозрачными) */
   * {
     opacity: 100% !important;
   }
 
-    /** Скрывает все элементы управления, оставляя только таблицу и заголовок месяца/года */
+  /** Скрывает все элементы управления, оставляя только таблицу и заголовок месяца/года */
   .hide-print {
     display: none !important;
   }

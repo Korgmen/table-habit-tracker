@@ -72,6 +72,10 @@
     "ok": "OK",
     "warning": "Advertencia"
   },
+  "update": {
+    "title": "Actualización disponible",
+    "message": "¿Hay una nueva versión de la aplicación disponible. Actualizar ahora?"
+  },
   "duplicate": {
     "title": "Confirmar duplicación",
     "message": "Las tareas del mes seleccionado se copiarán al mes actual (reemplazando las existentes)"

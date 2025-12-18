@@ -5,6 +5,7 @@
   import { ref, onMounted, onUnmounted } from 'vue';
   import { VueDraggableNext } from 'vue-draggable-next';
   import { useI18n } from 'vue-i18n';
+  import { registerSW } from 'virtual:pwa-register';
   import Header from '@/components/Header.vue';
   import TableHeader from '@/components/TableHeader.vue';
   import TaskRow from '@/components/TaskRow.vue';
@@ -13,7 +14,7 @@
   const store = useHabitStore();
   const { currentTheme, canNextMonth } = useHabitUtils();
   const { t } = useI18n();
-  const { showTaskLimit, showWelcome } = useModals(t);
+  const { showTaskLimit, showWelcome, showUpdatePrompt } = useModals(t);
 
   /** Ссылка на скрытый input для импорта файла */
   const importInput = ref(null);
@@ -63,8 +64,17 @@
   /** Инициирует печать страницы */
   const triggerPrint = () => window.print();
 
-  /** Подписка на глобальные клавиатурные события */
   onMounted(() => {
+    /** Регистрация Service Worker с обработкой обновления */
+    const updateSW = registerSW({
+      onNeedRefresh() {
+        showUpdatePrompt(updateSW);
+      },
+      onOfflineReady() {
+        console.log('App ready to work offline');
+      },
+    });
+    /** Подписка на глобальные клавиатурные события */
     window.addEventListener('keydown', handleKeydown);
     /** Показывает приветственное модальное окно при первом запуске */
     showWelcome();

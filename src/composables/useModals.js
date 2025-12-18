@@ -66,9 +66,23 @@ export function useModals(t) {
     });
   };
 
+  /** Показывает модальное окно с предложением обновить PWA */
+  const showUpdatePrompt = updateSW => {
+    store.showModal({
+      type: 'confirm',
+      title: t('update.title'),
+      message: t('update.message'),
+      onConfirm: () => {
+        updateSW(true);
+      },
+      onCancel: () => store.closeModal(),
+    });
+  };
+
   return {
     showTaskLimit,
     showWelcome,
     confirmDuplicateToCurrent,
+    showUpdatePrompt,
   };
 }

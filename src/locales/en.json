@@ -72,6 +72,10 @@
     "ok": "OK",
     "warning": "Warning"
   },
+  "update": {
+    "title": "Update Available",
+    "message": "A new version of the app is available. Update now?"
+  },
   "duplicate": {
     "title": "Confirm Duplication",
     "message": "Tasks from the selected month will be copied to the current month (replacing existing ones)"
