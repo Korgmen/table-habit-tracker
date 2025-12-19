@@ -48,6 +48,10 @@
     },
     "showWelcome": "Mostrar ventana de bienvenida"
   },
+  "auth": {
+    "login": "Iniciar sesión con Google para sincronizar",
+    "logout": "Cerrar sesión"
+  },
   "control": {
     "title": "Menú",
     "newTask": "Nueva tarea",

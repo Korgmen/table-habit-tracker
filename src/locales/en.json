@@ -48,6 +48,10 @@
     },
     "showWelcome": "Show welcome window"
   },
+  "auth": {
+    "login": "Sign in with Google to sync",
+    "logout": "Sign out"
+  },
   "control": {
     "title": "Menu",
     "newTask": "New task",

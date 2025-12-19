@@ -3,7 +3,7 @@
   import { useHabitStore } from '@/stores/habitStore';
   import { useModals } from '@/composables/useModals';
   import { useI18n } from 'vue-i18n';
-  import { Plus, Trash2, Eraser, Settings, Copy } from 'lucide-vue-next';
+  import { Plus, Trash2, Eraser, Settings, Copy, LogIn, LogOut } from 'lucide-vue-next';
 
   const store = useHabitStore();
   const { t } = useI18n();
@@ -76,6 +76,24 @@
         :title="t('settings.title')"
       >
         <Settings class="w-5" />
+      </button>
+
+      <button
+        v-if="!store.user"
+        class="tap-highlight-transparent relative flex h-8 cursor-pointer touch-manipulation items-center justify-center border-2 px-1.5"
+        @click="store.loginWithGoogle()"
+        :title="t('auth.login')"
+      >
+        <LogIn class="w-5" />
+      </button>
+
+      <button
+        v-else
+        class="tap-highlight-transparent relative flex h-8 cursor-pointer touch-manipulation items-center justify-center border-2 px-1.5"
+        @click="store.logout()"
+        :title="`${t('auth.logout')} (${store.user?.displayName})`"
+      >
+        <LogOut class="w-5" />
       </button>
 
       <button
