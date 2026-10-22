@@ -2,7 +2,7 @@
   import { useHabitStore } from '@/stores/habitStore';
   import { useHabitUtils } from '@/composables/useHabitUtils';
   import { useModals } from '@/composables/useModals';
-  import { ref, onMounted, onUnmounted } from 'vue';
+  import { ref, watch, onMounted, onUnmounted } from 'vue';
   import { VueDraggableNext } from 'vue-draggable-next';
   import { useI18n } from 'vue-i18n';
   import { registerSW } from 'virtual:pwa-register';
@@ -14,7 +14,15 @@
   const store = useHabitStore();
   const { currentTheme, canNextMonth } = useHabitUtils();
   const { t } = useI18n();
-  const { showTaskLimit, showWelcome, showUpdatePrompt } = useModals(t);
+  const { showTaskLimit, showWelcome, showUpdatePrompt, showCloudConflict } = useModals(t);
+
+  /** Конфликт определяет стор после входа, диалог показывается здесь, где доступен i18n */
+  watch(
+    () => store.cloudConflict,
+    conflict => {
+      if (conflict) showCloudConflict();
+    }
+  );
 
   /** Ссылка на скрытый input для импорта файла */
   const importInput = ref(null);
@@ -27,6 +35,7 @@
    * Игнорирует ввод в полях ввода.
    */
   const handleKeydown = event => {
+    if (store.modal.isOpen) return;
     if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') return;
 
     const keyActions = {
@@ -64,6 +73,15 @@
   /** Инициирует печать страницы */
   const triggerPrint = () => window.print();
 
+  /** Свёрнутое приложение дописывает отложенную запись в облако, вернувшееся сверяет дату */
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'hidden') store.flushCloudSave();
+    else store.syncRealDate();
+  };
+
+  /** Проверка смены дня, пока приложение открыто */
+  let realDateTimer = null;
+
   onMounted(() => {
     /** Регистрация Service Worker с обработкой обновления */
     const updateSW = registerSW({
@@ -76,6 +94,8 @@
     });
     /** Подписка на глобальные клавиатурные события */
     window.addEventListener('keydown', handleKeydown);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    realDateTimer = setInterval(() => store.syncRealDate(), 60 * 1000);
     /** Показывает приветственное модальное окно при первом запуске */
     showWelcome();
   });
@@ -83,6 +103,8 @@
   /** Очистка глобального обработчика клавиш */
   onUnmounted(() => {
     window.removeEventListener('keydown', handleKeydown);
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    clearInterval(realDateTimer);
   });
 </script>
 

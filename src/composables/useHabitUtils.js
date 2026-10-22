@@ -1,5 +1,5 @@
 import { computed } from 'vue';
-import { useHabitStore } from '@/stores/habitStore';
+import { useHabitStore, monthKey } from '@/stores/habitStore';
 
 export function useHabitUtils() {
   const store = useHabitStore();
@@ -30,13 +30,9 @@ export function useHabitUtils() {
    * Определяет, можно ли перейти к следующему месяцу.
    * Доступно только для месяцев не позже текущего реального.
    */
-  const canNextMonth = computed(() => {
-    const newDate = new Date(store.currentDate);
-    newDate.setMonth(store.currentMonth + 1);
-    const newMonthKey = `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, '0')}`;
-    const realMonthKey = `${store.realDate.getFullYear()}-${String(store.realDate.getMonth() + 1).padStart(2, '0')}`;
-    return newMonthKey <= realMonthKey;
-  });
+  const canNextMonth = computed(
+    () => monthKey(new Date(store.currentYear, store.currentMonth + 1, 1)) <= store.realMonthKey
+  );
 
   return {
     weekEndDay,

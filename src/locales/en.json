@@ -1,7 +1,7 @@
 {
   "welcome": {
     "title": "Welcome to Table – Habit Tracker",
-    "message": "<p><b>Table</b> is a habit tracker that helps you daily track the completion of important tasks and form sustainable habits.</p> <p>You add habits that need to be performed regularly (every day or several times a week): for example, \"wake up on time\", \"do exercises\", \"go to workout\", \"study Russian\".</p> <p>Every day you mark:</p> <p> <svg class='inline-block ml-2' width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'> <rect x='1' y='1' width='10' height='10' rx='5' fill='currentColor' /> <rect x='1' y='1' width='10' height='10' rx='5' stroke='currentColor' stroke-width='2' /> </svg> — completed (filled marker); </p> <p> <svg class='inline-block ml-2' width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'> <rect x='1' y='1' width='10' height='10' rx='5' stroke='currentColor' stroke-width='2' /> </svg> — not completed (leave empty); </p> <p> <svg class='inline-block ml-2' width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'> <rect x='1' y='1' width='10' height='10' rx='5' stroke='currentColor' stroke-width='2' /> <rect width='12' height='2' transform='translate(1.05025 9.53554) rotate(-45)' fill='currentColor' /> <rect width='12' height='2' transform='translate(2.46446 1.05025) rotate(45)' fill='currentColor' /> </svg> — skip (cross – the day doesn't count if the task wasn't required, for example, workout every other day); </p> <p>At the end of the month, the app shows:</p> <ul> <li>– completion percentage for each habit and overall average;</li> <li>– grade on a 5-point scale;</li> <li>– archive of all past months for progress comparison.</li> </ul> <p><b>Convenient to print:</b> the table can be printed in a clean form — without buttons and interface. Hang it on the fridge or wall, mark with a pencil throughout the month, and at the end — enter all data into the app. This way you save the archive and get statistics.</p> <p><i>It was thanks to the paper version that this app appeared; I needed an archive and statistics calculation.</i></p> <p>Everything is saved locally in the browser, you can export and import data.</p> <p>A simple table is a visual way to see where you keep the rhythm and where you need to improve.</p>"
+    "message": "<p><b>Table</b> is a habit tracker that helps you daily track the completion of important tasks and form sustainable habits.</p> <p>You add habits that need to be performed regularly (every day or several times a week): for example, \"wake up on time\", \"do exercises\", \"go to workout\", \"study Russian\".</p> <p>Every day you mark:</p> <p> <svg class='inline-block ml-2' width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'> <rect x='1' y='1' width='10' height='10' rx='5' fill='currentColor' /> <rect x='1' y='1' width='10' height='10' rx='5' stroke='currentColor' stroke-width='2' /> </svg> — completed (filled marker); </p> <p> <svg class='inline-block ml-2' width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'> <rect x='1' y='1' width='10' height='10' rx='5' stroke='currentColor' stroke-width='2' /> </svg> — not completed (leave empty); </p> <p> <svg class='inline-block ml-2' width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'> <rect x='1' y='1' width='10' height='10' rx='5' stroke='currentColor' stroke-width='2' /> <rect width='12' height='2' transform='translate(1.05025 9.53554) rotate(-45)' fill='currentColor' /> <rect width='12' height='2' transform='translate(2.46446 1.05025) rotate(45)' fill='currentColor' /> </svg> — skip (cross – the day doesn't count if the task wasn't required, for example, workout every other day); </p> <p>At the end of the month, the app shows:</p> <ul> <li>– completion percentage for each habit and overall average;</li> <li>– grade on a 5-point scale;</li> <li>– archive of all past months for progress comparison.</li> </ul> <p><b>Convenient to print:</b> the table can be printed in a clean form — without buttons and interface. Hang it on the fridge or wall, mark with a pencil throughout the month, and at the end — enter all data into the app. This way you save the archive and get statistics.</p> <p><i>It was thanks to the paper version that this app appeared; I needed an archive and statistics calculation.</i></p> <p>Data is saved in the browser and is available offline. Sign in with Google to sync it between devices; export and import to JSON are also available.</p> <p>A simple table is a visual way to see where you keep the rhythm and where you need to improve.</p>"
   },
   "settings": {
     "title": "Settings",
@@ -13,11 +13,12 @@
       "dark": "Dark"
     },
     "lang": {
-      "title": "Language",
-      "this": "English"
+      "title": "Language"
     },
     "expImp": {
-      "title": "Export/Import"
+      "title": "Export/Import",
+      "export": "Export to JSON",
+      "import": "Import from JSON"
     },
     "print": {
       "title": "Print"
@@ -53,7 +54,6 @@
     "logout": "Sign out"
   },
   "control": {
-    "title": "Menu",
     "newTask": "New task",
     "newSubtask": "New subtask",
     "deleteSubtask": "Delete last subtask",
@@ -63,7 +63,6 @@
     "deleteTask": "Delete task",
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
-    "hideControl": "Hide",
     "duplicateToCurrent": "Duplicate all tasks to current month"
   },
   "general": {
@@ -75,6 +74,12 @@
     "cancel": "Cancel",
     "ok": "OK",
     "warning": "Warning"
+  },
+  "conflict": {
+    "title": "Data Conflict",
+    "message": "Your local data differs from the cloud data. Save local data (overwriting cloud) or load from cloud (overwriting local)?",
+    "confirm": "Save local",
+    "cancel": "Load from cloud"
   },
   "update": {
     "title": "Update Available",
@@ -88,5 +93,20 @@
     "title": "No tasks yet",
     "message": "Click the + button or press N to add your first habit"
   },
-  "taskLimit": "Maximum number of tasks reached"
+  "taskLimit": "Maximum number of tasks reached",
+  "task": {
+    "defaultTitle": "New task"
+  },
+  "import": {
+    "tooLarge": "The file is too large (maximum 2 MB)",
+    "invalid": "The file does not contain valid tracker data",
+    "error": "Failed to import the file"
+  },
+  "mark": {
+    "cell": "{title}, day {day}, subtask {subtask}: {state}",
+    "done": "done",
+    "notDone": "not done",
+    "skip": "skipped",
+    "headerDay": "Day {day}: reset marks for all tasks"
+  }
 }

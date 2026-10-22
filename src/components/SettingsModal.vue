@@ -1,7 +1,6 @@
 <script setup>
   import { useHabitStore } from '@/stores/habitStore';
   import { useModals } from '@/composables/useModals';
-  import { ref } from 'vue';
   import { useI18n } from 'vue-i18n';
   import { X, Upload, Download, Printer } from 'lucide-vue-next';
 
@@ -22,23 +21,8 @@
   ]);
 
   const store = useHabitStore();
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const { showWelcome } = useModals(t);
-
-  /** Локальная копия выбранного языка для синхронизации с select */
-  const lang = ref(store.lang);
-
-  /** Сохраняет выбранный язык и обновляет локаль i18n */
-  const changeLang = () => {
-    store.setLang(lang.value);
-    let systemLang = 'en';
-    const navLang = navigator.language.toLowerCase();
-    if (navLang.startsWith('ru')) systemLang = 'ru';
-    else if (navLang.startsWith('ar')) systemLang = 'ar';
-    else if (navLang.startsWith('es')) systemLang = 'es';
-    else if (navLang.startsWith('zh')) systemLang = 'zh';
-    locale.value = lang.value === 'system' ? systemLang : lang.value;
-  };
 
   /** Передаёт событие импорта вверх */
   const handleImport = () => {
@@ -90,7 +74,11 @@
         <!-- Выбор языка -->
         <div class="flex flex-col gap-1.5">
           <label class="block">{{ t('settings.lang.title') }}</label>
-          <select v-model="lang" class="w-full border-2 p-1" @change="changeLang">
+          <select
+            v-model="store.lang"
+            class="w-full border-2 p-1"
+            @change="store.setLang(store.lang)"
+          >
             <option value="system">{{ t('settings.asInSystem') }}</option>
             <option value="ru">Русский</option>
             <option value="en">English</option>

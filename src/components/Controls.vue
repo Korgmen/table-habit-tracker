@@ -1,6 +1,6 @@
 <script setup>
   import { computed } from 'vue';
-  import { useHabitStore } from '@/stores/habitStore';
+  import { useHabitStore, MAX_TASKS } from '@/stores/habitStore';
   import { useModals } from '@/composables/useModals';
   import { useI18n } from 'vue-i18n';
   import { Plus, Trash2, Eraser, Settings, Copy, LogIn, LogOut } from 'lucide-vue-next';
@@ -18,15 +18,10 @@
    * Проверяет, отображается ли текущий реальный месяц.
    * Если да — кнопка дублирования скрывается.
    */
-  const isCurrentMonth = computed(() => {
-    return (
-      store.currentMonth === store.realDate.getMonth() &&
-      store.currentYear === store.realDate.getFullYear()
-    );
-  });
+  const isCurrentMonth = computed(() => store.currentMonthKey === store.realMonthKey);
 
   /** Проверка: достигнуто ли максимальное количество задач */
-  const canAddTask = computed(() => store.tasks.length < 20);
+  const canAddTask = computed(() => store.tasks.length < MAX_TASKS);
 
   /** Управляет добавлением задач */
   const tryAddTask = () => {

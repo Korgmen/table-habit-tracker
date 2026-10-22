@@ -1,42 +1,9 @@
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
-import { createI18n } from 'vue-i18n';
 import '@/style.css';
 import App from '@/App.vue';
 import { useHabitStore } from '@/stores/habitStore';
-import en from '@/locales/en.json';
-import ru from '@/locales/ru.json';
-import ar from '@/locales/ar.json';
-import es from '@/locales/es.json';
-import zh from '@/locales/zh.json';
-
-/**
- * Определяет активный язык интерфейса.
- * Приоритет: сохранённая настройка → системный язык → английский.
- */
-const savedLang = localStorage.getItem('lang') || 'system';
-let systemLang = 'en';
-const navLang = navigator.language.toLowerCase();
-if (navLang.startsWith('ru')) systemLang = 'ru';
-else if (navLang.startsWith('ar')) systemLang = 'ar';
-else if (navLang.startsWith('es')) systemLang = 'es';
-else if (navLang.startsWith('zh')) systemLang = 'zh';
-
-const activeLang = savedLang === 'system' ? systemLang : savedLang;
-
-/** Создаёт экземпляр vue-i18n */
-const i18n = createI18n({
-  legacy: false,
-  locale: activeLang,
-  fallbackLocale: 'en',
-  messages: {
-    en,
-    ru,
-    ar,
-    es,
-    zh,
-  },
-});
+import { i18n } from '@/i18n';
 
 /** Инициализирует приложение Vue */
 const app = createApp(App);

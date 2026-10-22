@@ -1,7 +1,7 @@
 {
   "welcome": {
     "title": "欢迎使用 Table – 习惯追踪器",
-    "message": "<p><b>Table</b> 是一个习惯追踪器，它帮助您每天追踪重要任务的完成情况并形成可持续的习惯。</p> <p>您添加需要定期执行的习惯（每天或每周几次）：例如，“准时起床”、“做锻炼”、“去健身”、“学习英语”。</p> <p>每天您标记：</p> <p> <svg class='inline-block ml-2' width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'> <rect x='1' y='1' width='10' height='10' rx='5' fill='currentColor' /> <rect x='1' y='1' width='10' height='10' rx='5' stroke='currentColor' stroke-width='2' /> </svg> — 已完成（填充标记）； </p> <p> <svg class='inline-block ml-2' width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'> <rect x='1' y='1' width='10' height='10' rx='5' stroke='currentColor' stroke-width='2' /> </svg> — 未完成（留空）； </p> <p> <svg class='inline-block ml-2' width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'> <rect x='1' y='1' width='10' height='10' rx='5' stroke='currentColor' stroke-width='2' /> <rect width='12' height='2' transform='translate(1.05025 9.53554) rotate(-45)' fill='currentColor' /> <rect width='12' height='2' transform='translate(2.46446 1.05025) rotate(45)' fill='currentColor' /> </svg> — 跳过（叉号 – 如果任务不需要，该天不算，例如，每隔一天训练）； </p> <p>在月底，应用显示：</p> <ul> <li>– 每个习惯的完成百分比和总体平均值；</li> <li>– 5 分制评分；</li> <li>– 所有过去月份的存档，用于比较进度。</li> </ul> <p><b>方便打印：</b> 表格可以以干净形式打印 — 没有按钮和界面。将它挂在冰箱或墙上，整个月用铅笔标记，并在月底 — 将所有数据输入应用。这样您可以保存存档并获取统计数据。</p> <p><i>正是因为纸质版本，这个应用才出现；我需要存档和统计计算。</i></p> <p>一切都本地保存在浏览器中，您可以导出和导入数据。</p> <p>简单的表格是一种视觉方式，可以看到您在哪里保持节奏，以及哪里需要改进。</p>"
+    "message": "<p><b>Table</b> 是一个习惯追踪器，它帮助您每天追踪重要任务的完成情况并形成可持续的习惯。</p> <p>您添加需要定期执行的习惯（每天或每周几次）：例如，“准时起床”、“做锻炼”、“去健身”、“学习英语”。</p> <p>每天您标记：</p> <p> <svg class='inline-block ml-2' width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'> <rect x='1' y='1' width='10' height='10' rx='5' fill='currentColor' /> <rect x='1' y='1' width='10' height='10' rx='5' stroke='currentColor' stroke-width='2' /> </svg> — 已完成（填充标记）； </p> <p> <svg class='inline-block ml-2' width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'> <rect x='1' y='1' width='10' height='10' rx='5' stroke='currentColor' stroke-width='2' /> </svg> — 未完成（留空）； </p> <p> <svg class='inline-block ml-2' width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'> <rect x='1' y='1' width='10' height='10' rx='5' stroke='currentColor' stroke-width='2' /> <rect width='12' height='2' transform='translate(1.05025 9.53554) rotate(-45)' fill='currentColor' /> <rect width='12' height='2' transform='translate(2.46446 1.05025) rotate(45)' fill='currentColor' /> </svg> — 跳过（叉号 – 如果任务不需要，该天不算，例如，每隔一天训练）； </p> <p>在月底，应用显示：</p> <ul> <li>– 每个习惯的完成百分比和总体平均值；</li> <li>– 5 分制评分；</li> <li>– 所有过去月份的存档，用于比较进度。</li> </ul> <p><b>方便打印：</b> 表格可以以干净形式打印 — 没有按钮和界面。将它挂在冰箱或墙上，整个月用铅笔标记，并在月底 — 将所有数据输入应用。这样您可以保存存档并获取统计数据。</p> <p><i>正是因为纸质版本，这个应用才出现；我需要存档和统计计算。</i></p> <p>数据保存在浏览器中，离线也可使用。使用 Google 登录即可在设备之间同步数据；也可以将数据导出和导入为 JSON。</p> <p>简单的表格是一种视觉方式，可以看到您在哪里保持节奏，以及哪里需要改进。</p>"
   },
   "settings": {
     "title": "设置",
@@ -13,11 +13,12 @@
       "dark": "深色"
     },
     "lang": {
-      "title": "语言",
-      "this": "中文"
+      "title": "语言"
     },
     "expImp": {
-      "title": "导出/导入"
+      "title": "导出/导入",
+      "export": "导出为 JSON",
+      "import": "从 JSON 导入"
     },
     "print": {
       "title": "打印"
@@ -53,7 +54,6 @@
     "logout": "退出登录"
   },
   "control": {
-    "title": "菜单",
     "newTask": "新任务",
     "newSubtask": "新子任务",
     "deleteSubtask": "删除最后一个子任务",
@@ -63,7 +63,6 @@
     "deleteTask": "删除任务",
     "prevMonth": "上个月",
     "nextMonth": "下个月",
-    "hideControl": "隐藏菜单",
     "duplicateToCurrent": "复制所有任务到当前月"
   },
   "general": {
@@ -75,6 +74,12 @@
     "cancel": "取消",
     "ok": "确定",
     "warning": "警告"
+  },
+  "conflict": {
+    "title": "数据冲突",
+    "message": "您的本地数据与云端数据不同。保存本地数据（覆盖云端）还是从云端加载（覆盖本地）？",
+    "confirm": "保存本地",
+    "cancel": "加载云端"
   },
   "update": {
     "title": "更新可用",
@@ -88,5 +93,20 @@
     "title": "还没有任务",
     "message": "点击 + 按钮或按 N 键添加第一个习惯"
   },
-  "taskLimit": "已达到最大任务数量"
+  "taskLimit": "已达到最大任务数量",
+  "task": {
+    "defaultTitle": "新任务"
+  },
+  "import": {
+    "tooLarge": "文件过大（最大 2 MB）",
+    "invalid": "文件不包含有效的追踪器数据",
+    "error": "无法导入文件"
+  },
+  "mark": {
+    "cell": "{title}，第 {day} 天，子任务 {subtask}：{state}",
+    "done": "已完成",
+    "notDone": "未完成",
+    "skip": "跳过",
+    "headerDay": "第 {day} 天：重置所有任务的标记"
+  }
 }

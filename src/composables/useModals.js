@@ -20,7 +20,7 @@ export function useModals(t) {
     store.showModal({
       type: 'custom',
       title: t('welcome.title'),
-      message: t('welcome.message'),
+      html: t('welcome.message'),
       onConfirm: () => {
         if (!force) {
           localStorage.setItem('hasSeenWelcome', 'true');
@@ -32,10 +32,9 @@ export function useModals(t) {
 
   /** Показывает подтверждение дублирования задач в текущий месяц */
   const confirmDuplicateToCurrent = () => {
-    const realMonthKey = `${store.realDate.getFullYear()}-${String(store.realDate.getMonth() + 1).padStart(2, '0')}`;
-    const currentMonthKey = `${store.currentYear}-${String(store.currentMonth + 1).padStart(2, '0')}`;
+    const realMonthKey = store.realMonthKey;
 
-    if (currentMonthKey === realMonthKey) return;
+    if (store.currentMonthKey === realMonthKey) return;
 
     store.showModal({
       type: 'confirm',
@@ -79,10 +78,28 @@ export function useModals(t) {
     });
   };
 
+  /**
+   * Предлагает выбрать между локальными и облачными данными при расхождении после входа.
+   * Закрытие без выбора оставляет синхронизацию выключенной до следующего входа.
+   */
+  const showCloudConflict = () => {
+    store.showModal({
+      type: 'confirm',
+      title: t('conflict.title'),
+      message: t('conflict.message'),
+      confirmText: t('conflict.confirm'),
+      cancelText: t('conflict.cancel'),
+      onConfirm: () => store.resolveCloudConflict(true),
+      onCancel: () => store.resolveCloudConflict(false),
+      onDismiss: () => store.closeModal(),
+    });
+  };
+
   return {
     showTaskLimit,
     showWelcome,
     confirmDuplicateToCurrent,
     showUpdatePrompt,
+    showCloudConflict,
   };
 }

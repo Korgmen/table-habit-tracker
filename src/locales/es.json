@@ -1,7 +1,7 @@
 {
   "welcome": {
     "title": "Bienvenido a Table – Rastreador de Hábitos",
-    "message": "<p><b>Table</b> es un rastreador de hábitos que te ayuda a rastrear diariamente la completación de tareas importantes y formar hábitos sostenibles.</p> <p>Agregas hábitos que necesitan realizarse regularmente (cada día o varias veces por semana): por ejemplo, \"levantarse a tiempo\", \"hacer ejercicios\", \"ir al entrenamiento\", \"estudiar inglés\".</p> <p>Cada día marcas:</p> <p> <svg class='inline-block ml-2' width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'> <rect x='1' y='1' width='10' height='10' rx='5' fill='currentColor' /> <rect x='1' y='1' width='10' height='10' rx='5' stroke='currentColor' stroke-width='2' /> </svg> — completado (marcador lleno); </p> <p> <svg class='inline-block ml-2' width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'> <rect x='1' y='1' width='10' height='10' rx='5' stroke='currentColor' stroke-width='2' /> </svg> — no completado (deja vacío); </p> <p> <svg class='inline-block ml-2' width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'> <rect x='1' y='1' width='10' height='10' rx='5' stroke='currentColor' stroke-width='2' /> <rect width='12' height='2' transform='translate(1.05025 9.53554) rotate(-45)' fill='currentColor' /> <rect width='12' height='2' transform='translate(2.46446 1.05025) rotate(45)' fill='currentColor' /> </svg> — omitir (cruz – el día no cuenta si la tarea no era requerida, por ejemplo, entrenamiento cada dos días); </p> <p>Al final del mes, la app muestra:</p> <ul> <li>– porcentaje de completación para cada hábito y promedio general;</li> <li>– calificación en una escala de 5 puntos;</li> <li>– archivo de todos los meses pasados para comparación de progreso.</li> </ul> <p><b>Conveniente para imprimir:</b> la tabla se puede imprimir en forma limpia — sin botones ni interfaz. Cuélgala en el refrigerador o la pared, marca con lápiz durante el mes, y al final — ingresa todos los datos en la app. De esta manera guardas el archivo y obtienes estadísticas.</p> <p><i>Fue gracias a la versión en papel que apareció esta app; necesitaba un archivo y cálculo de estadísticas.</i></p> <p>Todo se guarda localmente en el navegador, puedes exportar e importar datos.</p> <p>Una tabla simple es una forma visual de ver dónde mantienes el ritmo y dónde necesitas mejorar.</p>"
+    "message": "<p><b>Table</b> es un rastreador de hábitos que te ayuda a rastrear diariamente la completación de tareas importantes y formar hábitos sostenibles.</p> <p>Agregas hábitos que necesitan realizarse regularmente (cada día o varias veces por semana): por ejemplo, \"levantarse a tiempo\", \"hacer ejercicios\", \"ir al entrenamiento\", \"estudiar inglés\".</p> <p>Cada día marcas:</p> <p> <svg class='inline-block ml-2' width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'> <rect x='1' y='1' width='10' height='10' rx='5' fill='currentColor' /> <rect x='1' y='1' width='10' height='10' rx='5' stroke='currentColor' stroke-width='2' /> </svg> — completado (marcador lleno); </p> <p> <svg class='inline-block ml-2' width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'> <rect x='1' y='1' width='10' height='10' rx='5' stroke='currentColor' stroke-width='2' /> </svg> — no completado (deja vacío); </p> <p> <svg class='inline-block ml-2' width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'> <rect x='1' y='1' width='10' height='10' rx='5' stroke='currentColor' stroke-width='2' /> <rect width='12' height='2' transform='translate(1.05025 9.53554) rotate(-45)' fill='currentColor' /> <rect width='12' height='2' transform='translate(2.46446 1.05025) rotate(45)' fill='currentColor' /> </svg> — omitir (cruz – el día no cuenta si la tarea no era requerida, por ejemplo, entrenamiento cada dos días); </p> <p>Al final del mes, la app muestra:</p> <ul> <li>– porcentaje de completación para cada hábito y promedio general;</li> <li>– calificación en una escala de 5 puntos;</li> <li>– archivo de todos los meses pasados para comparación de progreso.</li> </ul> <p><b>Conveniente para imprimir:</b> la tabla se puede imprimir en forma limpia — sin botones ni interfaz. Cuélgala en el refrigerador o la pared, marca con lápiz durante el mes, y al final — ingresa todos los datos en la app. De esta manera guardas el archivo y obtienes estadísticas.</p> <p><i>Fue gracias a la versión en papel que apareció esta app; necesitaba un archivo y cálculo de estadísticas.</i></p> <p>Los datos se guardan en el navegador y están disponibles sin conexión. Inicia sesión con Google para sincronizarlos entre dispositivos; también puedes exportar e importar los datos en JSON.</p> <p>Una tabla simple es una forma visual de ver dónde mantienes el ritmo y dónde necesitas mejorar.</p>"
   },
   "settings": {
     "title": "Configuración",
@@ -13,11 +13,12 @@
       "dark": "Oscuro"
     },
     "lang": {
-      "title": "Idioma",
-      "this": "Español"
+      "title": "Idioma"
     },
     "expImp": {
-      "title": "Exportar/Importar"
+      "title": "Exportar/Importar",
+      "export": "Exportar a JSON",
+      "import": "Importar desde JSON"
     },
     "print": {
       "title": "Imprimir"
@@ -53,7 +54,6 @@
     "logout": "Cerrar sesión"
   },
   "control": {
-    "title": "Menú",
     "newTask": "Nueva tarea",
     "newSubtask": "Nueva subtarea",
     "deleteSubtask": "Eliminar la última subtarea",
@@ -63,7 +63,6 @@
     "deleteTask": "Eliminar tarea",
     "prevMonth": "Mes anterior",
     "nextMonth": "Mes siguiente",
-    "hideControl": "Ocultar",
     "duplicateToCurrent": "Duplicar todas las tareas al mes actual"
   },
   "general": {
@@ -75,6 +74,12 @@
     "cancel": "Cancelar",
     "ok": "OK",
     "warning": "Advertencia"
+  },
+  "conflict": {
+    "title": "Conflicto de datos",
+    "message": "Tus datos locales difieren de los datos en la nube. ¿Guardar datos locales (sobrescribiendo los de la nube) o cargar desde la nube (sobrescribiendo los locales)?",
+    "confirm": "Guardar locales",
+    "cancel": "Cargar de la nube"
   },
   "update": {
     "title": "Actualización disponible",
@@ -88,5 +93,20 @@
     "title": "Sin tareas aún",
     "message": "Haz clic en el botón + o pulsa N para añadir tu primer hábito"
   },
-  "taskLimit": "Se alcanzó el número máximo de tareas"
+  "taskLimit": "Se alcanzó el número máximo de tareas",
+  "task": {
+    "defaultTitle": "Nueva tarea"
+  },
+  "import": {
+    "tooLarge": "El archivo es demasiado grande (máximo 2 MB)",
+    "invalid": "El archivo no contiene datos válidos del rastreador",
+    "error": "No se pudo importar el archivo"
+  },
+  "mark": {
+    "cell": "{title}, día {day}, subtarea {subtask}: {state}",
+    "done": "hecho",
+    "notDone": "no hecho",
+    "skip": "omitido",
+    "headerDay": "Día {day}: restablecer las marcas de todas las tareas"
+  }
 }

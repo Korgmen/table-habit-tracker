@@ -14,17 +14,21 @@
   let firstFocusable = null;
   let lastFocusable = null;
 
-  /** Обрабатывает подтверждение действия в модальном окне */
-  const handleConfirm = () => {
-    if (store.modal.onConfirm) store.modal.onConfirm();
-    store.closeModal();
+  /** Вызывает обработчик и закрывает окно, если обработчик не открыл вместо него новое */
+  const runAndClose = handler => {
+    const modal = store.modal;
+    handler?.();
+    if (store.modal === modal) store.closeModal();
   };
 
+  /** Обрабатывает подтверждение действия в модальном окне */
+  const handleConfirm = () => runAndClose(store.modal.onConfirm);
+
   /** Обрабатывает отмену действия в модальном окне */
-  const handleCancel = () => {
-    if (store.modal.onCancel) store.modal.onCancel();
-    store.closeModal();
-  };
+  const handleCancel = () => runAndClose(store.modal.onCancel);
+
+  /** Закрытие крестиком или Escape вызывает onDismiss или, если его нет, onCancel */
+  const handleDismiss = () => runAndClose(store.modal.onDismiss ?? store.modal.onCancel);
 
   /**
    * Обрабатывает нажатия клавиш внутри модального окна.
@@ -35,7 +39,7 @@
     if (!store.modal.isOpen) return;
 
     if (event.key === 'Escape') {
-      store.closeModal();
+      handleDismiss();
       return;
     }
 
@@ -71,15 +75,15 @@
   };
 
   /**
-   * Отслеживает открытие/закрытие модального окна и управляет:
+   * Отслеживает открытие, закрытие и смену окна из очереди и управляет:
    * - фокусом,
    * - обработчиком клавиш,
    * - блокировкой прокрутки страницы.
    */
   watch(
-    () => store.modal.isOpen,
-    isOpen => {
-      if (isOpen) {
+    () => store.modal,
+    modal => {
+      if (modal.isOpen) {
         setupFocusTrap();
         document.addEventListener('keydown', handleKeydown);
         document.body.style.overflow = 'hidden';
@@ -112,7 +116,6 @@
         role="dialog"
         aria-modal="true"
         :aria-label="store.modal.title"
-        @keydown="handleKeydown"
       >
         <!-- Контейнер модального окна -->
         <div
@@ -128,7 +131,7 @@
           <button
             class="tap-highlight-transparent absolute top-0 right-0 w-fit cursor-pointer touch-manipulation p-2"
             :aria-label="t('settings.close')"
-            @click="store.closeModal"
+            @click="handleDismiss"
           >
             <X class="h-5 w-5" />
           </button>
@@ -138,12 +141,22 @@
 
           <!-- Сообщение -->
           <div
+            v-if="store.modal.html"
             class="mb-6 flex flex-col gap-1.5 text-base"
-            v-html="store.modal.message"
             :class="{
               'overflow-y-auto': store.modal.type === 'custom',
             }"
+            v-html="store.modal.html"
           ></div>
+          <p
+            v-else
+            class="mb-6 text-base"
+            :class="{
+              'overflow-y-auto': store.modal.type === 'custom',
+            }"
+          >
+            {{ store.modal.message }}
+          </p>
 
           <!-- Пользовательский контент (для типа custom) -->
           <div v-if="store.modal.type === 'custom'">
@@ -157,13 +170,17 @@
               class="tap-highlight-transparent flex h-8 w-fit cursor-pointer touch-manipulation items-center justify-center self-start border-2 px-3 py-1.5 font-semibold"
               @click="handleCancel"
             >
-              {{ t('modal.cancel') }}
+              {{ store.modal.cancelText || t('modal.cancel') }}
             </button>
             <button
               class="tap-highlight-transparent flex h-8 w-fit cursor-pointer touch-manipulation items-center justify-center self-start border-2 px-3 py-1.5 font-semibold"
               @click="handleConfirm"
             >
-              {{ store.modal.type === 'confirm' ? t('modal.confirm') : t('modal.ok') }}
+              {{
+                store.modal.type === 'confirm'
+                  ? store.modal.confirmText || t('modal.confirm')
+                  : t('modal.ok')
+              }}
             </button>
           </div>
         </div>

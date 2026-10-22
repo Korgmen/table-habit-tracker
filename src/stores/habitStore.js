@@ -2,14 +2,131 @@ import { defineStore } from 'pinia';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { auth, provider, db } from '@/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { i18n, resolveLang, applyLang, SUPPORTED_LANGS } from '@/i18n';
+
+/** Лимиты задач в месяце и подзадач в задаче */
+export const MAX_TASKS = 20;
+export const MAX_SUBTASKS = 8;
+
+/** Ключ месяца в архиве: 'YYYY-MM' */
+export const monthKey = date =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+const HTML_ENTITIES = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" };
+
+/**
+ * Снимает HTML-экранирование с заголовков задач.
+ * В старых экспортах, localStorage и Firestore заголовки лежат экранированными, иногда в несколько слоёв.
+ */
+const decodeArchiveTitles = archive => {
+  Object.values(archive).forEach(month => {
+    if (!Array.isArray(month?.tasks)) return;
+    month.tasks.forEach(task => {
+      if (typeof task.title !== 'string') return;
+      let prev;
+      do {
+        prev = task.title;
+        task.title = prev.replace(/&(amp|lt|gt|quot|#39);/g, entity => HTML_ENTITIES[entity]);
+      } while (task.title !== prev);
+    });
+  });
+  return archive;
+};
+
+/** Архив без пустых месяцев с отсортированными ключами, для сравнения локальных и облачных данных */
+const normalizeArchive = archive => {
+  const sortKeys = value => {
+    if (Array.isArray(value)) return value.map(sortKeys);
+    if (value && typeof value === 'object') {
+      return Object.fromEntries(
+        Object.keys(value)
+          .sort()
+          .map(key => [key, sortKeys(value[key])])
+      );
+    }
+    return value;
+  };
+  const filled = Object.fromEntries(
+    Object.entries(archive).filter(([, month]) => month?.tasks?.length > 0)
+  );
+  return JSON.stringify(sortKeys(filled));
+};
+
+/** Пустое состояние глобального модального окна */
+const emptyModal = () => ({
+  isOpen: false,
+  title: '',
+  message: '',
+  /** Разметка из словарей (приветствие); пользовательские данные идут только в message */
+  html: '',
+  type: 'alert',
+  onConfirm: null,
+  onCancel: null,
+  /** Закрытие крестиком или Escape, по умолчанию вызывается onCancel */
+  onDismiss: null,
+  confirmText: '',
+  cancelText: '',
+});
+
+/** Допустимые значения настроек: облачный документ применяется только по ним */
+const SETTINGS_VALUES = {
+  theme: ['system', 'light', 'dark'],
+  lang: ['system', ...SUPPORTED_LANGS],
+  weekStart: ['monday', 'sunday'],
+  showWeekSeparators: [true, false],
+  calculationMode: ['fullMonth', 'passedDays'],
+};
+
+/** Серия правок подряд (клики по отметкам, переход месяца) уходит в Firestore одной записью */
+const CLOUD_SAVE_DELAY = 1000;
+let cloudSaveTimer = null;
+
+const isValidMark = mark => mark === true || mark === false || mark === null;
+
+/** Проверяет форму архива: ключи YYYY-MM, у задач строковый title и subtasks, marks из true/false/null */
+export const isValidArchive = archive =>
+  archive !== null &&
+  typeof archive === 'object' &&
+  !Array.isArray(archive) &&
+  Object.entries(archive).every(
+    ([key, month]) =>
+      /^\d{4}-(0[1-9]|1[0-2])$/.test(key) &&
+      Array.isArray(month?.tasks) &&
+      month.tasks.every(
+        task =>
+          typeof task?.title === 'string' &&
+          Array.isArray(task.subtasks) &&
+          task.subtasks.every(
+            subtask =>
+              subtask &&
+              (subtask.marks === undefined ||
+                (Array.isArray(subtask.marks) && subtask.marks.every(isValidMark)))
+          )
+      )
+  );
+
+/**
+ * Читает архив из localStorage.
+ * Нечитаемые данные откладываются в habitArchiveBackup, приложение стартует с пустым архивом.
+ */
+const readLocalArchive = () => {
+  const saved = localStorage.getItem('habitArchive');
+  if (!saved) return {};
+  try {
+    const archive = JSON.parse(saved);
+    if (isValidArchive(archive)) return decodeArchiveTitles(archive);
+  } catch (error) {
+    console.error(error);
+  }
+  localStorage.setItem('habitArchiveBackup', saved);
+  return {};
+};
 
 /** Хранилище состояния приложения "Трекер привычек" */
 export const useHabitStore = defineStore('habit', {
   state: () => {
     const realDate = new Date();
-    const savedArchive = localStorage.getItem('habitArchive');
-    const archive = savedArchive ? JSON.parse(savedArchive) : {};
-    const currentMonthKey = `${realDate.getFullYear()}-${String(realDate.getMonth() + 1).padStart(2, '0')}`;
+    const archive = readLocalArchive();
     const savedTheme = localStorage.getItem('theme') || 'system';
     const savedLang = localStorage.getItem('lang') || 'system';
     const savedWeekStart = localStorage.getItem('weekStart') || 'monday';
@@ -24,7 +141,7 @@ export const useHabitStore = defineStore('habit', {
       /** Архив всех месяцев: { 'YYYY-MM': { tasks: [...] } } */
       archive,
       /** Задачи текущего отображаемого месяца */
-      tasks: archive[currentMonthKey]?.tasks || [],
+      tasks: archive[monthKey(realDate)]?.tasks || [],
       /** ID задачи, находящейся в режиме редактирования */
       editingTaskId: null,
       /** Активный режим взаимодействия: null | 'delete' | 'eraser' */
@@ -40,17 +157,14 @@ export const useHabitStore = defineStore('habit', {
       /** Режим расчёта прогресса: 'fullMonth' | 'passedDays' */
       calculationMode: savedCalculationMode,
       /** Состояние глобального модального окна */
-      modal: {
-        isOpen: false,
-        title: '',
-        message: '',
-        type: 'alert',
-        onConfirm: null,
-        onCancel: null,
-      },
+      modal: emptyModal(),
+      /** Окна, запрошенные при уже открытом окне: показываются по очереди после его закрытия */
+      modalQueue: [],
       /** Авторизация */
       user: null,
       isAuthReady: false,
+      /** Данные из Firestore, расходящиеся с локальными и ждущие выбора пользователя */
+      cloudConflict: null,
     };
   },
 
@@ -61,6 +175,12 @@ export const useHabitStore = defineStore('habit', {
     /** Текущий год */
     currentYear: state => state.currentDate.getFullYear(),
 
+    /** Ключ отображаемого месяца в архиве */
+    currentMonthKey: state => monthKey(state.currentDate),
+
+    /** Ключ реального текущего месяца в архиве */
+    realMonthKey: state => monthKey(state.realDate),
+
     /** Количество дней в текущем месяце */
     daysInMonth: state => {
       const year = state.currentYear;
@@ -70,19 +190,12 @@ export const useHabitStore = defineStore('habit', {
 
     /** Название текущего месяца с заглавной буквы */
     monthName: state => {
-      let lang = 'en';
-      if (state.lang === 'system') {
-        const navLang = navigator.language.toLowerCase();
-        if (navLang.startsWith('ru')) lang = 'ru';
-        else if (navLang.startsWith('ar')) lang = 'ar';
-        else if (navLang.startsWith('es')) lang = 'es';
-        else if (navLang.startsWith('zh')) lang = 'zh';
-      } else {
-        lang = state.lang;
-      }
-      const month = new Date(state.currentYear, state.currentMonth).toLocaleString(lang, {
-        month: 'long',
-      });
+      const month = new Date(state.currentYear, state.currentMonth).toLocaleString(
+        resolveLang(state.lang),
+        {
+          month: 'long',
+        }
+      );
       return month.charAt(0).toUpperCase() + month.slice(1);
     },
 
@@ -119,28 +232,12 @@ export const useHabitStore = defineStore('habit', {
   actions: {
     /** Возвращает локализованный заголовок по умолчанию для новой задачи */
     getDefaultTaskTitle() {
-      let currentLang = this.lang;
-      if (currentLang === 'system') {
-        const navLang = navigator.language.toLowerCase();
-        if (navLang.startsWith('ru')) currentLang = 'ru';
-        else if (navLang.startsWith('ar')) currentLang = 'ar';
-        else if (navLang.startsWith('es')) currentLang = 'es';
-        else if (navLang.startsWith('zh')) currentLang = 'zh';
-        else currentLang = 'en';
-      }
-      const titles = {
-        ru: 'Новая задача',
-        en: 'New task',
-        ar: 'مهمة جديدة',
-        es: 'Nueva tarea',
-        zh: '新任务',
-      };
-      return titles[currentLang] || 'New task';
+      return i18n.global.t('task.defaultTitle');
     },
 
     /** Добавляет новую задачу с одной подзадачей */
     addTask() {
-      if (this.tasks.length >= 20) {
+      if (this.tasks.length >= MAX_TASKS) {
         return false;
       }
 
@@ -158,7 +255,7 @@ export const useHabitStore = defineStore('habit', {
     /** Добавляет подзадачу к указанной задаче (максимум 8) */
     addSubtask(taskId) {
       const task = this.tasks.find(t => t.id === taskId);
-      if (task && task.subtasks.length < 8) {
+      if (task && task.subtasks.length < MAX_SUBTASKS) {
         task.subtasks.push({
           id: Date.now(),
           marks: Array(this.daysInMonth).fill(null),
@@ -173,23 +270,11 @@ export const useHabitStore = defineStore('habit', {
       this.editingTaskId = taskId;
     },
 
-    /** Завершает редактирование с экранированием HTML и сохранением */
+    /** Завершает редактирование и сохраняет заголовок */
     finishEditing(taskId, newTitle) {
       const task = this.tasks.find(t => t.id === taskId);
       if (task) {
-        const escapeHtml = str =>
-          str.replace(
-            /[&<>"']/g,
-            s =>
-              ({
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#39;',
-              })[s]
-          );
-        task.title = escapeHtml(newTitle.trim()) || this.getDefaultTaskTitle();
+        task.title = newTitle.trim() || this.getDefaultTaskTitle();
         this.editingTaskId = null;
         this.saveState();
       }
@@ -198,9 +283,9 @@ export const useHabitStore = defineStore('habit', {
     /** Пересчитывает прогресс задачи на основе отметок подзадач с учётом режима расчёта */
     updateTaskProgress(taskId) {
       const task = this.tasks.find(t => t.id === taskId);
-      if (!task || task.subtasks.length === 0) {
+      if (!task) return;
+      if (task.subtasks.length === 0) {
         task.progress = 0.0;
-        this.saveState();
         return;
       }
 
@@ -222,8 +307,6 @@ export const useHabitStore = defineStore('habit', {
       });
 
       task.progress = totalValid > 0 ? ((completed / totalValid) * 100).toFixed(1) : 0.0;
-
-      this.saveState();
     },
 
     /** Обновляет отметку в конкретный день подзадачи */
@@ -234,6 +317,7 @@ export const useHabitStore = defineStore('habit', {
         if (subtask && dayIndex < this.today) {
           subtask.marks[dayIndex] = state;
           this.updateTaskProgress(taskId);
+          this.saveState();
         }
       }
     },
@@ -248,6 +332,7 @@ export const useHabitStore = defineStore('habit', {
         });
       });
       this.tasks.forEach(task => this.updateTaskProgress(task.id));
+      this.saveState();
     },
 
     /** Удаляет задачу по ID */
@@ -269,7 +354,6 @@ export const useHabitStore = defineStore('habit', {
     /** Переключает активный режим (удаление/стирание) */
     toggleMode(mode) {
       this.activeMode = this.activeMode === mode ? null : mode;
-      this.saveState();
     },
 
     /** Стирает отметку в указанный день */
@@ -280,46 +364,74 @@ export const useHabitStore = defineStore('habit', {
         if (subtask) {
           subtask.marks[dayIndex] = null;
           this.updateTaskProgress(taskId);
+          this.saveState();
         }
       }
     },
 
-    /** Сохраняет текущее состояние в localStorage */
+    /** Сохраняет текущее состояние в localStorage и планирует запись в Firestore */
     saveState() {
-      const currentMonthKey = `${this.currentYear}-${String(this.currentMonth + 1).padStart(2, '0')}`;
-      this.archive[currentMonthKey] = { tasks: this.tasks };
+      this.archive[this.currentMonthKey] = { tasks: this.tasks };
+      this.saveLocal();
+      clearTimeout(cloudSaveTimer);
+      cloudSaveTimer = setTimeout(() => this.flushCloudSave(), CLOUD_SAVE_DELAY);
+    },
+
+    /** Пишет архив и настройки в localStorage */
+    saveLocal() {
       localStorage.setItem('habitArchive', JSON.stringify(this.archive));
-      localStorage.setItem('theme', this.theme);
-      localStorage.setItem('lang', this.lang);
-      localStorage.setItem('weekStart', this.weekStart);
-      localStorage.setItem('showWeekSeparators', this.showWeekSeparators);
-      localStorage.setItem('calculationMode', this.calculationMode);
-      this.saveToCloud();
+      Object.keys(SETTINGS_VALUES).forEach(key => localStorage.setItem(key, this[key]));
+    },
+
+    /** Немедленно отправляет отложенную запись в Firestore, если она есть */
+    async flushCloudSave() {
+      if (!cloudSaveTimer) return;
+      clearTimeout(cloudSaveTimer);
+      cloudSaveTimer = null;
+      await this.saveToCloud().catch(error => console.error(error));
     },
 
     /** Переход к предыдущему месяцу с сохранением и адаптацией данных */
     prevMonth() {
-      const newDate = new Date(this.currentDate);
-      newDate.setMonth(this.currentMonth - 1);
+      const newDate = new Date(this.currentYear, this.currentMonth - 1, 1);
       this.saveState();
       this.currentDate = newDate;
-      const newMonthKey = `${this.currentYear}-${String(this.currentMonth + 1).padStart(2, '0')}`;
-      this.tasks = this.archive[newMonthKey]?.tasks || [];
+      this.tasks = this.archive[this.currentMonthKey]?.tasks || [];
       this.adaptMarksToNewMonth();
       this.saveState();
     },
 
     /** Переход к следующему месяцу (не дальше текущего реального) */
     nextMonth() {
-      const newDate = new Date(this.currentDate);
-      newDate.setMonth(this.currentMonth + 1);
-      const realMonthKey = `${this.realDate.getFullYear()}-${String(this.realDate.getMonth() + 1).padStart(2, '0')}`;
-      const newMonthKey = `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, '0')}`;
-      if (newMonthKey > realMonthKey) return;
+      const newDate = new Date(this.currentYear, this.currentMonth + 1, 1);
+      const newMonthKey = monthKey(newDate);
+      if (newMonthKey > this.realMonthKey) return;
       this.saveState();
       this.currentDate = newDate;
       this.tasks = this.archive[newMonthKey]?.tasks || [];
       this.adaptMarksToNewMonth();
+      this.saveState();
+    },
+
+    /**
+     * Обновляет реальную дату, если наступил новый день (PWA может быть открыта сутками).
+     * С реального месяца при его смене переключается на новый.
+     */
+    syncRealDate() {
+      const now = new Date();
+      if (now.toDateString() === this.realDate.toDateString()) return;
+
+      const wasOnRealMonth = this.currentMonthKey === this.realMonthKey;
+      this.realDate = now;
+
+      if (wasOnRealMonth && this.currentMonthKey !== this.realMonthKey) {
+        this.saveState();
+        this.currentDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        this.tasks = this.archive[this.currentMonthKey]?.tasks || [];
+        this.adaptMarksToNewMonth();
+      } else {
+        this.tasks.forEach(task => this.updateTaskProgress(task.id));
+      }
       this.saveState();
     },
 
@@ -356,24 +468,24 @@ export const useHabitStore = defineStore('habit', {
       const file = event.target.files[0];
       if (file) {
         if (file.size > 2 * 1024 * 1024) {
-          alert('Файл слишком большой!');
+          this.showImportError('import.tooLarge');
+          event.target.value = '';
           return;
         }
         const reader = new FileReader();
         reader.onload = e => {
           try {
             const importedArchive = JSON.parse(e.target.result);
-            if (!this.validateArchive(importedArchive)) {
-              alert('Некорректная структура данных!');
+            if (!isValidArchive(importedArchive)) {
+              this.showImportError('import.invalid');
               return;
             }
-            this.archive = importedArchive;
-            const currentMonthKey = `${this.currentYear}-${String(this.currentMonth + 1).padStart(2, '0')}`;
-            this.tasks = this.archive[currentMonthKey]?.tasks || [];
+            this.archive = decodeArchiveTitles(importedArchive);
+            this.tasks = this.archive[this.currentMonthKey]?.tasks || [];
             this.adaptMarksToNewMonth();
             this.saveState();
           } catch (error) {
-            alert('Ошибка при импорте данных!');
+            this.showImportError('import.error');
             console.error(error);
           }
         };
@@ -382,12 +494,13 @@ export const useHabitStore = defineStore('habit', {
       }
     },
 
-    /** Проверяет корректность структуры импортируемого архива */
-    validateArchive(archive) {
-      return (
-        typeof archive === 'object' &&
-        Object.values(archive).every(month => month.tasks && Array.isArray(month.tasks))
-      );
+    /** Показывает ошибку импорта по ключу словаря */
+    showImportError(messageKey) {
+      this.showModal({
+        type: 'alert',
+        title: i18n.global.t('modal.warning'),
+        message: i18n.global.t(messageKey),
+      });
     },
 
     /** Устанавливает тему и сохраняет в localStorage */
@@ -399,7 +512,8 @@ export const useHabitStore = defineStore('habit', {
     /** Устанавливает язык интерфейса */
     setLang(newLang) {
       this.lang = newLang;
-      localStorage.setItem('lang', newLang);
+      applyLang(newLang);
+      this.saveState();
     },
 
     /** Устанавливает день начала недели */
@@ -423,6 +537,7 @@ export const useHabitStore = defineStore('habit', {
           if (subtask) {
             subtask.marks[dayIndex] = false;
             this.updateTaskProgress(taskId);
+            this.saveState();
           }
         }
       }
@@ -430,33 +545,26 @@ export const useHabitStore = defineStore('habit', {
 
     /**
      * Открывает модальное окно с заданными параметрами.
-     * @param {Object} options - { type: 'alert'|'confirm'|'custom', title, message, onConfirm, onCancel }
+     * @param {Object} options - { type: 'alert'|'confirm'|'custom', title, message, onConfirm, onCancel, confirmText, cancelText }
      */
     showModal(options) {
-      this.modal = {
-        ...this.modal,
-        isOpen: true,
-        ...options,
-      };
+      if (this.modal.isOpen) {
+        this.modalQueue.push(options);
+        return;
+      }
+      this.modal = { ...emptyModal(), isOpen: true, ...options };
     },
 
-    /** Закрывает модальное окно и сбрасывает его состояние */
+    /** Закрывает модальное окно и открывает следующее из очереди, если оно есть */
     closeModal() {
-      this.modal = {
-        isOpen: false,
-        title: '',
-        message: '',
-        type: 'alert',
-        onConfirm: null,
-        onCancel: null,
-      };
+      const next = this.modalQueue.shift();
+      this.modal = next ? { ...emptyModal(), isOpen: true, ...next } : emptyModal();
     },
 
     /** Устанавливает режим расчёта прогресса и пересчитывает все задачи */
     setCalculationMode(mode) {
       if (!['fullMonth', 'passedDays'].includes(mode)) return;
       this.calculationMode = mode;
-      localStorage.setItem('calculationMode', mode);
       this.tasks.forEach(task => this.updateTaskProgress(task.id));
       this.saveState();
     },
@@ -466,22 +574,64 @@ export const useHabitStore = defineStore('habit', {
       await signInWithPopup(auth, provider);
     },
 
-    /** Логаут */
+    /** Логаут: данные остаются в облаке, локальный архив очищается (устройство может быть общим) */
     async logout() {
+      await this.flushCloudSave();
       await signOut(auth);
       this.user = null;
+      this.cloudConflict = null;
+      this.archive = {};
+      this.tasks = [];
+      localStorage.removeItem('habitArchive');
     },
 
     /** Автовосстановление сессии */
     initAuth() {
       onAuthStateChanged(auth, async user => {
         this.user = user;
-        this.isAuthReady = true;
+        this.isAuthReady = false;
 
-        if (user) {
-          await this.loadFromCloud();
+        if (!user) {
+          this.isAuthReady = true;
+          return;
+        }
+
+        // Запись в облако открывается только после чтения облачного архива: до этого в сторе локальные данные
+        try {
+          const cloudData = await this.loadFromCloud();
+
+          if (!cloudData) {
+            this.isAuthReady = true;
+            await this.saveToCloud();
+            return;
+          }
+
+          const localArchive = normalizeArchive(this.archive);
+          const cloudArchive = normalizeArchive(decodeArchiveTitles(cloudData.archive || {}));
+
+          if (localArchive !== '{}' && localArchive !== cloudArchive) {
+            this.cloudConflict = cloudData;
+            return;
+          }
+
+          this.applyCloudData(cloudData);
+          this.isAuthReady = true;
+        } catch (error) {
+          console.error(error);
         }
       });
+    },
+
+    /**
+     * Завершает конфликт локальных и облачных данных.
+     * @param {boolean} keepLocal - true: локальные данные перезаписывают облако, false: облачные заменяют локальные
+     */
+    resolveCloudConflict(keepLocal) {
+      if (!this.cloudConflict) return;
+      if (!keepLocal) this.applyCloudData(this.cloudConflict);
+      this.cloudConflict = null;
+      this.isAuthReady = true;
+      if (keepLocal) this.saveToCloud().catch(error => console.error(error));
     },
 
     /** Сохранение данных в Firestore */
@@ -503,28 +653,28 @@ export const useHabitStore = defineStore('habit', {
       });
     },
 
-    /** Загрузку данных из Firestore */
+    /** Читает документ пользователя из Firestore, возвращает null, если его ещё нет */
     async loadFromCloud() {
-      if (!this.user) return;
+      if (!this.user) return null;
 
       const ref = doc(db, 'users', this.user.uid);
       const snap = await getDoc(ref);
 
-      if (!snap.exists()) {
-        await this.saveToCloud();
-        return;
-      }
+      return snap.exists() ? snap.data() : null;
+    },
 
-      const data = snap.data();
+    /** Применяет данные из Firestore к стору и localStorage */
+    applyCloudData(data) {
+      this.archive = decodeArchiveTitles(data.archive || {});
+      this.tasks = this.archive[this.currentMonthKey]?.tasks || [];
 
-      this.archive = data.archive || {};
-      this.tasks =
-        this.archive[`${this.currentYear}-${String(this.currentMonth + 1).padStart(2, '0')}`]
-          ?.tasks || [];
+      Object.entries(SETTINGS_VALUES).forEach(([key, allowed]) => {
+        const value = data.settings?.[key];
+        if (allowed.includes(value)) this[key] = value;
+      });
+      applyLang(this.lang);
 
-      Object.assign(this, data.settings || {});
-
-      localStorage.setItem('habitArchive', JSON.stringify(this.archive));
+      this.saveLocal();
     },
   },
 });
