@@ -60,6 +60,7 @@
           'cursor-pointer': canAddTask,
         }"
         :title="canAddTask ? t('control.newTask') : t('taskLimit')"
+        :disabled="!canAddTask"
         @click="tryAddTask"
       >
         <Plus class="w-5" />

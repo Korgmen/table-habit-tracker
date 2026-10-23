@@ -1,5 +1,6 @@
 <script setup>
   import { useHabitStore } from '@/stores/habitStore';
+  import { useI18n } from 'vue-i18n';
 
   const props = defineProps({
     /** Номер дня в месяце */
@@ -19,6 +20,14 @@
   });
 
   const store = useHabitStore();
+  const { t } = useI18n();
+
+  /** Ключ словаря для озвучки состояния отметки */
+  const markStateKey = mark => {
+    if (mark === true) return 'mark.done';
+    if (mark === false) return 'mark.skip';
+    return 'mark.notDone';
+  };
 </script>
 
 <template>
@@ -29,17 +38,27 @@
     <p class="text-sm leading-none font-medium md:text-lg print:text-lg">{{ day }}</p>
 
     <!-- Отметки для каждой подзадачи в этот день -->
-    <template v-for="subtask in task.subtasks" :key="subtask.id">
-      <div
+    <template v-for="(subtask, subtaskIndex) in task.subtasks" :key="subtask.id">
+      <button
+        type="button"
         class="tap-highlight-transparent relative flex aspect-square w-9/10 touch-manipulation items-center justify-center rounded-[50%] border-2 border-current transition-all duration-300 ease-in-out before:absolute before:h-0.5 before:w-full before:rotate-45 before:bg-current before:opacity-0 before:transition-all before:duration-300 before:ease-in-out after:absolute after:h-0.5 after:w-full after:-rotate-45 after:bg-current after:opacity-0 after:transition-all after:duration-300 after:ease-in-out md:w-3 print:w-3"
         :class="[
           props.getMarkClass(subtask.id, props.index),
           { 'cursor-not-allowed': props.day > store.today },
         ]"
+        :disabled="props.day > store.today"
+        :aria-label="
+          t('mark.cell', {
+            title: task.title,
+            day,
+            subtask: subtaskIndex + 1,
+            state: t(markStateKey(subtask.marks[index])),
+          })
+        "
         @click="props.handleMarkClick(subtask.id, props.index, $event)"
         @contextmenu.prevent="props.handleMarkClick(subtask.id, props.index, $event)"
         @touchend.prevent="props.handleTap(subtask.id, props.index, $event)"
-      ></div>
+      ></button>
     </template>
   </div>
 

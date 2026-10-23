@@ -35,7 +35,8 @@
         'cursor-not-allowed opacity-25': !canNextMonth,
         'cursor-pointer': canNextMonth,
       }"
-      @click="canNextMonth && store.nextMonth()"
+      :disabled="!canNextMonth"
+      @click="store.nextMonth"
     >
       <ArrowBigRight class="w-5" />
     </button>

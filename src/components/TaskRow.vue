@@ -183,6 +183,7 @@
             'cursor-pointer': task.subtasks.length < MAX_SUBTASKS,
             'cursor-not-allowed opacity-25': task.subtasks.length >= MAX_SUBTASKS,
           }"
+          :disabled="task.subtasks.length >= MAX_SUBTASKS"
           @click="handleAddSubtask"
           :title="t('control.newSubtask')"
         >

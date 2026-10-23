@@ -1,6 +1,7 @@
 <script setup>
   import { computed } from 'vue';
   import { useHabitStore } from '@/stores/habitStore';
+  import { useI18n } from 'vue-i18n';
   import { useDoubleTap } from '@/composables/useDoubleTap';
 
   const props = defineProps({
@@ -17,6 +18,7 @@
   });
 
   const store = useHabitStore();
+  const { t } = useI18n();
 
   const { tap } = useDoubleTap();
 
@@ -59,13 +61,16 @@
   >
     <p class="text-sm leading-none font-medium md:text-lg print:text-lg">{{ day }}</p>
 
-    <div
+    <button
+      type="button"
       class="tap-highlight-transparent relative flex aspect-square w-9/10 touch-manipulation items-center justify-center rounded-[50%] border-2 border-current transition-all duration-300 ease-in-out before:absolute before:h-0.5 before:w-full before:rotate-45 before:bg-current before:opacity-0 before:transition-all before:duration-300 before:ease-in-out after:absolute after:h-0.5 after:w-full after:-rotate-45 after:bg-current after:opacity-0 after:transition-all after:duration-300 after:ease-in-out md:w-3 print:w-3"
       :class="{
         'cursor-not-allowed': getHeaderCircleState === 'future',
         'cursor-pointer bg-current': getHeaderCircleState === 'completed',
         'bg-transparent before:opacity-100 after:opacity-100': isAllFalse,
       }"
+      :disabled="getHeaderCircleState === 'future'"
+      :aria-label="t('mark.headerDay', { day })"
       @click.left.prevent="
         if (props.day - 1 < store.today) store.updateHeaderDay(props.day - 1, null);
       "
@@ -73,7 +78,7 @@
         if (props.day - 1 < store.today) store.updateHeaderDay(props.day - 1, false);
       "
       @touchend.prevent="handleHeaderTap"
-    ></div>
+    ></button>
   </div>
 
   <div

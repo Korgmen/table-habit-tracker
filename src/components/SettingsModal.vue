@@ -59,8 +59,9 @@
 
         <!-- Выбор темы -->
         <div class="flex flex-col gap-1.5">
-          <label class="block">{{ t('settings.theme.title') }}</label>
+          <label for="settings-theme" class="block">{{ t('settings.theme.title') }}</label>
           <select
+            id="settings-theme"
             v-model="store.theme"
             class="w-full border-2 p-1"
             @change="store.setTheme(store.theme)"
@@ -73,8 +74,9 @@
 
         <!-- Выбор языка -->
         <div class="flex flex-col gap-1.5">
-          <label class="block">{{ t('settings.lang.title') }}</label>
+          <label for="settings-lang" class="block">{{ t('settings.lang.title') }}</label>
           <select
+            id="settings-lang"
             v-model="store.lang"
             class="w-full border-2 p-1"
             @change="store.setLang(store.lang)"
@@ -94,12 +96,16 @@
           <div class="flex items-center gap-1.5">
             <button
               class="tap-highlight-transparent relative flex h-8 cursor-pointer touch-manipulation items-center justify-center border-2 border-green-500 px-1.5 text-green-500"
+              :aria-label="t('settings.expImp.export')"
+              :title="t('settings.expImp.export')"
               @click="store.exportData"
             >
               <Upload class="w-5" />
             </button>
             <button
               class="tap-highlight-transparent relative flex h-8 cursor-pointer touch-manipulation items-center justify-center border-2 border-purple-500 px-1.5 text-purple-500"
+              :aria-label="t('settings.expImp.import')"
+              :title="t('settings.expImp.import')"
               @click="handleImport"
             >
               <Download class="w-5" />
@@ -113,6 +119,8 @@
           <div class="flex items-center gap-1.5">
             <button
               class="tap-highlight-transparent relative flex h-8 cursor-pointer touch-manipulation items-center justify-center border-2 px-1.5"
+              :aria-label="t('settings.print.title')"
+              :title="t('settings.print.title')"
               @click="handlePrint"
             >
               <Printer class="w-5" />
@@ -134,8 +142,11 @@
 
           <!-- Начало недели (если включены разделители) -->
           <div v-if="store.showWeekSeparators" class="col-span-2 mt-1.5 flex flex-col gap-1.5">
-            <label class="block">{{ t('settings.weekStart.title') }}</label>
+            <label for="settings-week-start" class="block">
+              {{ t('settings.weekStart.title') }}
+            </label>
             <select
+              id="settings-week-start"
               v-model="store.weekStart"
               class="w-full border-2 p-1"
               @change="store.setWeekStart(store.weekStart)"
@@ -148,8 +159,11 @@
 
         <!-- Режим расчёта прогресса -->
         <div class="flex flex-col gap-1.5">
-          <label class="block">{{ t('settings.calculationMode.title') }}</label>
+          <label for="settings-calculation-mode" class="block">
+            {{ t('settings.calculationMode.title') }}
+          </label>
           <select
+            id="settings-calculation-mode"
             v-model="store.calculationMode"
             class="w-full border-2 p-1"
             @change="store.setCalculationMode(store.calculationMode)"
