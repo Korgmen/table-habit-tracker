@@ -1,6 +1,7 @@
 <script setup>
-  import { computed, ref } from 'vue';
+  import { computed } from 'vue';
   import { useHabitStore } from '@/stores/habitStore';
+  import { useDoubleTap } from '@/composables/useDoubleTap';
 
   const props = defineProps({
     /** Номер дня в текущем месяце */
@@ -17,9 +18,7 @@
 
   const store = useHabitStore();
 
-  /** Таймер и состояние для двойного тапа */
-  const tapState = ref(new Map());
-  const DOUBLE_TAP_DELAY = 250;
+  const { tap } = useDoubleTap();
 
   /** Состояние кружка в заголовке: `future` – день ещё не наступил, `completed` – прошёл */
   const getHeaderCircleState = computed(() => {
@@ -43,29 +42,11 @@
     const dayIndex = props.day - 1;
     if (dayIndex >= store.today) return;
 
-    const key = `header-${props.day}`;
-    const now = Date.now();
-
-    let state = tapState.value.get(key) || { lastTap: 0, timeout: null };
-
-    if (state.timeout) {
-      clearTimeout(state.timeout);
-      state.timeout = null;
-    }
-
-    const timeDiff = now - state.lastTap;
-
-    if (timeDiff > 0 && timeDiff < DOUBLE_TAP_DELAY) {
-      store.updateHeaderDay(dayIndex, false);
-      tapState.value.delete(key);
-    } else {
-      state.lastTap = now;
-      state.timeout = setTimeout(() => {
-        store.updateHeaderDay(dayIndex, null);
-        tapState.value.delete(key);
-      }, DOUBLE_TAP_DELAY);
-      tapState.value.set(key, state);
-    }
+    tap(
+      dayIndex,
+      () => store.updateHeaderDay(dayIndex, null),
+      () => store.updateHeaderDay(dayIndex, false)
+    );
 
     event.preventDefault();
   };

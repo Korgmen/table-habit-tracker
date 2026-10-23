@@ -1,7 +1,8 @@
 <script setup>
   import { ref, nextTick } from 'vue';
   import { useHabitUtils } from '@/composables/useHabitUtils';
-  import { useHabitStore } from '@/stores/habitStore';
+  import { useHabitStore, MAX_SUBTASKS } from '@/stores/habitStore';
+  import { useDoubleTap } from '@/composables/useDoubleTap';
   import { useI18n } from 'vue-i18n';
   import { Plus, Trash2, XCircle, GripVertical } from 'lucide-vue-next';
   import TaskDay from './TaskDay.vue';
@@ -24,48 +25,25 @@
   /** Ссылка на input редактирования */
   const editInput = ref(null);
 
-  /** Таймер и состояние для двойного тапа */
-  const tapState = ref(new Map());
-  const DOUBLE_TAP_DELAY = 250;
-  const getTapKey = (taskId, subtaskId, dayIndex) => `${taskId}-${subtaskId}-${dayIndex}`;
+  const { tap } = useDoubleTap();
 
-  /** Общий обработчик тапа */
+  /**
+   * Обрабатывает тап по отметке на мобильных.
+   * Одиночный тап — выполнено, двойной — пропуск; в режиме ластика оба стирают.
+   */
   const handleTap = (subtaskId, dayIndex, event) => {
     const taskId = props.task.id;
     if (dayIndex >= store.today) return;
 
-    const key = getTapKey(taskId, subtaskId, dayIndex);
-    const now = Date.now();
-
-    let state = tapState.value.get(key) || { lastTap: 0, timeout: null };
-
-    if (state.timeout) {
-      clearTimeout(state.timeout);
-      state.timeout = null;
-    }
-
-    const timeDiff = now - state.lastTap;
-
-    if (timeDiff < DOUBLE_TAP_DELAY && timeDiff > 0) {
-      if (store.activeMode === 'eraser') {
-        store.eraseMark(taskId, subtaskId, dayIndex);
-      } else {
-        store.updateMark(taskId, subtaskId, dayIndex, false);
-      }
-      tapState.value.delete(key);
-    } else {
-      state.lastTap = now;
-      state.timeout = setTimeout(() => {
-        if (store.activeMode === 'eraser') {
-          store.eraseMark(taskId, subtaskId, dayIndex);
-        } else {
-          store.updateMark(taskId, subtaskId, dayIndex, true);
-        }
-        tapState.value.delete(key);
-      }, DOUBLE_TAP_DELAY);
-
-      tapState.value.set(key, state);
-    }
+    const setMark = state => {
+      if (store.activeMode === 'eraser') store.eraseMark(taskId, subtaskId, dayIndex);
+      else store.updateMark(taskId, subtaskId, dayIndex, state);
+    };
+    tap(
+      `${taskId}-${subtaskId}-${dayIndex}`,
+      () => setMark(true),
+      () => setMark(false)
+    );
 
     event.preventDefault();
   };
@@ -202,8 +180,8 @@
         <button
           class="tap-highlight-transparent relative flex h-6 touch-manipulation items-center justify-center border-2 px-0.5 transition-all duration-300 ease-in-out"
           :class="{
-            'cursor-pointer': task.subtasks.length < 8,
-            'cursor-not-allowed opacity-25': task.subtasks.length >= 8,
+            'cursor-pointer': task.subtasks.length < MAX_SUBTASKS,
+            'cursor-not-allowed opacity-25': task.subtasks.length >= MAX_SUBTASKS,
           }"
           @click="handleAddSubtask"
           :title="t('control.newSubtask')"
