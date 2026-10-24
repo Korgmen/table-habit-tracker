@@ -1,5 +1,12 @@
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useHabitStore, monthKey } from '@/stores/habitStore';
+
+/** Системная тема: один слушатель matchMedia на всё приложение */
+const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+const prefersDark = ref(darkQuery.matches);
+darkQuery.addEventListener('change', event => {
+  prefersDark.value = event.matches;
+});
 
 export function useHabitUtils() {
   const store = useHabitStore();
@@ -21,7 +28,7 @@ export function useHabitUtils() {
   /** Определяет текущую тему (light/dark) на основе настроек пользователя */
   const currentTheme = computed(() => {
     if (store.theme === 'system') {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      return prefersDark.value ? 'dark' : 'light';
     }
     return store.theme;
   });
