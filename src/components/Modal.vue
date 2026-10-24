@@ -129,7 +129,7 @@
         >
           <!-- Кнопка закрытия -->
           <button
-            class="tap-highlight-transparent absolute top-0 right-0 w-fit cursor-pointer touch-manipulation p-2"
+            class="tap-highlight-transparent absolute end-0 top-0 w-fit cursor-pointer touch-manipulation p-2"
             :aria-label="t('settings.close')"
             @click="handleDismiss"
           >

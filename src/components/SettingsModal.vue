@@ -36,12 +36,12 @@
 <template>
   <!-- Окно настроек -->
   <div
-    class="hide-print absolute top-0 right-0 z-50 w-screen border-3 p-4 md:w-fit print:w-fit"
+    class="hide-print absolute end-0 top-0 z-50 w-screen border-3 p-4 md:w-fit print:w-fit"
     :class="currentTheme === 'dark' ? 'bg-[#292929] text-[#FFF8F0]' : 'bg-white text-[#12130F]'"
   >
     <!-- Кнопка закрытия -->
     <button
-      class="tap-highlight-transparent absolute top-2 right-2 cursor-pointer touch-manipulation"
+      class="tap-highlight-transparent absolute end-2 top-2 cursor-pointer touch-manipulation"
       :aria-label="t('settings.close')"
       @click="emit('close')"
     >

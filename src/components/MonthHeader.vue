@@ -17,7 +17,7 @@
       :aria-label="t('control.prevMonth')"
       @click="store.prevMonth"
     >
-      <ArrowBigLeft class="w-5" />
+      <ArrowBigLeft class="w-5 rtl:-scale-x-100" />
     </button>
 
     <!-- Название текущего месяца и года -->
@@ -38,7 +38,7 @@
       :disabled="!canNextMonth"
       @click="store.nextMonth"
     >
-      <ArrowBigRight class="w-5" />
+      <ArrowBigRight class="w-5 rtl:-scale-x-100" />
     </button>
   </h1>
 </template>

@@ -169,13 +169,13 @@
       </div>
 
       <!-- Процент выполнения задачи -->
-      <div class="hide-print top-1.5 right-[5px] text-[12px] font-bold md:absolute print:absolute">
+      <div class="hide-print end-[5px] top-1.5 text-[12px] font-bold md:absolute print:absolute">
         {{ task.progress }}%
       </div>
 
       <!-- Кнопки добавления/удаления подзадач -->
       <div
-        class="hide-print top-1.5 left-[5px] flex gap-1 max-md:not-print:flex-row-reverse md:absolute print:absolute"
+        class="hide-print start-[5px] top-1.5 flex gap-1 max-md:not-print:flex-row-reverse md:absolute print:absolute"
       >
         <button
           class="tap-highlight-transparent relative flex h-6 touch-manipulation items-center justify-center border-2 px-0.5 transition-all duration-300 ease-in-out"
