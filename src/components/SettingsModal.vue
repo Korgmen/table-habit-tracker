@@ -5,8 +5,6 @@
   import { X, Upload, Download, Printer } from 'lucide-vue-next';
 
   defineProps({
-    /** Открыто ли окно настроек */
-    isOpen: Boolean,
     /** Текущая тема (light/dark) */
     currentTheme: String,
   });

@@ -120,9 +120,8 @@
     >
       <!-- Шапка: месяц, статистика, управление -->
       <Header
-        :settingsOpen="settingsOpen"
+        v-model:settingsOpen="settingsOpen"
         :currentTheme="currentTheme"
-        @update:settingsOpen="settingsOpen = $event"
         @import="triggerImport"
         @print="triggerPrint"
       />
