@@ -1,5 +1,6 @@
 <script setup>
   import { useHabitStore } from '@/stores/habitStore';
+  import { useModalStore } from '@/stores/modalStore';
   import { useHabitUtils } from '@/composables/useHabitUtils';
   import { useModals } from '@/composables/useModals';
   import { ref, watch, onMounted, onUnmounted } from 'vue';
@@ -12,6 +13,7 @@
   import Modal from '@/components/Modal.vue';
 
   const store = useHabitStore();
+  const modalStore = useModalStore();
   const { currentTheme, canNextMonth } = useHabitUtils();
   const { t } = useI18n();
   const { showTaskLimit, showWelcome, showUpdatePrompt, showCloudConflict } = useModals(t);
@@ -35,7 +37,7 @@
    * Игнорирует ввод в полях ввода.
    */
   const handleKeydown = event => {
-    if (store.modal.isOpen) return;
+    if (modalStore.modal.isOpen) return;
     if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') return;
 
     const keyActions = {

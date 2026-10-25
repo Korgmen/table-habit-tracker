@@ -1,15 +1,17 @@
 import { useHabitStore } from '@/stores/habitStore';
+import { useModalStore } from '@/stores/modalStore';
 
 export function useModals(t) {
   const store = useHabitStore();
+  const modalStore = useModalStore();
 
   /** Показывает модальное окно о достижении лимита задач */
   const showTaskLimit = () => {
-    store.showModal({
+    modalStore.showModal({
       type: 'alert',
       title: t('modal.warning'),
       message: t('taskLimit'),
-      onConfirm: () => store.closeModal(),
+      onConfirm: () => modalStore.closeModal(),
     });
   };
 
@@ -17,7 +19,7 @@ export function useModals(t) {
   const showWelcome = (force = false) => {
     if (!force && localStorage.getItem('hasSeenWelcome') === 'true') return;
 
-    store.showModal({
+    modalStore.showModal({
       type: 'custom',
       title: t('welcome.title'),
       html: t('welcome.message'),
@@ -25,7 +27,7 @@ export function useModals(t) {
         if (!force) {
           localStorage.setItem('hasSeenWelcome', 'true');
         }
-        store.closeModal();
+        modalStore.closeModal();
       },
     });
   };
@@ -36,7 +38,7 @@ export function useModals(t) {
 
     if (store.currentMonthKey === realMonthKey) return;
 
-    store.showModal({
+    modalStore.showModal({
       type: 'confirm',
       title: t('duplicate.title'),
       message: t('duplicate.message'),
@@ -46,7 +48,7 @@ export function useModals(t) {
         const cleanTasks = store.tasks.map(task => ({
           ...task,
           id: Date.now() + Math.random(),
-          subtasks: task.subtasks.map(sub => ({
+          subtasks: task.subtasks.map(() => ({
             id: Date.now() + Math.random(),
             marks: Array(store.daysInMonth).fill(null),
           })),
@@ -59,22 +61,22 @@ export function useModals(t) {
         store.tasks = cleanTasks;
         store.adaptMarksToNewMonth();
         store.saveState();
-        store.closeModal();
+        modalStore.closeModal();
       },
-      onCancel: () => store.closeModal(),
+      onCancel: () => modalStore.closeModal(),
     });
   };
 
   /** Показывает модальное окно с предложением обновить PWA */
   const showUpdatePrompt = updateSW => {
-    store.showModal({
+    modalStore.showModal({
       type: 'confirm',
       title: t('update.title'),
       message: t('update.message'),
       onConfirm: () => {
         updateSW(true);
       },
-      onCancel: () => store.closeModal(),
+      onCancel: () => modalStore.closeModal(),
     });
   };
 
@@ -83,7 +85,7 @@ export function useModals(t) {
    * Закрытие без выбора оставляет синхронизацию выключенной до следующего входа.
    */
   const showCloudConflict = () => {
-    store.showModal({
+    modalStore.showModal({
       type: 'confirm',
       title: t('conflict.title'),
       message: t('conflict.message'),
@@ -91,7 +93,7 @@ export function useModals(t) {
       cancelText: t('conflict.cancel'),
       onConfirm: () => store.resolveCloudConflict(true),
       onCancel: () => store.resolveCloudConflict(false),
-      onDismiss: () => store.closeModal(),
+      onDismiss: () => modalStore.closeModal(),
     });
   };
 

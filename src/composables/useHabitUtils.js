@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue';
-import { useHabitStore, monthKey } from '@/stores/habitStore';
+import { useHabitStore } from '@/stores/habitStore';
+import { monthKey } from '@/utils/archive';
 
 /** Системная тема: один слушатель matchMedia на всё приложение */
 const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');

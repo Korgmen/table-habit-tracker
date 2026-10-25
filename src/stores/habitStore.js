@@ -3,70 +3,12 @@ import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { auth, provider, db } from '@/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { i18n, resolveLang, applyLang, SUPPORTED_LANGS } from '@/i18n';
+import { monthKey, decodeArchiveTitles, normalizeArchive, isValidArchive } from '@/utils/archive';
+import { useModalStore } from '@/stores/modalStore';
 
 /** Лимиты задач в месяце и подзадач в задаче */
 export const MAX_TASKS = 20;
 export const MAX_SUBTASKS = 8;
-
-/** Ключ месяца в архиве: 'YYYY-MM' */
-export const monthKey = date =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-
-const HTML_ENTITIES = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" };
-
-/**
- * Снимает HTML-экранирование с заголовков задач.
- * В старых экспортах, localStorage и Firestore заголовки лежат экранированными, иногда в несколько слоёв.
- */
-const decodeArchiveTitles = archive => {
-  Object.values(archive).forEach(month => {
-    if (!Array.isArray(month?.tasks)) return;
-    month.tasks.forEach(task => {
-      if (typeof task.title !== 'string') return;
-      let prev;
-      do {
-        prev = task.title;
-        task.title = prev.replace(/&(amp|lt|gt|quot|#39);/g, entity => HTML_ENTITIES[entity]);
-      } while (task.title !== prev);
-    });
-  });
-  return archive;
-};
-
-/** Архив без пустых месяцев с отсортированными ключами, для сравнения локальных и облачных данных */
-const normalizeArchive = archive => {
-  const sortKeys = value => {
-    if (Array.isArray(value)) return value.map(sortKeys);
-    if (value && typeof value === 'object') {
-      return Object.fromEntries(
-        Object.keys(value)
-          .sort()
-          .map(key => [key, sortKeys(value[key])])
-      );
-    }
-    return value;
-  };
-  const filled = Object.fromEntries(
-    Object.entries(archive).filter(([, month]) => month?.tasks?.length > 0)
-  );
-  return JSON.stringify(sortKeys(filled));
-};
-
-/** Пустое состояние глобального модального окна */
-const emptyModal = () => ({
-  isOpen: false,
-  title: '',
-  message: '',
-  /** Разметка из словарей (приветствие); пользовательские данные идут только в message */
-  html: '',
-  type: 'alert',
-  onConfirm: null,
-  onCancel: null,
-  /** Закрытие крестиком или Escape, по умолчанию вызывается onCancel */
-  onDismiss: null,
-  confirmText: '',
-  cancelText: '',
-});
 
 /** Допустимые значения настроек: облачный документ применяется только по ним */
 const SETTINGS_VALUES = {
@@ -80,30 +22,6 @@ const SETTINGS_VALUES = {
 /** Серия правок подряд (клики по отметкам, переход месяца) уходит в Firestore одной записью */
 const CLOUD_SAVE_DELAY = 1000;
 let cloudSaveTimer = null;
-
-const isValidMark = mark => mark === true || mark === false || mark === null;
-
-/** Проверяет форму архива: ключи YYYY-MM, у задач строковый title и subtasks, marks из true/false/null */
-export const isValidArchive = archive =>
-  archive !== null &&
-  typeof archive === 'object' &&
-  !Array.isArray(archive) &&
-  Object.entries(archive).every(
-    ([key, month]) =>
-      /^\d{4}-(0[1-9]|1[0-2])$/.test(key) &&
-      Array.isArray(month?.tasks) &&
-      month.tasks.every(
-        task =>
-          typeof task?.title === 'string' &&
-          Array.isArray(task.subtasks) &&
-          task.subtasks.every(
-            subtask =>
-              subtask &&
-              (subtask.marks === undefined ||
-                (Array.isArray(subtask.marks) && subtask.marks.every(isValidMark)))
-          )
-      )
-  );
 
 /**
  * Читает архив из localStorage.
@@ -156,10 +74,6 @@ export const useHabitStore = defineStore('habit', {
       showWeekSeparators: savedShowWeekSeparators,
       /** Режим расчёта прогресса: 'fullMonth' | 'passedDays' */
       calculationMode: savedCalculationMode,
-      /** Состояние глобального модального окна */
-      modal: emptyModal(),
-      /** Окна, запрошенные при уже открытом окне: показываются по очереди после его закрытия */
-      modalQueue: [],
       /** Авторизация */
       user: null,
       isAuthReady: false,
@@ -496,7 +410,7 @@ export const useHabitStore = defineStore('habit', {
 
     /** Показывает ошибку импорта по ключу словаря */
     showImportError(messageKey) {
-      this.showModal({
+      useModalStore().showModal({
         type: 'alert',
         title: i18n.global.t('modal.warning'),
         message: i18n.global.t(messageKey),
@@ -541,24 +455,6 @@ export const useHabitStore = defineStore('habit', {
           }
         }
       }
-    },
-
-    /**
-     * Открывает модальное окно с заданными параметрами.
-     * @param {Object} options - { type: 'alert'|'confirm'|'custom', title, message, onConfirm, onCancel, confirmText, cancelText }
-     */
-    showModal(options) {
-      if (this.modal.isOpen) {
-        this.modalQueue.push(options);
-        return;
-      }
-      this.modal = { ...emptyModal(), isOpen: true, ...options };
-    },
-
-    /** Закрывает модальное окно и открывает следующее из очереди, если оно есть */
-    closeModal() {
-      const next = this.modalQueue.shift();
-      this.modal = next ? { ...emptyModal(), isOpen: true, ...next } : emptyModal();
     },
 
     /** Устанавливает режим расчёта прогресса и пересчитывает все задачи */

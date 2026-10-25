@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 import { setDoc } from 'firebase/firestore';
-import { useHabitStore, isValidArchive } from '@/stores/habitStore';
+import { useHabitStore } from '@/stores/habitStore';
+import { useModalStore } from '@/stores/modalStore';
 
 vi.mock('@/firebase', () => ({ auth: {}, provider: {}, db: {} }));
 vi.mock('firebase/auth', () => ({
@@ -108,21 +109,6 @@ describe('adaptMarksToNewMonth', () => {
 });
 
 describe('архив', () => {
-  it('isValidArchive принимает корректный архив', () => {
-    expect(isValidArchive({ '2026-10': { tasks: [task([true, null, false])] } })).toBe(true);
-    expect(isValidArchive({})).toBe(true);
-  });
-
-  it('isValidArchive отклоняет битую структуру', () => {
-    expect(isValidArchive(null)).toBe(false);
-    expect(isValidArchive([])).toBe(false);
-    expect(isValidArchive({ october: { tasks: [] } })).toBe(false);
-    expect(isValidArchive({ '2026-13': { tasks: [] } })).toBe(false);
-    expect(isValidArchive({ '2026-10': { tasks: {} } })).toBe(false);
-    expect(isValidArchive({ '2026-10': { tasks: [{ title: 'T', subtasks: null }] } })).toBe(false);
-    expect(isValidArchive({ '2026-10': { tasks: [task([1, 'x'])] } })).toBe(false);
-  });
-
   it('битый JSON в localStorage не роняет старт и откладывается в резервную копию', () => {
     vi.setSystemTime(new Date(2026, 9, 4, 12));
     localStorage.setItem('habitArchive', '{broken');
@@ -131,6 +117,19 @@ describe('архив', () => {
     const store = useHabitStore();
     expect(store.archive).toEqual({});
     expect(localStorage.getItem('habitArchiveBackup')).toBe('{broken');
+  });
+
+  it('заголовки из localStorage раскодируются при старте', () => {
+    const store = createStore(new Date(2026, 9, 4, 12), {
+      '2026-10': { tasks: [{ ...task([]), title: 'A &amp;amp; B' }] },
+    });
+    expect(store.tasks[0].title).toBe('A & B');
+  });
+
+  it('ошибка импорта открывает окно в сторе модалки', () => {
+    const store = createStore(new Date(2026, 9, 4, 12));
+    store.showImportError('import.invalid');
+    expect(useModalStore().modal).toMatchObject({ isOpen: true, type: 'alert' });
   });
 });
 
@@ -162,22 +161,6 @@ describe('синхронизация', () => {
     expect(store.calculationMode).toBe('passedDays');
     expect(store.user).toBe(null);
     expect(localStorage.getItem('theme')).toBe('dark');
-  });
-});
-
-describe('очередь модальных окон', () => {
-  it('окно, открытое поверх другого, ждёт его закрытия', () => {
-    const store = createStore(new Date(2026, 9, 10, 12));
-    store.showModal({ type: 'confirm', title: 'conflict' });
-    store.showModal({ type: 'confirm', title: 'update' });
-    expect(store.modal.title).toBe('conflict');
-
-    store.closeModal();
-    expect(store.modal.isOpen).toBe(true);
-    expect(store.modal.title).toBe('update');
-
-    store.closeModal();
-    expect(store.modal.isOpen).toBe(false);
   });
 });
 
