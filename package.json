@@ -13,7 +13,7 @@
     "test": "vitest",
     "test:watch": "vitest --watch"
   },
-  "repository": "korgmen/table-habit-tracker",
+  "repository": "Korgmen/table-habit-tracker",
   "keywords": [
     "tracker",
     "habit tracker"
@@ -21,9 +21,9 @@
   "author": "Роман Лебедев (t.me/korgmen)",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/korgmen/table-habit-tracker/issues"
+    "url": "https://github.com/Korgmen/table-habit-tracker/issues"
   },
-  "homepage": "https://github.com/korgmen/table-habit-tracker#readme",
+  "homepage": "https://github.com/Korgmen/table-habit-tracker#readme",
   "dependencies": {
     "firebase": "^12.7.0",
     "lucide-vue-next": "^0.544.0",
