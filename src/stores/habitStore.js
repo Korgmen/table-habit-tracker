@@ -249,6 +249,26 @@ export const useHabitStore = defineStore('habit', {
       this.saveState();
     },
 
+    /**
+     * Переносит отметки с фото бланка: entries = [{ taskId, rows: marks[] по подзадачам }].
+     * Для прошедших дней и сегодня фото главнее, будущие дни не трогаются.
+     */
+    applyScannedMarks(entries) {
+      entries.forEach(({ taskId, rows }) => {
+        const task = this.tasks.find(t => t.id === taskId);
+        if (!task) return;
+        rows.forEach((marks, row) => {
+          const subtask = task.subtasks[row];
+          if (!subtask) return;
+          marks.forEach((mark, dayIndex) => {
+            if (dayIndex < this.today) subtask.marks[dayIndex] = mark;
+          });
+        });
+        this.updateTaskProgress(taskId);
+      });
+      this.saveState();
+    },
+
     /** Удаляет задачу по ID */
     deleteTask(taskId) {
       this.tasks = this.tasks.filter(t => t.id !== taskId);

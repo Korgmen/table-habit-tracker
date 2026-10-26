@@ -17,6 +17,10 @@
     'import',
     /** Запрос печати */
     'print',
+    /** Запрос печати бланка для фото */
+    'printSheet',
+    /** Запрос переноса отметок с фото бланка */
+    'scanPhoto',
   ]);
 
   /** Передаёт событие импорта вверх */
@@ -44,6 +48,8 @@
       @close="settingsOpen = false"
       @import="handleImport"
       @print="handlePrint"
+      @print-sheet="emit('printSheet')"
+      @scan-photo="emit('scanPhoto')"
     />
   </transition>
 

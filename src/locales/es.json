@@ -21,7 +21,9 @@
       "import": "Importar desde JSON"
     },
     "print": {
-      "title": "Imprimir"
+      "title": "Imprimir",
+      "sheet": "Imprimir hoja para importar desde foto",
+      "scan": "Importar marcas desde una foto de la hoja"
     },
     "hotkeys": {
       "title": "Atajos de teclado",
@@ -101,6 +103,21 @@
     "tooLarge": "El archivo es demasiado grande (máximo 2 MB)",
     "invalid": "El archivo no contiene datos válidos del rastreador",
     "error": "No se pudo importar el archivo"
+  },
+  "scan": {
+    "title": "Marcas desde la foto de la hoja",
+    "scanning": "Reconociendo la foto…",
+    "summary": "Marcas que cambiarán: {changed}, dudosas: {uncertain}",
+    "legend": "En azul, las marcas que difieren de tus datos actuales; con borde ámbar, las que conviene revisar. Toca una marca para cambiarla.",
+    "missing": "Tareas de la hoja que no están en este mes: {count}. Se eliminaron o se volvieron a crear después de imprimir.",
+    "apply": "Importar",
+    "error": {
+      "markers": "No se encontraron las marcas de las esquinas de la hoja. Fotografía la hoja entera, recta y sin reflejos.",
+      "qr": "No se pudo leer el código QR de la hoja. Haz una foto más cercana y nítida.",
+      "month": "Esta hoja es de {month}. Abre ese mes e inténtalo de nuevo.",
+      "noTasks": "Ninguna tarea de esta hoja existe en este mes. Vuelve a imprimir la hoja.",
+      "failed": "No se pudo procesar la foto."
+    }
   },
   "mark": {
     "cell": "{title}, día {day}, subtarea {subtask}: {state}",

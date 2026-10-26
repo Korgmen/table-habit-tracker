@@ -2,7 +2,7 @@
   import { useHabitStore } from '@/stores/habitStore';
   import { useModals } from '@/composables/useModals';
   import { useI18n } from 'vue-i18n';
-  import { X, Upload, Download, Printer } from 'lucide-vue-next';
+  import { X, Upload, Download, Printer, QrCode, Camera } from 'lucide-vue-next';
 
   defineProps({
     /** Текущая тема (light/dark) */
@@ -16,6 +16,10 @@
     'import',
     /** Запрос печати */
     'print',
+    /** Запрос печати бланка для фото */
+    'printSheet',
+    /** Запрос переноса отметок с фото бланка */
+    'scanPhoto',
   ]);
 
   const store = useHabitStore();
@@ -122,6 +126,26 @@
               @click="handlePrint"
             >
               <Printer class="w-5" />
+            </button>
+            <button
+              class="tap-highlight-transparent relative flex h-8 touch-manipulation items-center justify-center border-2 px-1.5"
+              :class="store.tasks.length > 0 ? 'cursor-pointer' : 'cursor-not-allowed opacity-25'"
+              :disabled="store.tasks.length === 0"
+              :aria-label="t('settings.print.sheet')"
+              :title="t('settings.print.sheet')"
+              @click="emit('printSheet')"
+            >
+              <QrCode class="w-5" />
+            </button>
+            <button
+              class="tap-highlight-transparent relative flex h-8 touch-manipulation items-center justify-center border-2 px-1.5"
+              :class="store.tasks.length > 0 ? 'cursor-pointer' : 'cursor-not-allowed opacity-25'"
+              :disabled="store.tasks.length === 0"
+              :aria-label="t('settings.print.scan')"
+              :title="t('settings.print.scan')"
+              @click="emit('scanPhoto')"
+            >
+              <Camera class="w-5" />
             </button>
           </div>
         </div>

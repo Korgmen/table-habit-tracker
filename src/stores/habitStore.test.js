@@ -65,6 +65,22 @@ describe('updateTaskProgress', () => {
   });
 });
 
+describe('applyScannedMarks', () => {
+  it('переносит отметки с фото до сегодняшнего дня и пересчитывает прогресс', () => {
+    const store = createStore(new Date(2026, 9, 3, 12), {
+      '2026-10': { tasks: [task([false, false, false, ...Array(28).fill(null)])] },
+    });
+    store.applyScannedMarks([{ taskId: 1, rows: [Array(31).fill(true), Array(31).fill(true)] }]);
+
+    expect(store.tasks[0].subtasks[0].marks.slice(0, 4)).toEqual([true, true, true, null]);
+    expect(store.tasks[0].subtasks).toHaveLength(1);
+    expect(store.tasks[0].progress).toBe(((3 / 31) * 100).toFixed(1));
+    expect(JSON.parse(localStorage.getItem('habitArchive'))['2026-10'].tasks[0].progress).toBe(
+      store.tasks[0].progress
+    );
+  });
+});
+
 describe('навигация по месяцам на 31-е число', () => {
   it('prevMonth с 31 октября ведёт в сентябрь, nextMonth возвращает в октябрь', () => {
     const store = createStore(new Date(2026, 9, 31, 12));

@@ -3,7 +3,7 @@
   import { useModalStore } from '@/stores/modalStore';
   import { useHabitUtils } from '@/composables/useHabitUtils';
   import { useModals } from '@/composables/useModals';
-  import { ref, watch, onMounted, onUnmounted } from 'vue';
+  import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue';
   import { VueDraggableNext } from 'vue-draggable-next';
   import { useI18n } from 'vue-i18n';
   import { registerSW } from 'virtual:pwa-register';
@@ -11,6 +11,8 @@
   import TableHeader from '@/components/TableHeader.vue';
   import TaskRow from '@/components/TaskRow.vue';
   import Modal from '@/components/Modal.vue';
+  import PaperSheet from '@/components/PaperSheet.vue';
+  import PhotoImport from '@/components/PhotoImport.vue';
 
   const store = useHabitStore();
   const modalStore = useModalStore();
@@ -32,12 +34,23 @@
   /** Состояние открытия окна настроек */
   const settingsOpen = ref(false);
 
+  /** Печатается бланк для фото вместо таблицы */
+  const sheetPrinting = ref(false);
+
+  /** Ссылка на скрытый input для фото бланка и выбранное фото */
+  const photoInput = ref(null);
+  const photoFile = ref(null);
+
   /**
    * Обрабатывает глобальные горячие клавиши.
    * Игнорирует ввод в полях ввода.
    */
   const handleKeydown = event => {
     if (modalStore.modal.isOpen) return;
+    if (photoFile.value) {
+      if (event.code === 'Escape') photoFile.value = null;
+      return;
+    }
     if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') return;
 
     const keyActions = {
@@ -75,6 +88,27 @@
   /** Инициирует печать страницы */
   const triggerPrint = () => window.print();
 
+  /** Печатает бланк открытого месяца; обычный вид возвращает событие afterprint */
+  const triggerSheetPrint = async () => {
+    settingsOpen.value = false;
+    sheetPrinting.value = true;
+    await nextTick();
+    window.print();
+  };
+
+  const handleAfterPrint = () => {
+    sheetPrinting.value = false;
+  };
+
+  /** Открывает выбор фото бланка (на телефоне – с камерой) */
+  const triggerPhotoImport = () => photoInput.value.click();
+
+  const handlePhotoSelected = event => {
+    photoFile.value = event.target.files[0] || null;
+    event.target.value = '';
+    settingsOpen.value = false;
+  };
+
   /** Свёрнутое приложение дописывает отложенную запись в облако, вернувшееся сверяет дату */
   const handleVisibilityChange = () => {
     if (document.visibilityState === 'hidden') store.flushCloudSave();
@@ -96,6 +130,7 @@
     });
     /** Подписка на глобальные клавиатурные события */
     window.addEventListener('keydown', handleKeydown);
+    window.addEventListener('afterprint', handleAfterPrint);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     realDateTimer = setInterval(() => store.syncRealDate(), 60 * 1000);
     /** Показывает приветственное модальное окно при первом запуске */
@@ -105,6 +140,7 @@
   /** Очистка глобального обработчика клавиш */
   onUnmounted(() => {
     window.removeEventListener('keydown', handleKeydown);
+    window.removeEventListener('afterprint', handleAfterPrint);
     document.removeEventListener('visibilitychange', handleVisibilityChange);
     clearInterval(realDateTimer);
   });
@@ -119,6 +155,7 @@
   >
     <div
       class="relative mx-auto flex w-full flex-col gap-2.5 max-md:not-print:h-[100dvh] max-md:not-print:flex-col-reverse max-md:not-print:pb-2.5 md:my-5 md:w-fit md:min-w-[960px] print:my-5 print:w-fit print:min-w-[960px]"
+      :class="{ 'print:hidden': sheetPrinting }"
     >
       <!-- Шапка: месяц, статистика, управление -->
       <Header
@@ -126,6 +163,8 @@
         :currentTheme="currentTheme"
         @import="triggerImport"
         @print="triggerPrint"
+        @print-sheet="triggerSheetPrint"
+        @scan-photo="triggerPhotoImport"
       />
 
       <!-- Таблица привычек -->
@@ -175,7 +214,28 @@
         accept=".json"
         @change="store.importData"
       />
+
+      <!-- Скрытый input для фото бланка -->
+      <input
+        ref="photoInput"
+        type="file"
+        style="display: none"
+        accept="image/*"
+        @change="handlePhotoSelected"
+      />
     </div>
+
+    <!-- Бланк для печати и распознавания с фото -->
+    <PaperSheet v-if="sheetPrinting" />
+
+    <!-- Проверка отметок, распознанных с фото бланка -->
+    <PhotoImport
+      v-if="photoFile"
+      :key="photoFile.name + photoFile.lastModified"
+      :file="photoFile"
+      :currentTheme="currentTheme"
+      @close="photoFile = null"
+    />
 
     <!-- Глобальное модальное окно -->
     <Modal />

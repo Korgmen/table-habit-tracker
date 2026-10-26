@@ -21,7 +21,9 @@
       "import": "Import from JSON"
     },
     "print": {
-      "title": "Print"
+      "title": "Print",
+      "sheet": "Print sheet for photo import",
+      "scan": "Import marks from a photo of the sheet"
     },
     "hotkeys": {
       "title": "Keyboard shortcuts",
@@ -101,6 +103,21 @@
     "tooLarge": "The file is too large (maximum 2 MB)",
     "invalid": "The file does not contain valid tracker data",
     "error": "Failed to import the file"
+  },
+  "scan": {
+    "title": "Marks from sheet photo",
+    "scanning": "Recognizing the photo…",
+    "summary": "Marks to change: {changed}, uncertain: {uncertain}",
+    "legend": "Blue marks differ from your current data, amber outlines are worth checking. Tap a mark to change it.",
+    "missing": "Tasks from the sheet not found in this month: {count}. They were deleted or recreated after printing.",
+    "apply": "Import",
+    "error": {
+      "markers": "Could not find the corner markers of the sheet. Photograph the whole sheet, straight and without glare.",
+      "qr": "Could not read the sheet's QR code. Take a closer, sharper photo.",
+      "month": "This sheet is for {month}. Open that month and try again.",
+      "noTasks": "None of the tasks on this sheet exist in this month. Print the sheet again.",
+      "failed": "Could not process the photo."
+    }
   },
   "mark": {
     "cell": "{title}, day {day}, subtask {subtask}: {state}",
