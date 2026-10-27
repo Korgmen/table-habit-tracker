@@ -16,8 +16,8 @@ const mediaRef = query => {
 /** Системная тема */
 const prefersDark = mediaRef('(prefers-color-scheme: dark)');
 
-/** Десктопная раскладка (таблица) или телефонная (лента дней); печатается всегда таблица */
-const isDesktop = mediaRef('(min-width: 768px), print');
+/** Десктопная раскладка (таблица) или телефонная (лента дней) */
+const isDesktop = mediaRef('(min-width: 768px)');
 
 export function useHabitUtils() {
   const store = useHabitStore();

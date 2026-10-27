@@ -154,8 +154,6 @@
       "exportHint": "إلى JSON",
       "import": "استيراد",
       "importHint": "من JSON",
-      "print": "طباعة",
-      "printHint": "جدول الشهر",
       "sheet": "استمارة",
       "sheetHint": "للتصوير",
       "scan": "من صورة",

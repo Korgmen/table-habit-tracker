@@ -3,7 +3,7 @@
   import { useModalStore } from '@/stores/modalStore';
   import { useHabitUtils } from '@/composables/useHabitUtils';
   import { useModals } from '@/composables/useModals';
-  import { ref, computed, watch, watchEffect, nextTick, onMounted, onUnmounted } from 'vue';
+  import { ref, watch, watchEffect, nextTick, onMounted, onUnmounted } from 'vue';
   import { useI18n } from 'vue-i18n';
   import { registerSW } from 'virtual:pwa-register';
   import DesktopHeader from '@/components/DesktopHeader.vue';
@@ -50,12 +50,8 @@
   /** Ссылка на скрытый input для импорта файла */
   const importInput = ref(null);
 
-  /** Печатается таблица (на телефоне вместо ленты дней) или бланк для фото */
-  const printing = ref(false);
+  /** Печатается бланк для фото вместо интерфейса */
   const sheetPrinting = ref(false);
-
-  /** На телефоне показывается лента дней, на десктопе и при печати – таблица */
-  const showGrid = computed(() => isDesktop.value || printing.value);
 
   /** Ссылка на скрытый input для фото бланка и выбранное фото */
   const photoInput = ref(null);
@@ -101,13 +97,6 @@
     }
   };
 
-  /** Печатает таблицу открытого месяца */
-  const triggerPrint = async () => {
-    printing.value = true;
-    await nextTick();
-    window.print();
-  };
-
   /** Печатает бланк открытого месяца; обычный вид возвращает событие afterprint */
   const triggerSheetPrint = async () => {
     sheetPrinting.value = true;
@@ -116,7 +105,6 @@
   };
 
   const handleAfterPrint = () => {
-    printing.value = false;
     sheetPrinting.value = false;
   };
 
@@ -165,9 +153,9 @@
 
 <template>
   <div :class="{ 'print:hidden': sheetPrinting }">
-    <!-- Десктоп и печать: таблица месяца -->
+    <!-- Десктоп: таблица месяца -->
     <div
-      v-if="showGrid"
+      v-if="isDesktop"
       class="flex h-dvh flex-col overflow-hidden print:h-auto print:overflow-visible"
     >
       <DesktopHeader />
@@ -211,7 +199,6 @@
   <SettingsSheet
     v-if="modalStore.modal.name === 'settings'"
     @import="triggerImport"
-    @print="triggerPrint"
     @print-sheet="triggerSheetPrint"
     @scan-photo="triggerPhotoImport"
   />

@@ -154,8 +154,6 @@
       "exportHint": "to JSON",
       "import": "Import",
       "importHint": "from JSON",
-      "print": "Print",
-      "printHint": "month table",
       "sheet": "Sheet",
       "sheetHint": "for a photo",
       "scan": "From photo",

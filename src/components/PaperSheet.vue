@@ -25,7 +25,7 @@
   } from '@/utils/sheetLayout';
 
   const store = useHabitStore();
-  const { isEndOfWeek } = useHabitUtils();
+  const { isWeekStart } = useHabitUtils();
 
   /** Белые клетки маркера ArUco */
   const markerCells = marker =>
@@ -57,9 +57,11 @@
 
   /** Дни, после которых рисуется разделитель недели */
   const weekEnds = computed(() =>
-    Array.from({ length: store.daysInMonth }, (_, i) => i + 1).filter(day =>
-      isEndOfWeek(day, day === store.daysInMonth)
-    )
+    store.showWeekSeparators
+      ? Array.from({ length: store.daysInMonth - 1 }, (_, i) => i + 1).filter(day =>
+          isWeekStart(day + 1)
+        )
+      : []
   );
 
   /** Страницы бланка: задачи, раскладка и QR */

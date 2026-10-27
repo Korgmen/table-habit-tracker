@@ -11,8 +11,6 @@
   const emit = defineEmits([
     /** Запрос импорта */
     'import',
-    /** Запрос печати */
-    'print',
     /** Запрос печати бланка для фото */
     'printSheet',
     /** Запрос переноса отметок с фото бланка */
@@ -75,11 +73,6 @@
       title: t('settings.data.import'),
       hint: t('settings.data.importHint'),
       run: () => runAndClose('import'),
-    },
-    {
-      title: t('settings.data.print'),
-      hint: t('settings.data.printHint'),
-      run: () => runAndClose('print'),
     },
     {
       title: t('settings.data.sheet'),
@@ -273,7 +266,7 @@
         <h3 class="text-muted text-xs font-semibold tracking-wider uppercase">
           {{ t('settings.data.title') }}
         </h3>
-        <div class="grid grid-cols-3 gap-2">
+        <div class="grid grid-cols-2 gap-2">
           <button
             v-for="action in dataActions"
             :key="action.title"

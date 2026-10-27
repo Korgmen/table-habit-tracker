@@ -154,8 +154,6 @@
       "exportHint": "в JSON",
       "import": "Импорт",
       "importHint": "из JSON",
-      "print": "Печать",
-      "printHint": "таблица месяца",
       "sheet": "Бланк",
       "sheetHint": "для фото",
       "scan": "С фото",
