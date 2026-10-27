@@ -2,14 +2,13 @@
   import { ref, computed, onMounted } from 'vue';
   import { useI18n } from 'vue-i18n';
   import { X } from 'lucide-vue-next';
+  import MarkCircle from '@/components/MarkCircle.vue';
   import { useHabitStore } from '@/stores/habitStore';
   import { loadPhoto, scanSheet, matchScannedTasks, ScanError } from '@/utils/sheetScan';
 
   const props = defineProps({
     /** Фото бланка */
     file: Object,
-    /** Текущая тема (light/dark) */
-    currentTheme: String,
   });
 
   const emit = defineEmits([
@@ -105,15 +104,12 @@
     cell.uncertain = false;
   };
 
+  /** Рамка кружка: синяя – отличается от текущих данных, жёлтая – стоит проверить */
   const cellClass = (entry, row, dayIndex) => {
     const cell = entry.rows[row][dayIndex];
     return {
-      'bg-current': cell.value === true,
-      'before:opacity-100 after:opacity-100': cell.value === false,
-      'text-blue-500': isChanged(entry, row, dayIndex),
+      'ring-2 ring-blue-500': isChanged(entry, row, dayIndex),
       'outline-2 outline-offset-2 outline-amber-500': cell.uncertain && isEditable(dayIndex),
-      'cursor-pointer': isEditable(dayIndex),
-      'cursor-not-allowed opacity-30': !isEditable(dayIndex),
     };
   };
 
@@ -136,63 +132,65 @@
 
 <template>
   <div
-    class="fixed inset-0 z-50 overflow-y-auto p-4 select-none md:p-8"
-    :class="currentTheme === 'dark' ? 'bg-[#292929] text-[#FFF8F0]' : 'bg-white text-[#12130F]'"
+    class="bg-bg text-ink fixed inset-0 z-50 overflow-y-auto p-4 select-none md:p-8"
     role="dialog"
     aria-modal="true"
     :aria-label="t('scan.title')"
   >
-    <div class="mx-auto flex max-w-[960px] flex-col gap-4">
+    <div class="mx-auto flex max-w-[1100px] flex-col gap-4">
       <div class="flex items-center justify-between gap-3">
-        <h2 class="text-xl font-semibold">
+        <h2 class="text-[22px] font-bold tracking-tight">
           {{ t('scan.title') }}
-          <span v-if="sheetPage && sheetPage.pages > 1">
+          <span v-if="sheetPage && sheetPage.pages > 1" class="text-muted">
             {{ sheetPage.page }}/{{ sheetPage.pages }}
           </span>
         </h2>
         <button
-          class="tap-highlight-transparent cursor-pointer touch-manipulation p-2"
-          :aria-label="t('settings.close')"
+          class="bg-soft flex size-10 items-center justify-center rounded-full"
+          :aria-label="t('common.close')"
           @click="emit('close')"
         >
-          <X class="h-5 w-5" />
+          <X class="size-5" />
         </button>
       </div>
 
-      <p v-if="status === 'scanning'">{{ t('scan.scanning') }}</p>
+      <p v-if="status === 'scanning'" class="text-muted">{{ t('scan.scanning') }}</p>
 
-      <p v-else-if="status === 'error'">{{ errorText }}</p>
+      <p v-else-if="status === 'error'" class="bg-soft rounded-[14px] p-4 leading-normal">
+        {{ errorText }}
+      </p>
 
       <template v-else>
-        <div class="flex flex-col gap-1 text-sm">
-          <p>{{ t('scan.summary', { changed: changedCount, uncertain: uncertainCount }) }}</p>
+        <div class="text-muted flex flex-col gap-1 text-sm leading-normal">
+          <p class="text-ink font-semibold">
+            {{ t('scan.summary', { changed: changedCount, uncertain: uncertainCount }) }}
+          </p>
           <p>{{ t('scan.legend') }}</p>
-          <p v-if="missing > 0" class="text-amber-500">
+          <p v-if="missing > 0" class="text-amber-600">
             {{ t('scan.missing', { count: missing }) }}
           </p>
         </div>
 
         <!-- Распознанные задачи -->
-        <div class="overflow-x-auto border-3">
+        <div class="border-line overflow-x-auto rounded-[14px] border">
           <div
             v-for="entry in entries"
             :key="entry.task.id"
-            class="flex w-fit min-w-full flex-col items-center gap-2 border-t-3 px-3 pt-2.5 pb-3 first:border-t-0"
+            class="border-line flex w-fit min-w-full flex-col gap-2 border-t px-4 pt-3 pb-3.5 first:border-t-0"
           >
-            <p class="font-bold">{{ entry.task.title }}</p>
-            <div class="flex gap-1">
+            <p class="text-sm font-medium">{{ entry.task.title }}</p>
+            <div class="flex gap-0.5">
               <div
                 v-for="dayIndex in dayIndexes"
                 :key="dayIndex"
-                class="flex w-4 flex-col items-center gap-[5px]"
+                class="flex w-6 flex-col items-center gap-1"
               >
-                <span class="text-[10px] leading-none font-medium">{{ dayIndex + 1 }}</span>
+                <span class="text-muted text-[10px]">{{ dayIndex + 1 }}</span>
                 <button
                   v-for="(cells, row) in entry.rows"
                   :key="row"
                   type="button"
-                  class="tap-highlight-transparent relative flex aspect-square w-3 touch-manipulation items-center justify-center rounded-[50%] border-2 border-current before:absolute before:h-0.5 before:w-full before:rotate-45 before:bg-current before:opacity-0 after:absolute after:h-0.5 after:w-full after:-rotate-45 after:bg-current after:opacity-0"
-                  :class="cellClass(entry, row, dayIndex)"
+                  class="flex size-6 items-center justify-center disabled:cursor-default"
                   :disabled="!isEditable(dayIndex)"
                   :aria-label="
                     t('mark.cell', {
@@ -203,23 +201,27 @@
                     })
                   "
                   @click="cycleCell(cells[dayIndex])"
-                ></button>
+                >
+                  <MarkCircle
+                    class="rounded-full"
+                    :class="cellClass(entry, row, dayIndex)"
+                    :mark="cells[dayIndex].value"
+                    :future="!isEditable(dayIndex)"
+                  />
+                </button>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="flex justify-end gap-3">
+        <div class="flex justify-end gap-2">
           <button
-            class="tap-highlight-transparent flex h-8 cursor-pointer touch-manipulation items-center border-2 px-3 font-semibold"
+            class="border-line hover:bg-soft h-11 rounded-xl border px-4 text-sm"
             @click="emit('close')"
           >
-            {{ t('modal.cancel') }}
+            {{ t('common.cancel') }}
           </button>
-          <button
-            class="tap-highlight-transparent flex h-8 cursor-pointer touch-manipulation items-center border-2 px-3 font-semibold"
-            @click="apply"
-          >
+          <button class="bg-ink text-bg h-11 rounded-xl px-5 text-sm font-semibold" @click="apply">
             {{ t('scan.apply') }}
           </button>
         </div>

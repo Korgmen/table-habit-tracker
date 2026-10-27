@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 import { setDoc } from 'firebase/firestore';
 import { useHabitStore } from '@/stores/habitStore';
-import { useModalStore } from '@/stores/modalStore';
 
 vi.mock('@/firebase', () => ({ auth: {}, provider: {}, db: {} }));
 vi.mock('firebase/auth', () => ({
@@ -142,10 +141,114 @@ describe('архив', () => {
     expect(store.tasks[0].title).toBe('A & B');
   });
 
-  it('ошибка импорта открывает окно в сторе модалки', () => {
+  it('импорт файла без архива возвращает ключ ошибки и не трогает данные', async () => {
+    const store = createStore(new Date(2026, 9, 4, 12), {
+      '2026-10': { tasks: [task(Array(31).fill(null))] },
+    });
+    /** В jsdom у File нет text(), нужен только этот интерфейс */
+    const file = { size: 10, text: async () => '{"foo": 1}' };
+    expect(await store.importData(file)).toBe('import.invalid');
+    expect(store.tasks).toHaveLength(1);
+  });
+});
+
+describe('отметки', () => {
+  it('cycleMark: пусто → выполнено → пропуск → пусто, будущие дни не меняются', () => {
+    const store = createStore(new Date(2026, 9, 4, 12), {
+      '2026-10': { tasks: [task(Array(31).fill(null))] },
+    });
+    const marks = () => store.tasks[0].subtasks[0].marks;
+    store.cycleMark(1, 2, 0);
+    expect(marks()[0]).toBe(true);
+    store.cycleMark(1, 2, 0);
+    expect(marks()[0]).toBe(false);
+    store.cycleMark(1, 2, 0);
+    expect(marks()[0]).toBeNull();
+    store.cycleMark(1, 2, 10);
+    expect(marks()[10]).toBeNull();
+  });
+
+  it('toggleSkip ставит и снимает пропуск', () => {
+    const store = createStore(new Date(2026, 9, 4, 12), {
+      '2026-10': { tasks: [task([true, ...Array(30).fill(null)])] },
+    });
+    store.toggleSkip(1, 2, 0);
+    expect(store.tasks[0].subtasks[0].marks[0]).toBe(false);
+    store.toggleSkip(1, 2, 0);
+    expect(store.tasks[0].subtasks[0].marks[0]).toBeNull();
+  });
+
+  it('toggleDay проставляет день всем задачам, повторный клик очищает', () => {
+    const store = createStore(new Date(2026, 9, 4, 12), {
+      '2026-10': { tasks: [task(Array(31).fill(null)), task([true, ...Array(30).fill(null)], 5)] },
+    });
+    store.toggleDay(0, true);
+    expect(store.tasks.every(t => t.subtasks[0].marks[0] === true)).toBe(true);
+    store.toggleDay(0, true);
+    expect(store.tasks.every(t => t.subtasks[0].marks[0] === null)).toBe(true);
+  });
+});
+
+describe('задачи', () => {
+  it('addTask создаёт задачу с подзадачами и соблюдает лимит', () => {
     const store = createStore(new Date(2026, 9, 4, 12));
-    store.showImportError('import.invalid');
-    expect(useModalStore().modal).toMatchObject({ isOpen: true, type: 'alert' });
+    expect(store.addTask('  Чтение ', 3)).toBe(true);
+    expect(store.tasks[0].title).toBe('Чтение');
+    expect(store.tasks[0].subtasks).toHaveLength(3);
+    expect(store.tasks[0].subtasks[0].marks).toHaveLength(31);
+    expect(new Set(store.tasks[0].subtasks.map(s => s.id)).size).toBe(3);
+
+    for (let i = 1; i < 20; i++) store.addTask('x');
+    expect(store.addTask('over')).toBe(false);
+  });
+
+  it('updateTask переименовывает и обрезает подзадачи', () => {
+    const store = createStore(new Date(2026, 9, 4, 12));
+    store.addTask('A', 3);
+    const id = store.tasks[0].id;
+    store.updateTask(id, 'B', 1);
+    expect(store.tasks[0]).toMatchObject({ title: 'B' });
+    expect(store.tasks[0].subtasks).toHaveLength(1);
+    store.updateTask(id, '   ', 2);
+    expect(store.tasks[0].title).toBe('B');
+    expect(store.tasks[0].subtasks).toHaveLength(2);
+  });
+
+  it('moveTask и восстановление удалённой задачи на прежнее место', () => {
+    const store = createStore(new Date(2026, 9, 4, 12), {
+      '2026-10': { tasks: [task([], 1), task([], 3), task([], 5)] },
+    });
+    store.moveTask(1, 1);
+    expect(store.tasks.map(t => t.id)).toEqual([3, 1, 5]);
+    store.moveTask(3, -1);
+    expect(store.tasks.map(t => t.id)).toEqual([3, 1, 5]);
+
+    const removed = store.deleteTask(1);
+    expect(store.tasks.map(t => t.id)).toEqual([3, 5]);
+    expect(store.restoreTask(removed)).toBe(true);
+    expect(store.tasks.map(t => t.id)).toEqual([3, 1, 5]);
+  });
+
+  it('удалённую задачу нельзя вернуть в другой месяц', () => {
+    const store = createStore(new Date(2026, 9, 4, 12), {
+      '2026-10': { tasks: [task([], 1)] },
+    });
+    const removed = store.deleteTask(1);
+    store.prevMonth();
+    expect(store.restoreTask(removed)).toBe(false);
+    expect(store.tasks).toHaveLength(0);
+  });
+
+  it('duplicateToCurrent копирует задачи архива в текущий месяц без отметок', () => {
+    const store = createStore(new Date(2026, 9, 4, 12), {
+      '2026-09': { tasks: [task(Array(30).fill(true))] },
+    });
+    store.prevMonth();
+    store.duplicateToCurrent();
+    expect(store.currentMonthKey).toBe('2026-10');
+    expect(store.tasks[0].title).toBe('Task');
+    expect(store.tasks[0].subtasks[0].marks).toEqual(Array(31).fill(null));
+    expect(store.archive['2026-09'].tasks[0].subtasks[0].marks[0]).toBe(true);
   });
 });
 

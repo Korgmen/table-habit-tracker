@@ -103,7 +103,7 @@
       height="296mm"
       :viewBox="`0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}`"
       fill="black"
-      font-family="Inter"
+      font-family="Golos Text Variable"
     >
       <rect :width="PAGE_WIDTH" :height="PAGE_HEIGHT" fill="white" />
 

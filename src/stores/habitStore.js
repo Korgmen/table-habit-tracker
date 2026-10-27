@@ -2,9 +2,8 @@ import { defineStore } from 'pinia';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { auth, provider, db } from '@/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { i18n, resolveLang, applyLang, SUPPORTED_LANGS } from '@/i18n';
+import { resolveLang, applyLang, SUPPORTED_LANGS } from '@/i18n';
 import { monthKey, decodeArchiveTitles, normalizeArchive, isValidArchive } from '@/utils/archive';
-import { useModalStore } from '@/stores/modalStore';
 
 /** Лимиты задач в месяце и подзадач в задаче */
 export const MAX_TASKS = 20;
@@ -60,10 +59,6 @@ export const useHabitStore = defineStore('habit', {
       archive,
       /** Задачи текущего отображаемого месяца */
       tasks: archive[monthKey(realDate)]?.tasks || [],
-      /** ID задачи, находящейся в режиме редактирования */
-      editingTaskId: null,
-      /** Активный режим взаимодействия: null | 'delete' | 'eraser' */
-      activeMode: null,
       /** Текущая тема: 'light' | 'dark' | 'system' */
       theme: savedTheme,
       /** Язык интерфейса: 'ru' | 'en' | 'ar' | 'es' | 'zh' | 'system' */
@@ -144,54 +139,49 @@ export const useHabitStore = defineStore('habit', {
   },
 
   actions: {
-    /** Возвращает локализованный заголовок по умолчанию для новой задачи */
-    getDefaultTaskTitle() {
-      return i18n.global.t('task.defaultTitle');
+    /** Подзадача с пустыми отметками на текущий месяц */
+    createSubtask(offset = 0) {
+      return { id: Date.now() + offset + Math.random(), marks: Array(this.daysInMonth).fill(null) };
     },
 
-    /** Добавляет новую задачу с одной подзадачей */
-    addTask() {
-      if (this.tasks.length >= MAX_TASKS) {
-        return false;
-      }
+    /** Добавляет задачу с заданным числом подзадач, false при достижении лимита */
+    addTask(title, subtaskCount = 1) {
+      if (this.tasks.length >= MAX_TASKS) return false;
 
-      const id = Date.now();
+      const count = Math.min(Math.max(subtaskCount, 1), MAX_SUBTASKS);
       this.tasks.push({
-        id,
-        title: this.getDefaultTaskTitle(),
-        subtasks: [{ id: Date.now() + 1, marks: Array(this.daysInMonth).fill(null) }],
+        id: Date.now(),
+        title: title.trim(),
+        subtasks: Array.from({ length: count }, (_, i) => this.createSubtask(i + 1)),
         progress: 0.0,
       });
       this.saveState();
       return true;
     },
 
-    /** Добавляет подзадачу к указанной задаче (максимум 8) */
-    addSubtask(taskId) {
+    /** Переименовывает задачу и подгоняет число подзадач: лишние удаляются с конца вместе с отметками */
+    updateTask(taskId, title, subtaskCount) {
       const task = this.tasks.find(t => t.id === taskId);
-      if (task && task.subtasks.length < MAX_SUBTASKS) {
-        task.subtasks.push({
-          id: Date.now(),
-          marks: Array(this.daysInMonth).fill(null),
-        });
-        this.updateTaskProgress(taskId);
-        this.saveState();
+      if (!task) return;
+
+      const count = Math.min(Math.max(subtaskCount, 1), MAX_SUBTASKS);
+      task.title = title.trim() || task.title;
+      if (task.subtasks.length > count) task.subtasks.splice(count);
+      while (task.subtasks.length < count) {
+        task.subtasks.push(this.createSubtask(task.subtasks.length));
       }
+      this.updateTaskProgress(taskId);
+      this.saveState();
     },
 
-    /** Начинает редактирование заголовка задачи */
-    startEditing(taskId) {
-      this.editingTaskId = taskId;
-    },
-
-    /** Завершает редактирование и сохраняет заголовок */
-    finishEditing(taskId, newTitle) {
-      const task = this.tasks.find(t => t.id === taskId);
-      if (task) {
-        task.title = newTitle.trim() || this.getDefaultTaskTitle();
-        this.editingTaskId = null;
-        this.saveState();
-      }
+    /** Сдвигает задачу в списке на offset позиций */
+    moveTask(taskId, offset) {
+      const from = this.tasks.findIndex(t => t.id === taskId);
+      const to = from + offset;
+      if (from < 0 || to < 0 || to >= this.tasks.length) return;
+      const [task] = this.tasks.splice(from, 1);
+      this.tasks.splice(to, 0, task);
+      this.saveState();
     },
 
     /** Пересчитывает прогресс задачи на основе отметок подзадач с учётом режима расчёта */
@@ -236,6 +226,29 @@ export const useHabitStore = defineStore('habit', {
       }
     },
 
+    /** Клик по отметке: пусто → выполнено → пропуск → пусто */
+    cycleMark(taskId, subtaskId, dayIndex) {
+      const mark = this.tasks.find(t => t.id === taskId)?.subtasks.find(s => s.id === subtaskId)
+        ?.marks[dayIndex];
+      const next = mark === null || mark === undefined ? true : mark === true ? false : null;
+      this.updateMark(taskId, subtaskId, dayIndex, next);
+    },
+
+    /** Правый клик по отметке: пропуск ставится или снимается */
+    toggleSkip(taskId, subtaskId, dayIndex) {
+      const mark = this.tasks.find(t => t.id === taskId)?.subtasks.find(s => s.id === subtaskId)
+        ?.marks[dayIndex];
+      this.updateMark(taskId, subtaskId, dayIndex, mark === false ? null : false);
+    },
+
+    /** Ставит всем подзадачам за день отметку state, а если она уже стоит у всех, очищает день */
+    toggleDay(dayIndex, state) {
+      const allSet = this.tasks.every(task =>
+        task.subtasks.every(s => s.marks[dayIndex] === state)
+      );
+      this.updateHeaderDay(dayIndex, allSet ? null : state);
+    },
+
     /** Устанавливает одинаковую отметку для всех подзадач в выбранный день */
     updateHeaderDay(dayIndex, state) {
       this.tasks.forEach(task => {
@@ -269,38 +282,43 @@ export const useHabitStore = defineStore('habit', {
       this.saveState();
     },
 
-    /** Удаляет задачу по ID */
+    /**
+     * Удаляет задачу по ID.
+     * @returns {{ task, index, monthKey } | null} данные для restoreTask
+     */
     deleteTask(taskId) {
-      this.tasks = this.tasks.filter(t => t.id !== taskId);
+      const index = this.tasks.findIndex(t => t.id === taskId);
+      if (index < 0) return null;
+      const [task] = this.tasks.splice(index, 1);
       this.saveState();
+      return { task, index, monthKey: this.currentMonthKey };
     },
 
-    /** Удаляет последнюю подзадачу у задачи */
-    deleteLastSubtask(taskId) {
-      const task = this.tasks.find(t => t.id === taskId);
-      if (task && task.subtasks.length > 1) {
-        task.subtasks.pop();
-        this.updateTaskProgress(taskId);
-        this.saveState();
-      }
+    /** Возвращает удалённую задачу на прежнее место, если месяц не сменился и лимит позволяет */
+    restoreTask({ task, index, monthKey: key }) {
+      if (key !== this.currentMonthKey || this.tasks.length >= MAX_TASKS) return false;
+      this.tasks.splice(Math.min(index, this.tasks.length), 0, task);
+      this.saveState();
+      return true;
     },
 
-    /** Переключает активный режим (удаление/стирание) */
-    toggleMode(mode) {
-      this.activeMode = this.activeMode === mode ? null : mode;
-    },
-
-    /** Стирает отметку в указанный день */
-    eraseMark(taskId, subtaskId, dayIndex) {
-      const task = this.tasks.find(t => t.id === taskId);
-      if (task && dayIndex < this.today) {
-        const subtask = task.subtasks.find(s => s.id === subtaskId);
-        if (subtask) {
-          subtask.marks[dayIndex] = null;
-          this.updateTaskProgress(taskId);
-          this.saveState();
-        }
-      }
+    /**
+     * Копирует задачи открытого месяца в реальный текущий с чистыми отметками (с заменой)
+     * и переключается на него.
+     */
+    duplicateToCurrent() {
+      if (this.currentMonthKey === this.realMonthKey) return;
+      const source = this.tasks;
+      this.saveState();
+      this.currentDate = new Date(this.realDate);
+      this.tasks = source.map((task, i) => ({
+        id: Date.now() + i,
+        title: task.title,
+        progress: 0.0,
+        subtasks: task.subtasks.map((_, k) => this.createSubtask(i * MAX_SUBTASKS + k)),
+      }));
+      this.adaptMarksToNewMonth();
+      this.saveState();
     },
 
     /** Сохраняет текущее состояние в localStorage и планирует запись в Firestore */
@@ -325,26 +343,29 @@ export const useHabitStore = defineStore('habit', {
       await this.saveToCloud().catch(error => console.error(error));
     },
 
-    /** Переход к предыдущему месяцу с сохранением и адаптацией данных */
-    prevMonth() {
-      const newDate = new Date(this.currentYear, this.currentMonth - 1, 1);
+    /** Открывает месяц даты date (не позже реального) с сохранением и адаптацией данных */
+    openMonth(date) {
+      if (monthKey(date) > this.realMonthKey) return;
       this.saveState();
-      this.currentDate = newDate;
+      this.currentDate = date;
       this.tasks = this.archive[this.currentMonthKey]?.tasks || [];
       this.adaptMarksToNewMonth();
       this.saveState();
     },
 
+    /** Переход к предыдущему месяцу */
+    prevMonth() {
+      this.openMonth(new Date(this.currentYear, this.currentMonth - 1, 1));
+    },
+
     /** Переход к следующему месяцу (не дальше текущего реального) */
     nextMonth() {
-      const newDate = new Date(this.currentYear, this.currentMonth + 1, 1);
-      const newMonthKey = monthKey(newDate);
-      if (newMonthKey > this.realMonthKey) return;
-      this.saveState();
-      this.currentDate = newDate;
-      this.tasks = this.archive[newMonthKey]?.tasks || [];
-      this.adaptMarksToNewMonth();
-      this.saveState();
+      this.openMonth(new Date(this.currentYear, this.currentMonth + 1, 1));
+    },
+
+    /** Переход к реальному текущему месяцу */
+    goToToday() {
+      if (this.currentMonthKey !== this.realMonthKey) this.openMonth(new Date(this.realDate));
     },
 
     /**
@@ -397,44 +418,24 @@ export const useHabitStore = defineStore('habit', {
       downloadAnchorNode.remove();
     },
 
-    /** Импортирует архив из файла с проверкой размера и структуры */
-    importData(event) {
-      const file = event.target.files[0];
-      if (file) {
-        if (file.size > 2 * 1024 * 1024) {
-          this.showImportError('import.tooLarge');
-          event.target.value = '';
-          return;
-        }
-        const reader = new FileReader();
-        reader.onload = e => {
-          try {
-            const importedArchive = JSON.parse(e.target.result);
-            if (!isValidArchive(importedArchive)) {
-              this.showImportError('import.invalid');
-              return;
-            }
-            this.archive = decodeArchiveTitles(importedArchive);
-            this.tasks = this.archive[this.currentMonthKey]?.tasks || [];
-            this.adaptMarksToNewMonth();
-            this.saveState();
-          } catch (error) {
-            this.showImportError('import.error');
-            console.error(error);
-          }
-        };
-        reader.readAsText(file);
-        event.target.value = '';
+    /**
+     * Импортирует архив из файла с проверкой размера и структуры.
+     * @returns {Promise<string|null>} ключ словаря с ошибкой или null при успехе
+     */
+    async importData(file) {
+      if (file.size > 2 * 1024 * 1024) return 'import.tooLarge';
+      try {
+        const importedArchive = JSON.parse(await file.text());
+        if (!isValidArchive(importedArchive)) return 'import.invalid';
+        this.archive = decodeArchiveTitles(importedArchive);
+        this.tasks = this.archive[this.currentMonthKey]?.tasks || [];
+        this.adaptMarksToNewMonth();
+        this.saveState();
+        return null;
+      } catch (error) {
+        console.error(error);
+        return 'import.error';
       }
-    },
-
-    /** Показывает ошибку импорта по ключу словаря */
-    showImportError(messageKey) {
-      useModalStore().showModal({
-        type: 'alert',
-        title: i18n.global.t('modal.warning'),
-        message: i18n.global.t(messageKey),
-      });
     },
 
     /** Устанавливает тему и сохраняет в localStorage */
@@ -460,21 +461,6 @@ export const useHabitStore = defineStore('habit', {
     setShowWeekSeparators(newValue) {
       this.showWeekSeparators = newValue;
       this.saveState();
-    },
-
-    /** Обрабатывает долгое нажатие — ставит отметку "исключено" */
-    handleLongPress(taskId, subtaskId, dayIndex) {
-      if (dayIndex < this.today) {
-        const task = this.tasks.find(t => t.id === taskId);
-        if (task) {
-          const subtask = task.subtasks.find(s => s.id === subtaskId);
-          if (subtask) {
-            subtask.marks[dayIndex] = false;
-            this.updateTaskProgress(taskId);
-            this.saveState();
-          }
-        }
-      }
     },
 
     /** Устанавливает режим расчёта прогресса и пересчитывает все задачи */

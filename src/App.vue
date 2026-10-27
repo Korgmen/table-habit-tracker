@@ -3,24 +3,35 @@
   import { useModalStore } from '@/stores/modalStore';
   import { useHabitUtils } from '@/composables/useHabitUtils';
   import { useModals } from '@/composables/useModals';
-  import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue';
-  import { VueDraggableNext } from 'vue-draggable-next';
+  import { ref, computed, watch, watchEffect, nextTick, onMounted, onUnmounted } from 'vue';
   import { useI18n } from 'vue-i18n';
   import { registerSW } from 'virtual:pwa-register';
-  import Header from '@/components/Header.vue';
-  import TableHeader from '@/components/TableHeader.vue';
-  import TaskRow from '@/components/TaskRow.vue';
-  import Modal from '@/components/Modal.vue';
+  import DesktopHeader from '@/components/DesktopHeader.vue';
+  import ArchiveBanner from '@/components/ArchiveBanner.vue';
+  import HabitGrid from '@/components/HabitGrid.vue';
+  import EmptyState from '@/components/EmptyState.vue';
+  import MobileView from '@/components/MobileView.vue';
+  import Toast from '@/components/Toast.vue';
+  import SettingsSheet from '@/components/SettingsSheet.vue';
+  import HabitSheet from '@/components/HabitSheet.vue';
+  import DuplicateSheet from '@/components/DuplicateSheet.vue';
+  import WelcomeSheet from '@/components/WelcomeSheet.vue';
+  import ConflictSheet from '@/components/ConflictSheet.vue';
   import PaperSheet from '@/components/PaperSheet.vue';
   import PhotoImport from '@/components/PhotoImport.vue';
 
   const store = useHabitStore();
   const modalStore = useModalStore();
-  const { currentTheme, canNextMonth } = useHabitUtils();
+  const { currentTheme, canNextMonth, isDesktop, isCurrentMonth } = useHabitUtils();
   const { t } = useI18n();
-  const { showTaskLimit, showWelcome, showUpdatePrompt, showCloudConflict } = useModals(t);
+  const { openNewHabit, showWelcome, showUpdatePrompt, showCloudConflict } = useModals(t);
 
-  /** Конфликт определяет стор после входа, диалог показывается здесь, где доступен i18n */
+  /** Тема применяется к <html>, чтобы её видели и окна, вынесенные в body */
+  watchEffect(() => {
+    document.documentElement.dataset.theme = currentTheme.value;
+  });
+
+  /** Конфликт определяет стор после входа, диалог показывается здесь */
   watch(
     () => store.cloudConflict,
     conflict => {
@@ -28,75 +39,84 @@
     }
   );
 
+  /** Окна по имени из modalStore */
+  const sheets = {
+    habit: HabitSheet,
+    duplicate: DuplicateSheet,
+    welcome: WelcomeSheet,
+    conflict: ConflictSheet,
+  };
+
   /** Ссылка на скрытый input для импорта файла */
   const importInput = ref(null);
 
-  /** Состояние открытия окна настроек */
-  const settingsOpen = ref(false);
-
-  /** Печатается бланк для фото вместо таблицы */
+  /** Печатается таблица (на телефоне вместо ленты дней) или бланк для фото */
+  const printing = ref(false);
   const sheetPrinting = ref(false);
+
+  /** На телефоне показывается лента дней, на десктопе и при печати – таблица */
+  const showGrid = computed(() => isDesktop.value || printing.value);
 
   /** Ссылка на скрытый input для фото бланка и выбранное фото */
   const photoInput = ref(null);
   const photoFile = ref(null);
 
-  /**
-   * Обрабатывает глобальные горячие клавиши.
-   * Игнорирует ввод в полях ввода.
-   */
+  /** Глобальные горячие клавиши; ввод в полях и открытые окна их не вызывают */
   const handleKeydown = event => {
-    if (modalStore.modal.isOpen) return;
+    if (modalStore.isOpen) return;
     if (photoFile.value) {
       if (event.code === 'Escape') photoFile.value = null;
       return;
     }
-    if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') return;
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)) return;
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
 
     const keyActions = {
-      Escape: () => {
-        store.activeMode = null;
-        settingsOpen.value = false;
-      },
-      KeyE: () => {
-        store.toggleMode('eraser');
-        settingsOpen.value = false;
-      },
-      KeyD: () => {
-        store.toggleMode('delete');
-        settingsOpen.value = false;
-      },
-      KeyN: () => {
-        if (!store.addTask()) {
-          showTaskLimit();
-        }
-      },
+      KeyN: openNewHabit,
+      KeyS: () => modalStore.showModal('settings'),
+      KeyT: () => store.goToToday(),
       ArrowLeft: () => store.prevMonth(),
       ArrowRight: () => canNextMonth.value && store.nextMonth(),
-      KeyS: () => {
-        settingsOpen.value = !settingsOpen.value;
-        store.activeMode = null;
-      },
     };
 
-    keyActions[event.code]?.();
+    const action = keyActions[event.code];
+    if (action) {
+      event.preventDefault();
+      action();
+    }
   };
 
   /** Открывает системный диалог выбора файла для импорта */
   const triggerImport = () => importInput.value.click();
 
-  /** Инициирует печать страницы */
-  const triggerPrint = () => window.print();
+  const handleImportSelected = async event => {
+    const file = event.target.files[0];
+    event.target.value = '';
+    if (!file) return;
+    const error = await store.importData(file);
+    if (error) {
+      modalStore.showToast(t(error), { actionText: t('import.other'), onAction: triggerImport });
+    } else {
+      modalStore.showToast(t('import.done'));
+    }
+  };
+
+  /** Печатает таблицу открытого месяца */
+  const triggerPrint = async () => {
+    printing.value = true;
+    await nextTick();
+    window.print();
+  };
 
   /** Печатает бланк открытого месяца; обычный вид возвращает событие afterprint */
   const triggerSheetPrint = async () => {
-    settingsOpen.value = false;
     sheetPrinting.value = true;
     await nextTick();
     window.print();
   };
 
   const handleAfterPrint = () => {
+    printing.value = false;
     sheetPrinting.value = false;
   };
 
@@ -106,7 +126,6 @@
   const handlePhotoSelected = event => {
     photoFile.value = event.target.files[0] || null;
     event.target.value = '';
-    settingsOpen.value = false;
   };
 
   /** Свёрнутое приложение дописывает отложенную запись в облако, вернувшееся сверяет дату */
@@ -128,16 +147,14 @@
         console.log('App ready to work offline');
       },
     });
-    /** Подписка на глобальные клавиатурные события */
     window.addEventListener('keydown', handleKeydown);
     window.addEventListener('afterprint', handleAfterPrint);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     realDateTimer = setInterval(() => store.syncRealDate(), 60 * 1000);
-    /** Показывает приветственное модальное окно при первом запуске */
+    /** Показывает приветствие при первом запуске */
     showWelcome();
   });
 
-  /** Очистка глобального обработчика клавиш */
   onUnmounted(() => {
     window.removeEventListener('keydown', handleKeydown);
     window.removeEventListener('afterprint', handleAfterPrint);
@@ -147,97 +164,62 @@
 </script>
 
 <template>
-  <!-- Корневой контейнер с применением темы -->
-  <div
-    id="app"
-    class="flex md:min-h-screen print:min-h-screen"
-    :class="currentTheme === 'dark' ? 'bg-[#292929] text-[#FFF8F0]' : 'bg-white text-[#12130F]'"
-  >
+  <div :class="{ 'print:hidden': sheetPrinting }">
+    <!-- Десктоп и печать: таблица месяца -->
     <div
-      class="relative mx-auto flex w-full flex-col gap-2.5 max-md:not-print:h-[100dvh] max-md:not-print:flex-col-reverse max-md:not-print:pb-2.5 md:my-5 md:w-fit md:min-w-[960px] print:my-5 print:w-fit print:min-w-[960px]"
-      :class="{ 'print:hidden': sheetPrinting }"
+      v-if="showGrid"
+      class="flex h-dvh flex-col overflow-hidden print:h-auto print:overflow-visible"
     >
-      <!-- Шапка: месяц, статистика, управление -->
-      <Header
-        v-model:settingsOpen="settingsOpen"
-        :currentTheme="currentTheme"
-        @import="triggerImport"
-        @print="triggerPrint"
-        @print-sheet="triggerSheetPrint"
-        @scan-photo="triggerPhotoImport"
-      />
-
-      <!-- Таблица привычек -->
-      <div
-        class="overscroll-contain max-md:not-print:overflow-x-auto max-md:not-print:overflow-y-auto"
-      >
-        <div
-          class="w-fit border-t-3 border-b-3 select-none md:w-auto md:border-3 print:w-auto print:border-3"
-        >
-          <!-- Заголовки дней -->
-          <TableHeader />
-
-          <!-- Перетаскиваемый список задач -->
-          <VueDraggableNext
-            v-if="store.tasks.length > 0"
-            v-model="store.tasks"
-            item-key="id"
-            handle=".drag-handle"
-            @end="store.saveState"
-          >
-            <template v-for="task in store.tasks" :key="task.id">
-              <TaskRow :task="task" />
-            </template>
-          </VueDraggableNext>
-
-          <!-- Сообщение, если нет задач -->
-          <div v-else class="border-t-3 px-2 py-8 text-center md:px-5 md:py-16 print:hidden">
-            <div
-              class="flex flex-col items-center gap-3 max-md:sticky max-md:left-2 max-md:w-[calc(100vw-16px)] md:gap-6"
-            >
-              <p class="text-2xl font-bold">
-                {{ t('noTasks.title') }}
-              </p>
-              <p class="max-w-md text-lg">
-                {{ t('noTasks.message') }}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Скрытый input для импорта JSON-файла -->
-      <input
-        ref="importInput"
-        type="file"
-        style="display: none"
-        accept=".json"
-        @change="store.importData"
-      />
-
-      <!-- Скрытый input для фото бланка -->
-      <input
-        ref="photoInput"
-        type="file"
-        style="display: none"
-        accept="image/*"
-        @change="handlePhotoSelected"
-      />
+      <DesktopHeader />
+      <ArchiveBanner v-if="!isCurrentMonth" class="mx-8 mb-3.5" />
+      <HabitGrid v-if="store.tasks.length > 0" />
+      <EmptyState v-else />
     </div>
 
-    <!-- Бланк для печати и распознавания с фото -->
-    <PaperSheet v-if="sheetPrinting" />
-
-    <!-- Проверка отметок, распознанных с фото бланка -->
-    <PhotoImport
-      v-if="photoFile"
-      :key="photoFile.name + photoFile.lastModified"
-      :file="photoFile"
-      :currentTheme="currentTheme"
-      @close="photoFile = null"
-    />
-
-    <!-- Глобальное модальное окно -->
-    <Modal />
+    <!-- Телефон: лента дней и отметки за выбранный день -->
+    <MobileView v-else />
   </div>
+
+  <!-- Скрытые input для импорта JSON и фото бланка -->
+  <input
+    ref="importInput"
+    type="file"
+    class="hidden"
+    accept=".json"
+    @change="handleImportSelected"
+  />
+  <input
+    ref="photoInput"
+    type="file"
+    class="hidden"
+    accept="image/*"
+    @change="handlePhotoSelected"
+  />
+
+  <!-- Бланк для печати и распознавания с фото -->
+  <PaperSheet v-if="sheetPrinting" />
+
+  <!-- Проверка отметок, распознанных с фото бланка -->
+  <PhotoImport
+    v-if="photoFile"
+    :key="photoFile.name + photoFile.lastModified"
+    :file="photoFile"
+    @close="photoFile = null"
+  />
+
+  <!-- Глобальное окно и тост -->
+  <SettingsSheet
+    v-if="modalStore.modal.name === 'settings'"
+    @import="triggerImport"
+    @print="triggerPrint"
+    @print-sheet="triggerSheetPrint"
+    @scan-photo="triggerPhotoImport"
+  />
+  <component
+    :is="sheets[modalStore.modal.name]"
+    v-else-if="modalStore.isOpen"
+    :key="modalStore.modal.name + JSON.stringify(modalStore.modal.props)"
+    v-bind="modalStore.modal.props"
+  />
+  <Toast />
 </template>

@@ -1,106 +1,57 @@
-import { useHabitStore } from '@/stores/habitStore';
+import { useHabitStore, MAX_TASKS } from '@/stores/habitStore';
 import { useModalStore } from '@/stores/modalStore';
 
 export function useModals(t) {
   const store = useHabitStore();
   const modalStore = useModalStore();
 
-  /** Показывает модальное окно о достижении лимита задач */
-  const showTaskLimit = () => {
-    modalStore.showModal({
-      type: 'alert',
-      title: t('modal.warning'),
-      message: t('taskLimit'),
-      onConfirm: () => modalStore.closeModal(),
+  /** Открывает окно новой привычки или сообщает о лимите */
+  const openNewHabit = () => {
+    if (store.tasks.length >= MAX_TASKS) {
+      modalStore.showToast(t('taskLimit', { max: MAX_TASKS }));
+      return;
+    }
+    modalStore.showModal('habit');
+  };
+
+  /** Открывает окно привычки для правки */
+  const openHabit = taskId => modalStore.showModal('habit', { taskId });
+
+  /** Удаляет привычку и предлагает вернуть её из тоста */
+  const deleteHabit = taskId => {
+    const title = store.tasks.find(task => task.id === taskId)?.title;
+    const removed = store.deleteTask(taskId);
+    if (!removed) return;
+    modalStore.showToast(t('habit.deleted', { title }), {
+      actionText: t('habit.undo'),
+      onAction: () => store.restoreTask(removed),
     });
   };
 
-  /** Показывает приветственное сообщение, если пользователь его ещё не видел */
+  /** Показывает приветствие, если пользователь его ещё не видел */
   const showWelcome = (force = false) => {
     if (!force && localStorage.getItem('hasSeenWelcome') === 'true') return;
-
-    modalStore.showModal({
-      type: 'custom',
-      title: t('welcome.title'),
-      html: t('welcome.message'),
-      onConfirm: () => {
-        if (!force) {
-          localStorage.setItem('hasSeenWelcome', 'true');
-        }
-        modalStore.closeModal();
-      },
-    });
+    if (force) modalStore.replaceModal('welcome');
+    else modalStore.showModal('welcome');
   };
 
-  /** Показывает подтверждение дублирования задач в текущий месяц */
-  const confirmDuplicateToCurrent = () => {
-    const realMonthKey = store.realMonthKey;
-
-    if (store.currentMonthKey === realMonthKey) return;
-
-    modalStore.showModal({
-      type: 'confirm',
-      title: t('duplicate.title'),
-      message: t('duplicate.message'),
-
-      /** Дублирует задачи текущего месяца в текущий реальный */
-      onConfirm: () => {
-        const cleanTasks = store.tasks.map(task => ({
-          ...task,
-          id: Date.now() + Math.random(),
-          subtasks: task.subtasks.map(() => ({
-            id: Date.now() + Math.random(),
-            marks: Array(store.daysInMonth).fill(null),
-          })),
-        }));
-
-        store.archive[realMonthKey] = { tasks: cleanTasks };
-        localStorage.setItem('habitArchive', JSON.stringify(store.archive));
-
-        store.currentDate = new Date(store.realDate);
-        store.tasks = cleanTasks;
-        store.adaptMarksToNewMonth();
-        store.saveState();
-        modalStore.closeModal();
-      },
-      onCancel: () => modalStore.closeModal(),
-    });
-  };
-
-  /** Показывает модальное окно с предложением обновить PWA */
+  /** Предлагает обновить PWA */
   const showUpdatePrompt = updateSW => {
-    modalStore.showModal({
-      type: 'confirm',
-      title: t('update.title'),
-      message: t('update.message'),
-      onConfirm: () => {
-        updateSW(true);
-      },
-      onCancel: () => modalStore.closeModal(),
+    modalStore.showToast(t('update.message'), {
+      actionText: t('update.action'),
+      onAction: () => updateSW(true),
+      persistent: true,
     });
   };
 
-  /**
-   * Предлагает выбрать между локальными и облачными данными при расхождении после входа.
-   * Закрытие без выбора оставляет синхронизацию выключенной до следующего входа.
-   */
-  const showCloudConflict = () => {
-    modalStore.showModal({
-      type: 'confirm',
-      title: t('conflict.title'),
-      message: t('conflict.message'),
-      confirmText: t('conflict.confirm'),
-      cancelText: t('conflict.cancel'),
-      onConfirm: () => store.resolveCloudConflict(true),
-      onCancel: () => store.resolveCloudConflict(false),
-      onDismiss: () => modalStore.closeModal(),
-    });
-  };
+  /** Предлагает выбрать между локальными и облачными данными при расхождении после входа */
+  const showCloudConflict = () => modalStore.showModal('conflict');
 
   return {
-    showTaskLimit,
+    openNewHabit,
+    openHabit,
+    deleteHabit,
     showWelcome,
-    confirmDuplicateToCurrent,
     showUpdatePrompt,
     showCloudConflict,
   };

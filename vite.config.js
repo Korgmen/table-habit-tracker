@@ -9,12 +9,11 @@ export default defineConfig({
     vue(),
     VitePWA({
       registerType: 'prompt',
-      includeAssets: [
-        'favicons/favicon.svg',
-        'robots.txt',
-        'favicons/apple-touch-icon.png',
-        'fonts/**',
-      ],
+      includeAssets: ['favicons/favicon.svg', 'robots.txt', 'favicons/apple-touch-icon.png'],
+      /** Шрифт приходит из пакета в assets, а по умолчанию workbox не прекэширует woff2 */
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,woff2}'],
+      },
       manifest: {
         name: 'Table – Habit Tracker',
         short_name: 'Table',

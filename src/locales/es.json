@@ -1,109 +1,4 @@
 {
-  "welcome": {
-    "title": "Bienvenido a Table – Rastreador de Hábitos",
-    "message": "<p><b>Table</b> es un rastreador de hábitos que te ayuda a rastrear diariamente la completación de tareas importantes y formar hábitos sostenibles.</p> <p>Agregas hábitos que necesitan realizarse regularmente (cada día o varias veces por semana): por ejemplo, \"levantarse a tiempo\", \"hacer ejercicios\", \"ir al entrenamiento\", \"estudiar inglés\".</p> <p>Cada día marcas:</p> <p> <svg class='inline-block ml-2' width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'> <rect x='1' y='1' width='10' height='10' rx='5' fill='currentColor' /> <rect x='1' y='1' width='10' height='10' rx='5' stroke='currentColor' stroke-width='2' /> </svg> — completado (marcador lleno); </p> <p> <svg class='inline-block ml-2' width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'> <rect x='1' y='1' width='10' height='10' rx='5' stroke='currentColor' stroke-width='2' /> </svg> — no completado (deja vacío); </p> <p> <svg class='inline-block ml-2' width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'> <rect x='1' y='1' width='10' height='10' rx='5' stroke='currentColor' stroke-width='2' /> <rect width='12' height='2' transform='translate(1.05025 9.53554) rotate(-45)' fill='currentColor' /> <rect width='12' height='2' transform='translate(2.46446 1.05025) rotate(45)' fill='currentColor' /> </svg> — omitir (cruz – el día no cuenta si la tarea no era requerida, por ejemplo, entrenamiento cada dos días); </p> <p>Al final del mes, la app muestra:</p> <ul> <li>– porcentaje de completación para cada hábito y promedio general;</li> <li>– calificación en una escala de 5 puntos;</li> <li>– archivo de todos los meses pasados para comparación de progreso.</li> </ul> <p><b>Conveniente para imprimir:</b> la tabla se puede imprimir en forma limpia — sin botones ni interfaz. Cuélgala en el refrigerador o la pared, marca con lápiz durante el mes, y al final — ingresa todos los datos en la app. De esta manera guardas el archivo y obtienes estadísticas.</p> <p><i>Fue gracias a la versión en papel que apareció esta app; necesitaba un archivo y cálculo de estadísticas.</i></p> <p>Los datos se guardan en el navegador y están disponibles sin conexión. Inicia sesión con Google para sincronizarlos entre dispositivos; también puedes exportar e importar los datos en JSON.</p> <p>Una tabla simple es una forma visual de ver dónde mantienes el ritmo y dónde necesitas mejorar.</p>"
-  },
-  "settings": {
-    "title": "Configuración",
-    "close": "Cerrar configuración",
-    "asInSystem": "Como en el sistema",
-    "theme": {
-      "title": "Tema",
-      "light": "Claro",
-      "dark": "Oscuro"
-    },
-    "lang": {
-      "title": "Idioma"
-    },
-    "expImp": {
-      "title": "Exportar/Importar",
-      "export": "Exportar a JSON",
-      "import": "Importar desde JSON"
-    },
-    "print": {
-      "title": "Imprimir",
-      "sheet": "Imprimir hoja para importar desde foto",
-      "scan": "Importar marcas desde una foto de la hoja"
-    },
-    "hotkeys": {
-      "title": "Atajos de teclado",
-      "escape": "Escape: Reiniciar modos y cerrar menú/configuración",
-      "e": "E: Alternar modo borrador",
-      "d": "D: Alternar modo eliminar",
-      "n": "N: Añadir nueva tarea",
-      "arrowLeft": "Flecha izquierda: Cambiar al mes anterior",
-      "arrowRight": "Flecha derecha: Cambiar al mes siguiente",
-      "s": "S: Alternar configuración"
-    },
-    "showWeek": {
-      "title": "Separadores de semanas",
-      "checkbox": "Mostrar"
-    },
-    "weekStart": {
-      "title": "La semana comienza en",
-      "monday": "Lunes",
-      "sunday": "Domingo"
-    },
-    "calculationMode": {
-      "title": "Cálculo de Progreso",
-      "fullMonth": "Mes Completo",
-      "passedDays": "Solo Días Pasados"
-    },
-    "showWelcome": "Mostrar ventana de bienvenida"
-  },
-  "auth": {
-    "login": "Iniciar sesión con Google para sincronizar",
-    "logout": "Cerrar sesión"
-  },
-  "control": {
-    "newTask": "Nueva tarea",
-    "newSubtask": "Nueva subtarea",
-    "deleteSubtask": "Eliminar la última subtarea",
-    "eraseMode": "Modo de borrado de marcas",
-    "moveTask": "Mover tarea",
-    "deleteTaskMode": "Modo de eliminación de tareas",
-    "deleteTask": "Eliminar tarea",
-    "prevMonth": "Mes anterior",
-    "nextMonth": "Mes siguiente",
-    "duplicateToCurrent": "Duplicar todas las tareas al mes actual"
-  },
-  "general": {
-    "allAveragePer": "Promedio general",
-    "grade": "Calificación"
-  },
-  "modal": {
-    "confirm": "Confirmar",
-    "cancel": "Cancelar",
-    "ok": "OK",
-    "warning": "Advertencia"
-  },
-  "conflict": {
-    "title": "Conflicto de datos",
-    "message": "Tus datos locales difieren de los datos en la nube. ¿Guardar datos locales (sobrescribiendo los de la nube) o cargar desde la nube (sobrescribiendo los locales)?",
-    "confirm": "Guardar locales",
-    "cancel": "Cargar de la nube"
-  },
-  "update": {
-    "title": "Actualización disponible",
-    "message": "¿Hay una nueva versión de la aplicación disponible. Actualizar ahora?"
-  },
-  "duplicate": {
-    "title": "Confirmar duplicación",
-    "message": "Las tareas del mes seleccionado se copiarán al mes actual (reemplazando las existentes)"
-  },
-  "noTasks": {
-    "title": "Sin tareas aún",
-    "message": "Haz clic en el botón + o pulsa N para añadir tu primer hábito"
-  },
-  "taskLimit": "Se alcanzó el número máximo de tareas",
-  "task": {
-    "defaultTitle": "Nueva tarea"
-  },
-  "import": {
-    "tooLarge": "El archivo es demasiado grande (máximo 2 MB)",
-    "invalid": "El archivo no contiene datos válidos del rastreador",
-    "error": "No se pudo importar el archivo"
-  },
   "scan": {
     "title": "Marcas desde la foto de la hoja",
     "scanning": "Reconociendo la foto…",
@@ -124,6 +19,201 @@
     "done": "hecho",
     "notDone": "no hecho",
     "skip": "omitido",
-    "headerDay": "Día {day}: restablecer las marcas de todas las tareas"
-  }
+    "headerDay": "Día {day}: marcar en todos los hábitos"
+  },
+  "import": {
+    "tooLarge": "El archivo es demasiado grande (máximo 2 MB)",
+    "invalid": "El archivo no contiene datos válidos del rastreador",
+    "error": "No se pudo importar el archivo",
+    "done": "Datos importados",
+    "other": "Elegir otro"
+  },
+  "common": {
+    "add": "Añadir",
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "delete": "Eliminar",
+    "save": "Guardar"
+  },
+  "month": {
+    "prev": "Mes anterior",
+    "next": "Mes siguiente",
+    "prevHint": "Mes anterior (←)",
+    "nextHint": "Mes siguiente (→)"
+  },
+  "stats": {
+    "average": "Promedio",
+    "grade": "Nota",
+    "today": "Hoy"
+  },
+  "sync": {
+    "synced": "Sincronizado",
+    "waiting": "Sincronizando…"
+  },
+  "header": {
+    "newHabit": "Hábito",
+    "newHabitLong": "Nuevo hábito",
+    "newHabitHint": "Nuevo hábito (N)",
+    "settingsHint": "Configuración (S)"
+  },
+  "archive": {
+    "banner": "Archivo de {month}. Puedes corregir las marcas, las estadísticas se recalcularán.",
+    "bannerShort": "Archivo. Las marcas se pueden editar.",
+    "moveTo": "Pasar a {month}",
+    "moveToLong": "Pasar hábitos a {month}"
+  },
+  "grid": {
+    "habit": "Hábito",
+    "month": "Este mes",
+    "addHabit": "Añadir hábito",
+    "drag": "Arrastra para reordenar",
+    "edit": "Editar hábito",
+    "perDay": "{count} marcas al día",
+    "dayHint": "Clic para marcar el día en todos los hábitos, clic derecho para omitir",
+    "legendDone": "Clic – hecho",
+    "legendSkip": "Clic derecho o segundo clic – omitido, el día no cuenta",
+    "legendClear": "Tercer clic – borrar",
+    "legendDay": "Clic en la fecha – todo el día"
+  },
+  "list": {
+    "today": "Hoy",
+    "stat": "{month}: {avg}% · nota {grade}",
+    "skipped": "omitido – el día no cuenta",
+    "streak": "racha de {count} días",
+    "monthPct": "{pct}% en {month}",
+    "ofSubs": "{done} de {total}",
+    "hint": "Toca un círculo: hecho → omitido (el día no cuenta) → vacío. Toca un nombre para ver los ajustes del hábito y las marcas del mes."
+  },
+  "empty": {
+    "title": "Aún no hay hábitos",
+    "text": "Añade el primero, por ejemplo «Ejercicio» o «Lectura». Márcalo cada día y al final del mes verás el porcentaje y la nota.",
+    "openPrev": "Abrir {month}",
+    "hotkey": "Tecla N – nuevo hábito"
+  },
+  "habit": {
+    "title": "Hábito",
+    "titleNew": "Nuevo hábito",
+    "name": "Nombre",
+    "namePlaceholder": "Por ejemplo, Ejercicio",
+    "perDay": "Marcas al día",
+    "perDayHint": "Por ejemplo, 3 para series o vasos de agua. Hasta {max}.",
+    "decrease": "Menos",
+    "increase": "Más",
+    "subsWarning": "Las marcas de las subtareas quitadas se borrarán al guardar.",
+    "marksFor": "Marcas de {month}",
+    "subTab": "Marca {n}",
+    "statMonth": "{month}",
+    "statDone": "Hechas",
+    "statSkips": "Omitidas",
+    "order": "Posición en la lista",
+    "up": "Subir",
+    "down": "Bajar",
+    "deleteConfirm": "¿Eliminar «{title}» y todas sus marcas de {month}? No se podrá deshacer.",
+    "limitLine": "{count} de {max} hábitos este mes",
+    "added": "Hábito «{title}» añadido",
+    "deleted": "«{title}» eliminado",
+    "undo": "Deshacer"
+  },
+  "settings": {
+    "title": "Configuración",
+    "asInSystem": "Del sistema",
+    "appearance": "Apariencia",
+    "table": "Tabla",
+    "account": {
+      "title": "Cuenta",
+      "localOnly": "Los datos se guardan solo en este navegador. Inicia sesión para sincronizarlos entre dispositivos."
+    },
+    "theme": {
+      "title": "Tema",
+      "system": "Sistema",
+      "light": "Claro",
+      "dark": "Oscuro"
+    },
+    "lang": {
+      "title": "Idioma"
+    },
+    "weekStart": {
+      "title": "La semana empieza el",
+      "monday": "Lun",
+      "sunday": "Dom"
+    },
+    "showWeek": {
+      "title": "Separadores de semanas",
+      "hint": "Líneas verticales entre semanas en la tabla"
+    },
+    "calculationMode": {
+      "title": "Cálculo del progreso",
+      "fullMonth": "Todo el mes",
+      "passedDays": "Días pasados",
+      "fullMonthHint": "El porcentaje cuenta todos los días del mes, así que al principio será bajo.",
+      "passedDaysHint": "El porcentaje cuenta solo los días hasta hoy inclusive."
+    },
+    "data": {
+      "title": "Datos",
+      "export": "Exportar",
+      "exportHint": "a JSON",
+      "import": "Importar",
+      "importHint": "desde JSON",
+      "print": "Imprimir",
+      "printHint": "tabla del mes",
+      "sheet": "Hoja",
+      "sheetHint": "para foto",
+      "scan": "Desde foto",
+      "scanHint": "pasar marcas"
+    },
+    "hotkeys": {
+      "title": "Atajos de teclado",
+      "n": "Nuevo hábito",
+      "s": "Configuración",
+      "arrowLeft": "Mes anterior",
+      "arrowRight": "Mes siguiente",
+      "t": "Mes actual",
+      "escape": "Cerrar ventana"
+    },
+    "showWelcome": "Cómo funciona"
+  },
+  "auth": {
+    "login": "Iniciar sesión con Google",
+    "logout": "Cerrar sesión"
+  },
+  "duplicate": {
+    "title": "¿Pasar los hábitos a {month}?",
+    "message": "Los hábitos ({count}) pasarán a {to} con las marcas vacías.",
+    "replaceWarning": "La lista actual y las marcas de ese mes se reemplazarán.",
+    "confirm": "Pasar",
+    "confirmReplace": "Reemplazar lista",
+    "done": "Hábitos pasados a {month}"
+  },
+  "welcome": {
+    "title": "Una tabla sencilla para mantener el ritmo",
+    "text": "Añade hábitos y márcalos cada día. Al final del mes verás el porcentaje de cada uno, el promedio general y una nota en escala de cinco puntos.",
+    "done": "Hecho",
+    "notDone": "No hecho",
+    "notDoneHint": "déjalo vacío",
+    "skip": "Omitido",
+    "skipHint": "el día no cuenta, por ejemplo entrenar en días alternos",
+    "paper": "Puedes imprimir la tabla, marcarla a lápiz en la nevera y pasarla aquí a final de mes, a mano o con una foto de la hoja. Los datos se guardan en el navegador y funcionan sin conexión.",
+    "start": "Empezar"
+  },
+  "conflict": {
+    "title": "Los datos no coinciden",
+    "message": "Este dispositivo y la nube tienen versiones distintas. Elige cuál conservar, la otra se sobrescribirá.",
+    "local": "Este dispositivo",
+    "cloud": "Nube",
+    "keep": "Conservar",
+    "load": "Cargar",
+    "summary": "Hábitos ahora: {tasks} · meses: {months}",
+    "changed": "modificado {date}",
+    "keptLocal": "La nube se actualizó con los datos de este dispositivo",
+    "loadedCloud": "Datos cargados desde la nube"
+  },
+  "update": {
+    "message": "Hay una nueva versión de la aplicación",
+    "action": "Actualizar"
+  },
+  "toast": {
+    "exported": "Archivo {name} guardado",
+    "signedIn": "Sesión iniciada"
+  },
+  "taskLimit": "Límite alcanzado: {max} hábitos al mes"
 }

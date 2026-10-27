@@ -1,109 +1,4 @@
 {
-  "welcome": {
-    "title": "欢迎使用 Table – 习惯追踪器",
-    "message": "<p><b>Table</b> 是一个习惯追踪器，它帮助您每天追踪重要任务的完成情况并形成可持续的习惯。</p> <p>您添加需要定期执行的习惯（每天或每周几次）：例如，“准时起床”、“做锻炼”、“去健身”、“学习英语”。</p> <p>每天您标记：</p> <p> <svg class='inline-block ml-2' width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'> <rect x='1' y='1' width='10' height='10' rx='5' fill='currentColor' /> <rect x='1' y='1' width='10' height='10' rx='5' stroke='currentColor' stroke-width='2' /> </svg> — 已完成（填充标记）； </p> <p> <svg class='inline-block ml-2' width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'> <rect x='1' y='1' width='10' height='10' rx='5' stroke='currentColor' stroke-width='2' /> </svg> — 未完成（留空）； </p> <p> <svg class='inline-block ml-2' width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'> <rect x='1' y='1' width='10' height='10' rx='5' stroke='currentColor' stroke-width='2' /> <rect width='12' height='2' transform='translate(1.05025 9.53554) rotate(-45)' fill='currentColor' /> <rect width='12' height='2' transform='translate(2.46446 1.05025) rotate(45)' fill='currentColor' /> </svg> — 跳过（叉号 – 如果任务不需要，该天不算，例如，每隔一天训练）； </p> <p>在月底，应用显示：</p> <ul> <li>– 每个习惯的完成百分比和总体平均值；</li> <li>– 5 分制评分；</li> <li>– 所有过去月份的存档，用于比较进度。</li> </ul> <p><b>方便打印：</b> 表格可以以干净形式打印 — 没有按钮和界面。将它挂在冰箱或墙上，整个月用铅笔标记，并在月底 — 将所有数据输入应用。这样您可以保存存档并获取统计数据。</p> <p><i>正是因为纸质版本，这个应用才出现；我需要存档和统计计算。</i></p> <p>数据保存在浏览器中，离线也可使用。使用 Google 登录即可在设备之间同步数据；也可以将数据导出和导入为 JSON。</p> <p>简单的表格是一种视觉方式，可以看到您在哪里保持节奏，以及哪里需要改进。</p>"
-  },
-  "settings": {
-    "title": "设置",
-    "close": "关闭设置",
-    "asInSystem": "与系统一致",
-    "theme": {
-      "title": "主题",
-      "light": "浅色",
-      "dark": "深色"
-    },
-    "lang": {
-      "title": "语言"
-    },
-    "expImp": {
-      "title": "导出/导入",
-      "export": "导出为 JSON",
-      "import": "从 JSON 导入"
-    },
-    "print": {
-      "title": "打印",
-      "sheet": "打印用于拍照导入的表格",
-      "scan": "从表格照片导入标记"
-    },
-    "hotkeys": {
-      "title": "快捷键",
-      "escape": "Escape: 重置模式并关闭菜单/设置",
-      "e": "E: 切换橡皮擦模式",
-      "d": "D: 切换删除模式",
-      "n": "N: 添加新任务",
-      "arrowLeft": "左箭头: 上个月",
-      "arrowRight": "右箭头: 下个月",
-      "s": "S: 切换设置"
-    },
-    "showWeek": {
-      "title": "周分隔符",
-      "checkbox": "显示"
-    },
-    "weekStart": {
-      "title": "一周开始于",
-      "monday": "星期一",
-      "sunday": "星期天"
-    },
-    "calculationMode": {
-      "title": "进度计算",
-      "fullMonth": "整个月份",
-      "passedDays": "仅已过日子"
-    },
-    "showWelcome": "显示欢迎窗口"
-  },
-  "auth": {
-    "login": "通过 Google 登录以同步",
-    "logout": "退出登录"
-  },
-  "control": {
-    "newTask": "新任务",
-    "newSubtask": "新子任务",
-    "deleteSubtask": "删除最后一个子任务",
-    "eraseMode": "标记清除模式",
-    "moveTask": "移动任务",
-    "deleteTaskMode": "任务删除模式",
-    "deleteTask": "删除任务",
-    "prevMonth": "上个月",
-    "nextMonth": "下个月",
-    "duplicateToCurrent": "复制所有任务到当前月"
-  },
-  "general": {
-    "allAveragePer": "总平均值",
-    "grade": "评分"
-  },
-  "modal": {
-    "confirm": "确认",
-    "cancel": "取消",
-    "ok": "确定",
-    "warning": "警告"
-  },
-  "conflict": {
-    "title": "数据冲突",
-    "message": "您的本地数据与云端数据不同。保存本地数据（覆盖云端）还是从云端加载（覆盖本地）？",
-    "confirm": "保存本地",
-    "cancel": "加载云端"
-  },
-  "update": {
-    "title": "更新可用",
-    "message": "应用有新版本可用。现在更新吗？"
-  },
-  "duplicate": {
-    "title": "确认复制",
-    "message": "所选月份的任务将被复制到当前月份（将替换现有任务）"
-  },
-  "noTasks": {
-    "title": "还没有任务",
-    "message": "点击 + 按钮或按 N 键添加第一个习惯"
-  },
-  "taskLimit": "已达到最大任务数量",
-  "task": {
-    "defaultTitle": "新任务"
-  },
-  "import": {
-    "tooLarge": "文件过大（最大 2 MB）",
-    "invalid": "文件不包含有效的追踪器数据",
-    "error": "无法导入文件"
-  },
   "scan": {
     "title": "表格照片中的标记",
     "scanning": "正在识别照片…",
@@ -124,6 +19,201 @@
     "done": "已完成",
     "notDone": "未完成",
     "skip": "跳过",
-    "headerDay": "第 {day} 天：重置所有任务的标记"
-  }
+    "headerDay": "第 {day} 天：为所有习惯标记"
+  },
+  "import": {
+    "tooLarge": "文件过大（最大 2 MB）",
+    "invalid": "文件不包含有效的追踪器数据",
+    "error": "无法导入文件",
+    "done": "数据已导入",
+    "other": "选择其他文件"
+  },
+  "common": {
+    "add": "添加",
+    "cancel": "取消",
+    "close": "关闭",
+    "delete": "删除",
+    "save": "保存"
+  },
+  "month": {
+    "prev": "上个月",
+    "next": "下个月",
+    "prevHint": "上个月（←）",
+    "nextHint": "下个月（→）"
+  },
+  "stats": {
+    "average": "平均",
+    "grade": "评分",
+    "today": "今天"
+  },
+  "sync": {
+    "synced": "已同步",
+    "waiting": "同步中…"
+  },
+  "header": {
+    "newHabit": "习惯",
+    "newHabitLong": "新习惯",
+    "newHabitHint": "新习惯（N）",
+    "settingsHint": "设置（S）"
+  },
+  "archive": {
+    "banner": "{month}的存档。仍可修改标记，统计会重新计算。",
+    "bannerShort": "存档。可以修改标记。",
+    "moveTo": "转到{month}",
+    "moveToLong": "将习惯转到{month}"
+  },
+  "grid": {
+    "habit": "习惯",
+    "month": "本月",
+    "addHabit": "添加习惯",
+    "drag": "拖动以调整顺序",
+    "edit": "编辑习惯",
+    "perDay": "每天 {count} 次",
+    "dayHint": "点击为所有习惯标记这一天，右键为跳过",
+    "legendDone": "点击 – 完成",
+    "legendSkip": "右键或第二次点击 – 跳过，这一天不计入",
+    "legendClear": "第三次点击 – 清除",
+    "legendDay": "点击日期 – 整天"
+  },
+  "list": {
+    "today": "今天",
+    "stat": "{month}：{avg}% · 评分 {grade}",
+    "skipped": "跳过 – 这一天不计入",
+    "streak": "连续 {count} 天",
+    "monthPct": "{month} {pct}%",
+    "ofSubs": "{done}/{total}",
+    "hint": "点击圆圈：完成 → 跳过（不计入）→ 空。点击名称可打开习惯设置和本月标记。"
+  },
+  "empty": {
+    "title": "还没有习惯",
+    "text": "添加第一个习惯，比如“锻炼”或“阅读”。每天标记，月底就能看到完成率和评分。",
+    "openPrev": "打开{month}",
+    "hotkey": "按 N 新建习惯"
+  },
+  "habit": {
+    "title": "习惯",
+    "titleNew": "新习惯",
+    "name": "名称",
+    "namePlaceholder": "例如：锻炼",
+    "perDay": "每天标记次数",
+    "perDayHint": "例如 3 组训练或 3 杯水。最多 {max}。",
+    "decrease": "减少",
+    "increase": "增加",
+    "subsWarning": "保存后，多余子任务的标记将被删除。",
+    "marksFor": "{month}的标记",
+    "subTab": "标记 {n}",
+    "statMonth": "{month}",
+    "statDone": "完成",
+    "statSkips": "跳过",
+    "order": "列表位置",
+    "up": "上移",
+    "down": "下移",
+    "deleteConfirm": "删除“{title}”及其{month}的所有标记？此操作无法撤销。",
+    "limitLine": "本月 {count}/{max} 个习惯",
+    "added": "已添加习惯“{title}”",
+    "deleted": "已删除“{title}”",
+    "undo": "撤销"
+  },
+  "settings": {
+    "title": "设置",
+    "asInSystem": "跟随系统",
+    "appearance": "外观",
+    "table": "表格",
+    "account": {
+      "title": "账户",
+      "localOnly": "数据仅保存在此浏览器中。登录后可在多台设备间同步。"
+    },
+    "theme": {
+      "title": "主题",
+      "system": "系统",
+      "light": "浅色",
+      "dark": "深色"
+    },
+    "lang": {
+      "title": "语言"
+    },
+    "weekStart": {
+      "title": "每周开始于",
+      "monday": "周一",
+      "sunday": "周日"
+    },
+    "showWeek": {
+      "title": "周分隔线",
+      "hint": "表格中各周之间的竖线"
+    },
+    "calculationMode": {
+      "title": "进度计算",
+      "fullMonth": "整个月",
+      "passedDays": "已过天数",
+      "fullMonthHint": "按本月所有天数计算，月初的百分比会较低。",
+      "passedDaysHint": "只计算截至今天（含）的天数。"
+    },
+    "data": {
+      "title": "数据",
+      "export": "导出",
+      "exportHint": "为 JSON",
+      "import": "导入",
+      "importHint": "从 JSON",
+      "print": "打印",
+      "printHint": "本月表格",
+      "sheet": "表单",
+      "sheetHint": "用于拍照",
+      "scan": "从照片",
+      "scanHint": "导入标记"
+    },
+    "hotkeys": {
+      "title": "快捷键",
+      "n": "新习惯",
+      "s": "设置",
+      "arrowLeft": "上个月",
+      "arrowRight": "下个月",
+      "t": "当前月份",
+      "escape": "关闭窗口"
+    },
+    "showWelcome": "使用说明"
+  },
+  "auth": {
+    "login": "使用 Google 登录",
+    "logout": "退出登录"
+  },
+  "duplicate": {
+    "title": "将习惯转到{month}？",
+    "message": "{count} 个习惯将转到{to}，标记清空。",
+    "replaceWarning": "该月当前的列表和标记将被替换。",
+    "confirm": "转移",
+    "confirmReplace": "替换列表",
+    "done": "习惯已转到{month}"
+  },
+  "welcome": {
+    "title": "用一张简单的表格保持节奏",
+    "text": "添加习惯并每天标记。月底可以看到每个习惯的完成率、总平均值和五分制评分。",
+    "done": "完成",
+    "notDone": "未完成",
+    "notDoneHint": "留空即可",
+    "skip": "跳过",
+    "skipHint": "这一天不计入，例如隔天训练",
+    "paper": "可以打印表格，贴在冰箱上用铅笔标记，月底再手动或通过表单照片导入。数据保存在浏览器中，可离线使用。",
+    "start": "开始"
+  },
+  "conflict": {
+    "title": "数据不一致",
+    "message": "此设备和云端的版本不同。请选择保留哪一个，另一个将被覆盖。",
+    "local": "此设备",
+    "cloud": "云端",
+    "keep": "保留",
+    "load": "加载",
+    "summary": "当前习惯：{tasks} · 月份：{months}",
+    "changed": "修改于 {date}",
+    "keptLocal": "已用此设备的数据更新云端",
+    "loadedCloud": "已从云端加载数据"
+  },
+  "update": {
+    "message": "应用有新版本",
+    "action": "更新"
+  },
+  "toast": {
+    "exported": "文件 {name} 已保存",
+    "signedIn": "已登录"
+  },
+  "taskLimit": "已达上限：每月 {max} 个习惯"
 }
