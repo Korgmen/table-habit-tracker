@@ -1,15 +1,26 @@
 import { defineStore } from 'pinia';
+import { markRaw } from 'vue';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { auth, provider, db } from '@/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { resolveLang, applyLang, SUPPORTED_LANGS } from '@/i18n';
-import { monthKey, decodeArchiveTitles, normalizeArchive, isValidArchive } from '@/utils/archive';
+import {
+  monthKey,
+  normalizeArchive,
+  isValidArchive,
+  prepareArchive,
+  createId,
+  countTasks,
+  mergeArchives,
+  unwrapExport,
+  exportFileName,
+  SCHEMA_VERSION,
+  MAX_TASKS,
+  MAX_SUBTASKS,
+  MAX_TITLE,
+} from '@/utils/archive';
 
-/** Лимиты задач в месяце и подзадач в задаче */
-export const MAX_TASKS = 20;
-export const MAX_SUBTASKS = 8;
-
-/** Допустимые значения настроек: облачный документ применяется только по ним */
+/** Допустимые значения настроек: облачный документ и файл импорта применяются только по ним */
 const SETTINGS_VALUES = {
   theme: ['system', 'light', 'dark'],
   lang: ['system', ...SUPPORTED_LANGS],
@@ -18,24 +29,93 @@ const SETTINGS_VALUES = {
   calculationMode: ['fullMonth', 'passedDays'],
 };
 
+/** Ключи резервной копии архива в localStorage: копия и время её создания */
+const BACKUP_KEY = 'habitArchiveBackup';
+const BACKUP_AT_KEY = 'habitArchiveBackupAt';
+
+/** Серия кликов подряд пишется в localStorage одной записью */
+const LOCAL_SAVE_DELAY = 300;
+let localSaveTimer = null;
+
 /** Серия правок подряд (клики по отметкам, переход месяца) уходит в Firestore одной записью */
 const CLOUD_SAVE_DELAY = 1000;
 let cloudSaveTimer = null;
+/** Есть изменения, которые ещё не записаны в Firestore */
+let cloudDirty = false;
+/** Идущая запись в Firestore: следующая начинается только после неё */
+let cloudWrite = null;
+
+/** Лимит документа Firestore 1 МиБ; размер считается по JSON приблизительно, поэтому с запасом */
+const CLOUD_DOC_LIMIT = 1024 * 1024;
+const CLOUD_DOC_MAX = 1000 * 1000;
+
+/** Повторы после сбоя синхронизации: паузы растут до минуты */
+const RETRY_DELAYS = [2000, 5000, 15000, 30000, 60000];
+let retryTimer = null;
+let retryAttempt = 0;
+/** Коды Firestore, при которых сеть недоступна, и коды, после которых имеет смысл повторить */
+const OFFLINE_CODES = ['unavailable', 'deadline-exceeded'];
+const RETRY_CODES = [...OFFLINE_CODES, 'aborted', 'internal', 'unknown', 'resource-exhausted'];
+
+/** Сколько ждать подтверждения записи в облако перед выходом из аккаунта */
+const LOGOUT_SAVE_TIMEOUT = 8000;
+
+/** Номер входа: ответ облака для прошлого пользователя или прошлой попытки отбрасывается */
+let authGeneration = 0;
+
+const IMPORT_FILE_LIMIT = 2 * 1024 * 1024;
+
+/** Шагов отмены в памяти */
+const HISTORY_LIMIT = 50;
+let historyId = 0;
+
+const clone = value => (value == null ? null : JSON.parse(JSON.stringify(value)));
+
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+const isQuotaError = error =>
+  error?.name === 'QuotaExceededError' ||
+  error?.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+  error?.code === 22;
+
+/** Сохраняет текст файлом через ссылку на Blob */
+const downloadText = (text, name) => {
+  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = name;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  /** Safari начинает скачивание асинхронно и теряет файл при немедленном отзыве ссылки */
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
+/** Время резервной копии: число, 0 для копии без даты, null если копии нет */
+const readBackupAt = () => {
+  if (!localStorage.getItem(BACKUP_KEY)) return null;
+  return Number(localStorage.getItem(BACKUP_AT_KEY)) || 0;
+};
 
 /**
  * Читает архив из localStorage.
- * Нечитаемые данные откладываются в habitArchiveBackup, приложение стартует с пустым архивом.
+ * Нечитаемые данные откладываются в резервную копию, приложение стартует с пустым архивом.
  */
 const readLocalArchive = () => {
   const saved = localStorage.getItem('habitArchive');
   if (!saved) return {};
   try {
     const archive = JSON.parse(saved);
-    if (isValidArchive(archive)) return decodeArchiveTitles(archive);
+    if (isValidArchive(archive)) return prepareArchive(archive);
   } catch (error) {
     console.error(error);
   }
-  localStorage.setItem('habitArchiveBackup', saved);
+  try {
+    localStorage.setItem(BACKUP_KEY, saved);
+    localStorage.setItem(BACKUP_AT_KEY, String(Date.now()));
+  } catch (error) {
+    console.error(error);
+  }
   return {};
 };
 
@@ -74,6 +154,25 @@ export const useHabitStore = defineStore('habit', {
       isAuthReady: false,
       /** Данные из Firestore, расходящиеся с локальными и ждущие выбора пользователя */
       cloudConflict: null,
+      /**
+       * Состояние синхронизации: 'off' без входа, 'connecting' чтение облака после входа,
+       * 'conflict' ждёт выбора версии, 'pending' есть несохранённые правки, 'saving' идёт запись,
+       * 'synced', 'offline' нет сети, 'error' сбой (код в syncError)
+       */
+      syncState: 'off',
+      /** Код последней ошибки облака: код Firestore или 'too-large'; null после успешной записи */
+      syncError: null,
+      /** Доля лимита документа Firestore, которую занимают данные */
+      cloudUsage: 0,
+      /** Ошибка записи в localStorage: 'quota' | 'unknown' | null */
+      localSaveError: null,
+      /** Время резервной копии архива (см. readBackupAt) */
+      backupAt: readBackupAt(),
+      /** Разобранный файл импорта, ждущий подтверждения: { source, archive, settings, truncated } */
+      pendingImport: null,
+      /** Шаги отмены и повтора: { id, label, viewKey, months, settings } */
+      undoStack: [],
+      redoStack: [],
     };
   },
 
@@ -136,12 +235,23 @@ export const useHabitStore = defineStore('habit', {
       if (progress >= 50) return '3';
       return '2';
     },
+
+    /** Настройки для облака и файла экспорта */
+    settings: state =>
+      Object.fromEntries(Object.keys(SETTINGS_VALUES).map(key => [key, state[key]])),
+
+    canUndo: state => state.undoStack.length > 0,
+
+    canRedo: state => state.redoStack.length > 0,
+
+    /** id последнего шага отмены: тост с кнопкой «Отменить» отменяет именно его */
+    lastChangeId: state => state.undoStack.at(-1)?.id ?? null,
   },
 
   actions: {
     /** Подзадача с пустыми отметками на текущий месяц */
-    createSubtask(offset = 0) {
-      return { id: Date.now() + offset + Math.random(), marks: Array(this.daysInMonth).fill(null) };
+    createSubtask() {
+      return { id: createId(), marks: Array(this.daysInMonth).fill(null) };
     },
 
     /** Добавляет задачу с заданным числом подзадач, false при достижении лимита */
@@ -149,10 +259,11 @@ export const useHabitStore = defineStore('habit', {
       if (this.tasks.length >= MAX_TASKS) return false;
 
       const count = Math.min(Math.max(subtaskCount, 1), MAX_SUBTASKS);
+      this.recordChange('add');
       this.tasks.push({
-        id: Date.now(),
-        title: title.trim(),
-        subtasks: Array.from({ length: count }, (_, i) => this.createSubtask(i + 1)),
+        id: createId(),
+        title: title.trim().slice(0, MAX_TITLE),
+        subtasks: Array.from({ length: count }, () => this.createSubtask()),
         progress: 0.0,
       });
       this.saveState();
@@ -165,10 +276,14 @@ export const useHabitStore = defineStore('habit', {
       if (!task) return;
 
       const count = Math.min(Math.max(subtaskCount, 1), MAX_SUBTASKS);
-      task.title = title.trim() || task.title;
+      const newTitle = title.trim().slice(0, MAX_TITLE) || task.title;
+      if (newTitle === task.title && count === task.subtasks.length) return;
+
+      this.recordChange('edit');
+      task.title = newTitle;
       if (task.subtasks.length > count) task.subtasks.splice(count);
       while (task.subtasks.length < count) {
-        task.subtasks.push(this.createSubtask(task.subtasks.length));
+        task.subtasks.push(this.createSubtask());
       }
       this.updateTaskProgress(taskId);
       this.saveState();
@@ -179,8 +294,22 @@ export const useHabitStore = defineStore('habit', {
       const from = this.tasks.findIndex(t => t.id === taskId);
       const to = from + offset;
       if (from < 0 || to < 0 || to >= this.tasks.length) return;
+      this.recordChange('move');
       const [task] = this.tasks.splice(from, 1);
       this.tasks.splice(to, 0, task);
+      this.saveState();
+    },
+
+    /** Ставит задачи в порядке list (перетаскивание строк) */
+    reorderTasks(list) {
+      if (
+        list.length !== this.tasks.length ||
+        list.every((task, i) => task.id === this.tasks[i].id)
+      ) {
+        return;
+      }
+      this.recordChange('move');
+      this.tasks.splice(0, this.tasks.length, ...list);
       this.saveState();
     },
 
@@ -215,15 +344,12 @@ export const useHabitStore = defineStore('habit', {
 
     /** Обновляет отметку в конкретный день подзадачи */
     updateMark(taskId, subtaskId, dayIndex, state) {
-      const task = this.tasks.find(t => t.id === taskId);
-      if (task) {
-        const subtask = task.subtasks.find(s => s.id === subtaskId);
-        if (subtask && dayIndex < this.today) {
-          subtask.marks[dayIndex] = state;
-          this.updateTaskProgress(taskId);
-          this.saveState();
-        }
-      }
+      const subtask = this.tasks.find(t => t.id === taskId)?.subtasks.find(s => s.id === subtaskId);
+      if (!subtask || dayIndex >= this.today || subtask.marks[dayIndex] === state) return;
+      this.recordChange('mark');
+      subtask.marks[dayIndex] = state;
+      this.updateTaskProgress(taskId);
+      this.saveState();
     },
 
     /** Клик по отметке: пусто → выполнено → пропуск → пусто */
@@ -251,11 +377,11 @@ export const useHabitStore = defineStore('habit', {
 
     /** Устанавливает одинаковую отметку для всех подзадач в выбранный день */
     updateHeaderDay(dayIndex, state) {
+      if (dayIndex >= this.today || this.tasks.length === 0) return;
+      this.recordChange('day');
       this.tasks.forEach(task => {
         task.subtasks.forEach(subtask => {
-          if (dayIndex < this.today) {
-            subtask.marks[dayIndex] = state;
-          }
+          subtask.marks[dayIndex] = state;
         });
       });
       this.tasks.forEach(task => this.updateTaskProgress(task.id));
@@ -267,6 +393,7 @@ export const useHabitStore = defineStore('habit', {
      * Для прошедших дней и сегодня фото главнее, будущие дни не трогаются.
      */
     applyScannedMarks(entries) {
+      this.recordChange('scan');
       entries.forEach(({ taskId, rows }) => {
         const task = this.tasks.find(t => t.id === taskId);
         if (!task) return;
@@ -282,22 +409,12 @@ export const useHabitStore = defineStore('habit', {
       this.saveState();
     },
 
-    /**
-     * Удаляет задачу по ID.
-     * @returns {{ task, index, monthKey } | null} данные для restoreTask
-     */
+    /** Удаляет задачу по ID; вернуть её можно через undo */
     deleteTask(taskId) {
       const index = this.tasks.findIndex(t => t.id === taskId);
-      if (index < 0) return null;
-      const [task] = this.tasks.splice(index, 1);
-      this.saveState();
-      return { task, index, monthKey: this.currentMonthKey };
-    },
-
-    /** Возвращает удалённую задачу на прежнее место, если месяц не сменился и лимит позволяет */
-    restoreTask({ task, index, monthKey: key }) {
-      if (key !== this.currentMonthKey || this.tasks.length >= MAX_TASKS) return false;
-      this.tasks.splice(Math.min(index, this.tasks.length), 0, task);
+      if (index < 0) return false;
+      this.recordChange('delete');
+      this.tasks.splice(index, 1);
       this.saveState();
       return true;
     },
@@ -308,39 +425,144 @@ export const useHabitStore = defineStore('habit', {
      */
     duplicateToCurrent() {
       if (this.currentMonthKey === this.realMonthKey) return;
+      this.recordChange('duplicate', [this.realMonthKey]);
       const source = this.tasks;
       this.saveState();
       this.currentDate = new Date(this.realDate);
-      this.tasks = source.map((task, i) => ({
-        id: Date.now() + i,
+      this.tasks = source.map(task => ({
+        id: createId(),
         title: task.title,
         progress: 0.0,
-        subtasks: task.subtasks.map((_, k) => this.createSubtask(i * MAX_SUBTASKS + k)),
+        subtasks: task.subtasks.map(() => this.createSubtask()),
       }));
       this.adaptMarksToNewMonth();
       this.saveState();
     },
 
-    /** Сохраняет текущее состояние в localStorage и планирует запись в Firestore */
+    /** Задачи месяца key: у открытого месяца – рабочий список, у остальных – из архива */
+    monthTasks(key) {
+      return key === this.currentMonthKey ? this.tasks : (this.archive[key]?.tasks ?? null);
+    },
+
+    /** Снимок месяцев keys (и настроек) для шага отмены */
+    snapshot(label, keys, withSettings) {
+      return markRaw({
+        id: ++historyId,
+        label,
+        viewKey: this.currentMonthKey,
+        months: Object.fromEntries(keys.map(key => [key, clone(this.monthTasks(key))])),
+        settings: withSettings ? { ...this.settings } : null,
+      });
+    },
+
+    /**
+     * Запоминает состояние месяцев keys перед изменением.
+     * @param {string} label - вид действия для подписи в тосте ('mark', 'day', 'import' …)
+     */
+    recordChange(label, keys = [this.currentMonthKey], withSettings = false) {
+      this.undoStack.push(this.snapshot(label, keys, withSettings));
+      if (this.undoStack.length > HISTORY_LIMIT) this.undoStack.shift();
+      this.redoStack = [];
+    },
+
+    /** Возвращает месяцы (и настройки) из шага и открывает месяц, где шаг был сделан */
+    restoreEntry(entry) {
+      const reverse = this.snapshot(entry.label, Object.keys(entry.months), !!entry.settings);
+      this.archive[this.currentMonthKey] = { tasks: this.tasks };
+      Object.entries(entry.months).forEach(([key, tasks]) => {
+        if (tasks) this.archive[key] = { tasks: clone(tasks) };
+        else delete this.archive[key];
+      });
+      if (entry.settings) this.applySettings(entry.settings);
+      if (entry.viewKey !== this.currentMonthKey) {
+        const [year, month] = entry.viewKey.split('-').map(Number);
+        this.currentDate =
+          entry.viewKey === this.realMonthKey ? new Date(this.realDate) : new Date(year, month - 1);
+      }
+      this.tasks = this.archive[this.currentMonthKey]?.tasks || [];
+      this.adaptMarksToNewMonth();
+      this.saveState();
+      return reverse;
+    },
+
+    /** Отменяет последний шаг; возвращает его label или null */
+    undo() {
+      const entry = this.undoStack.pop();
+      if (!entry) return null;
+      this.redoStack.push(this.restoreEntry(entry));
+      return entry.label;
+    },
+
+    /** Повторяет отменённый шаг; возвращает его label или null */
+    redo() {
+      const entry = this.redoStack.pop();
+      if (!entry) return null;
+      this.undoStack.push(this.restoreEntry(entry));
+      return entry.label;
+    },
+
+    /** Отменяет шаги до шага id включительно; false, если шаг уже вышел из истории */
+    undoTo(id) {
+      if (!this.undoStack.some(entry => entry.id === id)) return false;
+      let entry;
+      do {
+        entry = this.undoStack.at(-1);
+        this.undo();
+      } while (entry.id !== id);
+      return true;
+    },
+
+    clearHistory() {
+      this.undoStack = [];
+      this.redoStack = [];
+    },
+
+    /** Сохраняет текущее состояние: localStorage и Firestore с задержкой на серию правок */
     saveState() {
       this.archive[this.currentMonthKey] = { tasks: this.tasks };
-      this.saveLocal();
-      clearTimeout(cloudSaveTimer);
-      cloudSaveTimer = setTimeout(() => this.flushCloudSave(), CLOUD_SAVE_DELAY);
+      clearTimeout(localSaveTimer);
+      localSaveTimer = setTimeout(() => this.saveLocal(), LOCAL_SAVE_DELAY);
+      this.scheduleCloudSave();
     },
 
-    /** Пишет архив и настройки в localStorage */
+    /** Пишет настройки и архив в localStorage; false, если браузер отказал */
     saveLocal() {
-      localStorage.setItem('habitArchive', JSON.stringify(this.archive));
-      Object.keys(SETTINGS_VALUES).forEach(key => localStorage.setItem(key, this[key]));
+      clearTimeout(localSaveTimer);
+      localSaveTimer = null;
+      try {
+        Object.keys(SETTINGS_VALUES).forEach(key => localStorage.setItem(key, this[key]));
+        localStorage.setItem('habitArchive', JSON.stringify(this.archive));
+        this.localSaveError = null;
+        return true;
+      } catch (error) {
+        console.error(error);
+        this.localSaveError = isQuotaError(error) ? 'quota' : 'unknown';
+        return false;
+      }
     },
 
-    /** Немедленно отправляет отложенную запись в Firestore, если она есть */
-    async flushCloudSave() {
-      if (!cloudSaveTimer) return;
-      clearTimeout(cloudSaveTimer);
-      cloudSaveTimer = null;
-      await this.saveToCloud().catch(error => console.error(error));
+    /** Немедленно пишет отложенное сохранение в localStorage (закрытие или сворачивание вкладки) */
+    flushLocalSave() {
+      if (localSaveTimer) this.saveLocal();
+    },
+
+    /** Копия текущего архива перед импортом: переживает перезагрузку, в отличие от undo */
+    writeBackup() {
+      if (countTasks(this.archive) === 0) return;
+      try {
+        const now = Date.now();
+        localStorage.setItem(BACKUP_KEY, JSON.stringify(this.archive));
+        localStorage.setItem(BACKUP_AT_KEY, String(now));
+        this.backupAt = now;
+      } catch (error) {
+        console.error(error);
+      }
+    },
+
+    /** Сохраняет резервную копию файлом как есть, даже если она не читается */
+    downloadBackup() {
+      const saved = localStorage.getItem(BACKUP_KEY);
+      if (saved) downloadText(saved, exportFileName(new Date(), 'habit_backup'));
     },
 
     /** Открывает месяц даты date (не позже реального) с сохранением и адаптацией данных */
@@ -406,36 +628,111 @@ export const useHabitStore = defineStore('habit', {
       });
     },
 
-    /** Экспортирует весь архив как JSON-файл */
+    /** Сохраняет архив и настройки файлом; возвращает имя файла */
     exportData() {
-      const dataStr =
-        'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(this.archive));
-      const downloadAnchorNode = document.createElement('a');
-      downloadAnchorNode.setAttribute('href', dataStr);
-      downloadAnchorNode.setAttribute('download', 'habit_data.json');
-      document.body.appendChild(downloadAnchorNode);
-      downloadAnchorNode.click();
-      downloadAnchorNode.remove();
+      const name = exportFileName(new Date());
+      const data = {
+        schemaVersion: SCHEMA_VERSION,
+        exportedAt: new Date().toISOString(),
+        settings: this.settings,
+        archive: this.archive,
+      };
+      downloadText(JSON.stringify(data), name);
+      return name;
     },
 
     /**
-     * Импортирует архив из файла с проверкой размера и структуры.
+     * Читает файл импорта и готовит его к подтверждению (pendingImport).
      * @returns {Promise<string|null>} ключ словаря с ошибкой или null при успехе
      */
-    async importData(file) {
-      if (file.size > 2 * 1024 * 1024) return 'import.tooLarge';
+    async readImportFile(file) {
+      if (file.size > IMPORT_FILE_LIMIT) return 'import.tooLarge';
+      let text;
       try {
-        const importedArchive = JSON.parse(await file.text());
-        if (!isValidArchive(importedArchive)) return 'import.invalid';
-        this.archive = decodeArchiveTitles(importedArchive);
-        this.tasks = this.archive[this.currentMonthKey]?.tasks || [];
-        this.adaptMarksToNewMonth();
-        this.saveState();
-        return null;
+        text = await file.text();
       } catch (error) {
         console.error(error);
         return 'import.error';
       }
+      try {
+        return this.prepareImport(JSON.parse(text), 'file');
+      } catch (error) {
+        console.error(error);
+        return 'import.invalid';
+      }
+    },
+
+    /** Готовит к восстановлению резервную копию; ключ словаря с ошибкой или null */
+    readBackup() {
+      try {
+        const error = this.prepareImport(JSON.parse(localStorage.getItem(BACKUP_KEY)), 'backup');
+        return error && 'backup.invalid';
+      } catch (error) {
+        console.error(error);
+        return 'backup.invalid';
+      }
+    },
+
+    /**
+     * Проверяет данные файла (экспорт любой версии) и кладёт их в pendingImport.
+     * Длинные названия из старых версий обрезаются до лимита, их число попадает в truncated.
+     */
+    prepareImport(data, source) {
+      const { version, archive, settings } = unwrapExport(data);
+      if (!Number.isInteger(version) || version < 1) return 'import.invalid';
+      if (version > SCHEMA_VERSION) return 'import.newer';
+      if (!isValidArchive(archive)) return 'import.invalid';
+      if (countTasks(archive) === 0) return 'import.empty';
+
+      prepareArchive(archive);
+      let truncated = 0;
+      Object.values(archive).forEach(month =>
+        month.tasks.forEach(task => {
+          if (task.title.length <= MAX_TITLE) return;
+          task.title = task.title.slice(0, MAX_TITLE);
+          truncated++;
+        })
+      );
+      this.pendingImport = markRaw({ source, archive, settings, truncated });
+      return null;
+    },
+
+    cancelImport() {
+      this.pendingImport = null;
+    },
+
+    /**
+     * Применяет pendingImport. Текущий архив до этого уходит в резервную копию и в историю отмены.
+     * @param {Object} options - replace: заменить архив и настройки целиком, иначе слить по месяцам;
+     *   takeIncoming: месяцы, которые при слиянии берутся из файла, хотя есть и локально
+     */
+    applyImport({ replace = true, takeIncoming = [] } = {}) {
+      const pending = this.pendingImport;
+      if (!pending) return;
+      const keys = new Set([
+        ...Object.keys(this.archive),
+        ...Object.keys(pending.archive),
+        this.currentMonthKey,
+      ]);
+      this.recordChange('import', [...keys], replace);
+      this.writeBackup();
+      this.archive = replace
+        ? pending.archive
+        : mergeArchives(this.archive, pending.archive, takeIncoming);
+      if (replace) this.applySettings(pending.settings);
+      this.pendingImport = null;
+      this.tasks = this.archive[this.currentMonthKey]?.tasks || [];
+      this.adaptMarksToNewMonth();
+      this.saveState();
+    },
+
+    /** Применяет настройки из облака, файла или истории; недопустимые значения пропускаются */
+    applySettings(settings) {
+      Object.entries(SETTINGS_VALUES).forEach(([key, allowed]) => {
+        const value = settings?.[key];
+        if (allowed.includes(value)) this[key] = value;
+      });
+      applyLang(this.lang);
     },
 
     /** Устанавливает тему и сохраняет в localStorage */
@@ -476,52 +773,102 @@ export const useHabitStore = defineStore('habit', {
       await signInWithPopup(auth, provider);
     },
 
-    /** Логаут: данные остаются в облаке, локальный архив очищается (устройство может быть общим) */
-    async logout() {
-      await this.flushCloudSave();
+    /**
+     * Логаут: данные остаются в облаке, локальные очищаются (устройство может быть общим).
+     * Без force выходит только после подтверждённой записи в облако.
+     * @returns {Promise<boolean>} false, если облако не подтвердило запись и выход отменён
+     */
+    async logout({ force = false } = {}) {
+      if (!force) {
+        const saved = await Promise.race([
+          this.flushCloudSave(),
+          wait(LOGOUT_SAVE_TIMEOUT).then(() => false),
+        ]);
+        if (!saved) return false;
+      }
       await signOut(auth);
+      clearTimeout(localSaveTimer);
+      clearTimeout(cloudSaveTimer);
+      clearTimeout(retryTimer);
+      localSaveTimer = null;
+      cloudSaveTimer = null;
+      cloudDirty = false;
       this.user = null;
       this.cloudConflict = null;
+      this.syncState = 'off';
+      this.syncError = null;
+      this.cloudUsage = 0;
       this.archive = {};
       this.tasks = [];
+      this.pendingImport = null;
+      this.clearHistory();
       localStorage.removeItem('habitArchive');
+      localStorage.removeItem(BACKUP_KEY);
+      localStorage.removeItem(BACKUP_AT_KEY);
+      this.backupAt = null;
+      return true;
     },
 
     /** Автовосстановление сессии */
     initAuth() {
-      onAuthStateChanged(auth, async user => {
+      onAuthStateChanged(auth, user => {
+        if (user?.uid !== this.user?.uid) this.clearHistory();
+        authGeneration++;
+        clearTimeout(retryTimer);
+        retryAttempt = 0;
         this.user = user;
         this.isAuthReady = false;
+        this.cloudConflict = null;
+        this.syncError = null;
 
         if (!user) {
           this.isAuthReady = true;
+          this.syncState = 'off';
+          return;
+        }
+        this.connectCloud();
+      });
+    },
+
+    /**
+     * Читает облачный архив и сверяет с локальным.
+     * Запись в облако открывается только после этого: до чтения в сторе локальные данные.
+     */
+    async connectCloud() {
+      const generation = authGeneration;
+      this.syncState = 'connecting';
+      try {
+        const cloudData = await this.loadFromCloud();
+        if (generation !== authGeneration) return;
+
+        if (!cloudData) {
+          this.isAuthReady = true;
+          await this.saveToCloud();
           return;
         }
 
-        // Запись в облако открывается только после чтения облачного архива: до этого в сторе локальные данные
-        try {
-          const cloudData = await this.loadFromCloud();
+        cloudData.archive = cloudData.archive || {};
+        const valid = isValidArchive(cloudData.archive);
+        if (valid) prepareArchive(cloudData.archive);
+        const localArchive = normalizeArchive(this.archive);
 
-          if (!cloudData) {
-            this.isAuthReady = true;
-            await this.saveToCloud();
-            return;
-          }
-
-          const localArchive = normalizeArchive(this.archive);
-          const cloudArchive = normalizeArchive(decodeArchiveTitles(cloudData.archive || {}));
-
-          if (localArchive !== '{}' && localArchive !== cloudArchive) {
-            this.cloudConflict = cloudData;
-            return;
-          }
-
-          this.applyCloudData(cloudData);
-          this.isAuthReady = true;
-        } catch (error) {
-          console.error(error);
+        if (
+          !valid ||
+          (localArchive !== '{}' && localArchive !== normalizeArchive(cloudData.archive))
+        ) {
+          this.cloudConflict = markRaw({ ...cloudData, invalid: !valid });
+          this.syncState = 'conflict';
+          return;
         }
-      });
+
+        this.applyCloudData(cloudData);
+        this.isAuthReady = true;
+        this.markSynced();
+      } catch (error) {
+        if (generation !== authGeneration) return;
+        console.error(error);
+        this.handleSyncError(error);
+      }
     },
 
     /**
@@ -529,30 +876,132 @@ export const useHabitStore = defineStore('habit', {
      * @param {boolean} keepLocal - true: локальные данные перезаписывают облако, false: облачные заменяют локальные
      */
     resolveCloudConflict(keepLocal) {
-      if (!this.cloudConflict) return;
-      if (!keepLocal) this.applyCloudData(this.cloudConflict);
+      const conflict = this.cloudConflict;
+      if (!conflict || (!keepLocal && conflict.invalid)) return;
+      if (!keepLocal) {
+        const keys = new Set([
+          ...Object.keys(this.archive),
+          ...Object.keys(conflict.archive),
+          this.currentMonthKey,
+        ]);
+        this.recordChange('cloud', [...keys], true);
+        this.applyCloudData(conflict);
+      }
       this.cloudConflict = null;
       this.isAuthReady = true;
-      if (keepLocal) this.saveToCloud().catch(error => console.error(error));
+      if (keepLocal) this.saveToCloud();
+      else this.markSynced();
     },
 
-    /** Сохранение данных в Firestore */
-    async saveToCloud() {
-      if (!this.user || !this.isAuthReady) return;
+    /** Планирует запись в Firestore после серии правок */
+    scheduleCloudSave() {
+      if (!this.user) return;
+      cloudDirty = true;
+      if (this.isAuthReady && !['offline', 'error'].includes(this.syncState)) {
+        this.syncState = 'pending';
+      }
+      clearTimeout(cloudSaveTimer);
+      cloudSaveTimer = setTimeout(() => this.flushCloudSave(), CLOUD_SAVE_DELAY);
+    },
 
-      const ref = doc(db, 'users', this.user.uid);
+    /**
+     * Немедленно отправляет отложенные изменения в Firestore.
+     * @returns {Promise<boolean>} true, если в облаке те же данные, что на устройстве
+     */
+    async flushCloudSave() {
+      clearTimeout(cloudSaveTimer);
+      cloudSaveTimer = null;
+      if (!this.user) return true;
+      /** Облако ещё не прочитано или конфликт не решён: локальные данные в нём могут отсутствовать */
+      if (!this.isAuthReady) return countTasks(this.archive) === 0;
+      if (!cloudDirty && !cloudWrite) return true;
+      return this.saveToCloud();
+    },
 
-      await setDoc(ref, {
-        archive: this.archive,
-        settings: {
-          theme: this.theme,
-          lang: this.lang,
-          weekStart: this.weekStart,
-          showWeekSeparators: this.showWeekSeparators,
-          calculationMode: this.calculationMode,
-        },
-        updatedAt: Date.now(),
-      });
+    /**
+     * Записывает данные в Firestore. Записи идут строго по очереди: правки во время записи
+     * уходят следующей записью, и более старый снимок не может лечь поверх нового.
+     * @returns {Promise<boolean>} false при ошибке (статус и повтор выставлены)
+     */
+    saveToCloud() {
+      if (!this.user || !this.isAuthReady) return Promise.resolve(false);
+      cloudDirty = true;
+      if (!cloudWrite) cloudWrite = this.runCloudWrites();
+      return cloudWrite;
+    },
+
+    async runCloudWrites() {
+      try {
+        while (cloudDirty && this.user && this.isAuthReady) {
+          cloudDirty = false;
+          await this.writeCloud();
+        }
+        if (this.user) this.markSynced();
+        return true;
+      } catch (error) {
+        cloudDirty = true;
+        console.error(error);
+        this.handleSyncError(error);
+        return false;
+      } finally {
+        cloudWrite = null;
+      }
+    },
+
+    /** Одна запись документа пользователя: архив, настройки и время изменения */
+    async writeCloud() {
+      const data = { archive: this.archive, settings: this.settings, updatedAt: Date.now() };
+      const size = new TextEncoder().encode(JSON.stringify(data)).length;
+      this.cloudUsage = size / CLOUD_DOC_LIMIT;
+      if (size > CLOUD_DOC_MAX) {
+        throw Object.assign(new Error('Cloud document is too large'), { code: 'too-large' });
+      }
+      /** Без сети Firestore держит запись в очереди и завершает её после подключения */
+      this.syncState = navigator.onLine ? 'saving' : 'offline';
+      await setDoc(doc(db, 'users', this.user.uid), data);
+    },
+
+    markSynced() {
+      clearTimeout(retryTimer);
+      retryAttempt = 0;
+      this.syncState = 'synced';
+      this.syncError = null;
+    },
+
+    /** Сеть пропала: правки копятся в очереди Firestore до её возвращения */
+    markOffline() {
+      if (this.user && this.isAuthReady && this.syncState !== 'error') this.syncState = 'offline';
+    },
+
+    /** Выставляет статус по ошибке Firestore и планирует повтор, если он имеет смысл */
+    handleSyncError(error) {
+      const code = String(error?.code || 'unknown').replace(/^firestore\//, '');
+      const offline = !navigator.onLine || OFFLINE_CODES.includes(code);
+      this.syncState = offline ? 'offline' : 'error';
+      if (!offline) this.syncError = code;
+      if (!offline && !RETRY_CODES.includes(code)) return;
+      clearTimeout(retryTimer);
+      const delay = RETRY_DELAYS[Math.min(retryAttempt, RETRY_DELAYS.length - 1)];
+      retryAttempt++;
+      retryTimer = setTimeout(() => this.resumeSync(), delay);
+    },
+
+    /** Продолжает синхронизацию с того места, где она остановилась */
+    resumeSync() {
+      if (!this.user || this.cloudConflict) return Promise.resolve(false);
+      if (!this.isAuthReady) return this.connectCloud();
+      if (!cloudDirty && !cloudWrite) {
+        if (navigator.onLine) this.markSynced();
+        return Promise.resolve(true);
+      }
+      return this.saveToCloud();
+    },
+
+    /** Повтор синхронизации сразу: кнопка «Повторить» или восстановление сети */
+    retrySync() {
+      clearTimeout(retryTimer);
+      retryAttempt = 0;
+      return this.resumeSync();
     },
 
     /** Читает документ пользователя из Firestore, возвращает null, если его ещё нет */
@@ -565,18 +1014,20 @@ export const useHabitStore = defineStore('habit', {
       return snap.exists() ? snap.data() : null;
     },
 
-    /** Применяет данные из Firestore к стору и localStorage */
+    /**
+     * Применяет данные из Firestore к стору и localStorage.
+     * @returns {boolean} false, если архив в облаке повреждён и не применён
+     */
     applyCloudData(data) {
-      this.archive = decodeArchiveTitles(data.archive || {});
+      const archive = data.archive || {};
+      if (!isValidArchive(archive)) return false;
+      this.archive = prepareArchive(archive);
       this.tasks = this.archive[this.currentMonthKey]?.tasks || [];
-
-      Object.entries(SETTINGS_VALUES).forEach(([key, allowed]) => {
-        const value = data.settings?.[key];
-        if (allowed.includes(value)) this[key] = value;
-      });
-      applyLang(this.lang);
-
+      this.applySettings(data.settings);
+      this.adaptMarksToNewMonth();
+      cloudDirty = false;
       this.saveLocal();
+      return true;
     },
   },
 });

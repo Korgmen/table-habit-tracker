@@ -12,7 +12,8 @@
       "month": "这是 {month} 的表格。请打开该月份后重试。",
       "noTasks": "本月中没有此表格上的任务。请重新打印表格。",
       "failed": "无法处理照片。"
-    }
+    },
+    "applied": "已导入照片中的标记"
   },
   "mark": {
     "cell": "{title}，第 {day} 天，子任务 {subtask}：{state}",
@@ -26,7 +27,9 @@
     "invalid": "文件不包含有效的追踪器数据",
     "error": "无法导入文件",
     "done": "数据已导入",
-    "other": "选择其他文件"
+    "other": "选择其他文件",
+    "newer": "该文件由更新版本的应用创建。请更新应用后重试。",
+    "empty": "文件中没有习惯"
   },
   "common": {
     "add": "添加",
@@ -47,8 +50,29 @@
     "today": "今天"
   },
   "sync": {
-    "synced": "已同步",
-    "waiting": "同步中…"
+    "state": {
+      "off": "未登录",
+      "connecting": "连接中…",
+      "conflict": "需要选择版本",
+      "pending": "保存中…",
+      "saving": "保存中…",
+      "synced": "已同步",
+      "offline": "离线",
+      "error": "同步出错"
+    },
+    "reason": {
+      "offline": "无网络连接。更改保存在本设备上，联网后会同步。",
+      "conflict": "本设备和云端的数据不同。同步将在你做出选择后继续。",
+      "permissionDenied": "无权访问云端数据。请重新登录。",
+      "unauthenticated": "会话已过期。请重新登录。",
+      "resourceExhausted": "超出云端配额。稍后将重试。",
+      "tooLarge": "数据过多，无法存入云端（超过 1 MB）。数据保存在本设备上，请导出为文件。",
+      "unknown": "无法连接云端。数据保存在本设备上，正在重试。"
+    },
+    "choose": "选择",
+    "retry": "重试",
+    "usage": "云端存储已使用 {pct}%（上限 1 MB）。",
+    "failed": "云端同步失败。数据已保存在本设备上。"
   },
   "header": {
     "newHabit": "习惯",
@@ -108,11 +132,11 @@
     "order": "列表位置",
     "up": "上移",
     "down": "下移",
-    "deleteConfirm": "删除“{title}”及其{month}的所有标记？此操作无法撤销。",
+    "deleteConfirm": "删除“{title}”及其{month}的所有标记？",
     "limitLine": "本月 {count}/{max} 个习惯",
     "added": "已添加习惯“{title}”",
     "deleted": "已删除“{title}”",
-    "undo": "撤销"
+    "subsRemoved": "已删除移除的子任务的标记"
   },
   "settings": {
     "title": "设置",
@@ -157,7 +181,10 @@
       "sheet": "表单",
       "sheetHint": "用于拍照",
       "scan": "从照片",
-      "scanHint": "导入标记"
+      "scanHint": "导入标记",
+      "backup": "备份",
+      "backupHint": "{date}",
+      "backupHintNoDate": "恢复"
     },
     "hotkeys": {
       "title": "快捷键",
@@ -166,13 +193,20 @@
       "arrowLeft": "上个月",
       "arrowRight": "下个月",
       "t": "当前月份",
-      "escape": "关闭窗口"
+      "escape": "关闭窗口",
+      "undo": "撤销",
+      "redo": "重做"
     },
     "showWelcome": "使用说明"
   },
   "auth": {
     "login": "使用 Google 登录",
-    "logout": "退出登录"
+    "logout": "退出登录",
+    "loggingOut": "正在退出…",
+    "unsaved": "本设备上的更改尚未同步到云端。现在退出的话，这些更改将从本设备删除。",
+    "saveFile": "保存文件",
+    "logoutAnyway": "仍然退出",
+    "logoutFailed": "无法退出"
   },
   "duplicate": {
     "title": "将习惯转到{month}？",
@@ -203,7 +237,9 @@
     "summary": "当前习惯：{tasks} · 月份：{months}",
     "changed": "修改于 {date}",
     "keptLocal": "已用此设备的数据更新云端",
-    "loadedCloud": "已从云端加载数据"
+    "loadedCloud": "已从云端加载数据",
+    "postponed": "未选择版本，同步已暂停。稍后可在同步状态中选择。",
+    "invalid": "云端数据已损坏，无法加载"
   },
   "update": {
     "message": "应用有新版本",
@@ -211,7 +247,56 @@
   },
   "toast": {
     "exported": "文件 {name} 已保存",
-    "signedIn": "已登录"
+    "signedIn": "已登录",
+    "signedOut": "已退出"
   },
-  "taskLimit": "已达上限：每月 {max} 个习惯"
+  "taskLimit": "已达上限：每月 {max} 个习惯",
+  "history": {
+    "undo": "撤销",
+    "redo": "重做",
+    "undoHint": "撤销（{key}）",
+    "redoHint": "重做（{key}）",
+    "undone": "已撤销：{action}",
+    "redone": "已重做：{action}",
+    "gone": "此更改已无法撤销",
+    "dayChanged": "已更改所有习惯第 {day} 天的标记",
+    "action": {
+      "mark": "标记",
+      "day": "当天标记",
+      "scan": "照片标记",
+      "add": "新习惯",
+      "edit": "编辑习惯",
+      "move": "习惯顺序",
+      "delete": "删除习惯",
+      "duplicate": "迁移习惯",
+      "import": "导入",
+      "cloud": "从云端加载"
+    }
+  },
+  "importSheet": {
+    "title": "导入数据",
+    "titleBackup": "恢复备份",
+    "summary": "月份：{months} · 习惯：{tasks} · {from} – {to}",
+    "truncated": "超过 {max} 个字符的名称将被截短：{count}",
+    "merge": "合并",
+    "mergeHint": "文件中的月份会添加到当前数据。",
+    "replace": "全部替换",
+    "replaceHint": "当前所有数据将被文件替换。",
+    "settingsHint": "文件中的设置也会被应用。",
+    "overlap": "这些月份在此处和文件中都有。保留哪个版本？",
+    "keepCurrent": "当前",
+    "takeFile": "文件",
+    "safety": "导入前会保存当前数据的备份，并且导入可以撤销。",
+    "confirm": "导入",
+    "confirmReplace": "替换",
+    "restored": "备份已恢复"
+  },
+  "backup": {
+    "invalid": "无法读取备份",
+    "download": "下载"
+  },
+  "storage": {
+    "quota": "浏览器存储已满，更改未保存在本设备上。请将数据导出为文件。",
+    "failed": "无法在本设备上保存数据。请将数据导出为文件。"
+  }
 }

@@ -1,12 +1,14 @@
 <script setup>
-  import { computed } from 'vue';
+  import { ref, computed } from 'vue';
   import { useHabitStore } from '@/stores/habitStore';
   import { useModalStore } from '@/stores/modalStore';
   import { useHabitUtils } from '@/composables/useHabitUtils';
   import { useModals } from '@/composables/useModals';
   import { useI18n } from 'vue-i18n';
+  import { resolveLang } from '@/i18n';
   import { X } from 'lucide-vue-next';
   import Sheet from '@/components/Sheet.vue';
+  import SyncStatus from '@/components/SyncStatus.vue';
 
   const emit = defineEmits([
     /** Запрос импорта */
@@ -19,7 +21,7 @@
 
   const store = useHabitStore();
   const modalStore = useModalStore();
-  const { isDesktop } = useHabitUtils();
+  const { isDesktop, modKey } = useHabitUtils();
   const { t } = useI18n();
   const { showWelcome } = useModals(t);
 
@@ -57,9 +59,55 @@
   };
 
   const exportData = () => {
-    store.exportData();
-    modalStore.showToast(t('toast.exported', { name: 'habit_data.json' }));
+    const name = store.exportData();
+    modalStore.showToast(t('toast.exported', { name }));
   };
+
+  /** С какой доли лимита облачного документа показывать предупреждение */
+  const CLOUD_USAGE_WARNING = 0.8;
+  const cloudUsagePct = computed(() => Math.round(store.cloudUsage * 100));
+
+  /** Выход ждёт записи в облако; если она не подтвердилась, спрашиваем, что делать */
+  const loggingOut = ref(false);
+  const logoutBlocked = ref(false);
+
+  const logout = async (force = false) => {
+    loggingOut.value = true;
+    try {
+      const done = await store.logout({ force });
+      logoutBlocked.value = !done;
+      if (done) modalStore.showToast(t('toast.signedOut'));
+    } catch (error) {
+      console.error(error);
+      modalStore.showToast(t('auth.logoutFailed'));
+    } finally {
+      loggingOut.value = false;
+    }
+  };
+
+  /** Резервная копия открывается в окне импорта; нечитаемую можно только скачать */
+  const restoreBackup = () => {
+    const error = store.readBackup();
+    if (error) {
+      modalStore.showToast(t(error), {
+        actionText: t('backup.download'),
+        onAction: () => store.downloadBackup(),
+      });
+      return;
+    }
+    modalStore.replaceModal('import');
+  };
+
+  const backupHint = computed(() => {
+    if (!store.backupAt) return t('settings.data.backupHintNoDate');
+    const date = new Date(store.backupAt).toLocaleString(resolveLang(store.lang), {
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    return t('settings.data.backupHint', { date });
+  });
 
   /** Системный диалог файла или печати открывается после закрытия окна настроек */
   const runAndClose = event => {
@@ -86,6 +134,9 @@
       run: () => runAndClose('scanPhoto'),
       disabled: store.tasks.length === 0,
     },
+    ...(store.backupAt === null
+      ? []
+      : [{ title: t('settings.data.backup'), hint: backupHint.value, run: restoreBackup }]),
   ]);
 
   const hotkeys = computed(() => [
@@ -94,6 +145,8 @@
     ['←', t('settings.hotkeys.arrowLeft')],
     ['→', t('settings.hotkeys.arrowRight')],
     ['T', t('settings.hotkeys.t')],
+    [`${modKey}+Z`, t('settings.hotkeys.undo')],
+    [`${modKey}+Shift+Z`, t('settings.hotkeys.redo')],
     ['Esc', t('settings.hotkeys.escape')],
   ]);
 </script>
@@ -117,33 +170,61 @@
         <h3 class="text-muted text-xs font-semibold tracking-wider uppercase">
           {{ t('settings.account.title') }}
         </h3>
-        <div
-          v-if="store.user"
-          class="border-line flex items-center gap-3 rounded-[14px] border p-3"
-        >
-          <span
-            class="bg-soft flex size-10 shrink-0 items-center justify-center rounded-full font-bold"
-          >
-            {{ userInitial }}
-          </span>
-          <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span class="truncate text-[15px] font-semibold">
-              {{ store.user.email || store.user.displayName }}
+        <div v-if="store.user" class="border-line flex flex-col gap-3 rounded-[14px] border p-3">
+          <div class="flex items-center gap-3">
+            <span
+              class="bg-soft flex size-10 shrink-0 items-center justify-center self-start rounded-full font-bold"
+            >
+              {{ userInitial }}
             </span>
-            <span class="text-muted flex items-center gap-1.5 text-xs">
-              <span
-                class="size-[7px] rounded-full"
-                :class="store.isAuthReady ? 'bg-ok' : 'bg-line2'"
-              ></span>
-              {{ store.isAuthReady ? t('sync.synced') : t('sync.waiting') }}
-            </span>
+            <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span class="truncate text-[15px] font-semibold">
+                {{ store.user.email || store.user.displayName }}
+              </span>
+              <SyncStatus detailed />
+            </div>
+            <button
+              class="border-line enabled:hover:bg-soft h-9 shrink-0 self-start rounded-[10px] border px-3 text-[13px] disabled:opacity-50"
+              :disabled="loggingOut || logoutBlocked"
+              @click="logout()"
+            >
+              {{ loggingOut ? t('auth.loggingOut') : t('auth.logout') }}
+            </button>
           </div>
-          <button
-            class="border-line hover:bg-soft h-9 rounded-[10px] border px-3 text-[13px]"
-            @click="store.logout()"
+          <span
+            v-if="store.cloudUsage >= CLOUD_USAGE_WARNING"
+            class="text-danger text-xs leading-snug"
           >
-            {{ t('auth.logout') }}
-          </button>
+            {{ t('sync.usage', { pct: cloudUsagePct }) }}
+          </span>
+          <div
+            v-if="logoutBlocked"
+            class="border-danger flex flex-col gap-3 rounded-xl border-[1.5px] p-3"
+            role="alert"
+          >
+            <span class="text-sm leading-normal">{{ t('auth.unsaved') }}</span>
+            <div class="flex flex-wrap justify-end gap-2">
+              <button
+                class="border-line h-9 rounded-[10px] border px-3 text-[13px]"
+                @click="logoutBlocked = false"
+              >
+                {{ t('common.cancel') }}
+              </button>
+              <button
+                class="border-line h-9 rounded-[10px] border px-3 text-[13px]"
+                @click="exportData"
+              >
+                {{ t('auth.saveFile') }}
+              </button>
+              <button
+                class="bg-danger h-9 rounded-[10px] px-3 text-[13px] font-semibold text-white disabled:opacity-50"
+                :disabled="loggingOut"
+                @click="logout(true)"
+              >
+                {{ t('auth.logoutAnyway') }}
+              </button>
+            </div>
+          </div>
         </div>
         <div v-else class="border-line flex flex-col gap-2.5 rounded-[14px] border p-3.5">
           <span class="text-muted text-sm leading-normal">

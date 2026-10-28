@@ -4,6 +4,8 @@
   import { X } from 'lucide-vue-next';
   import MarkCircle from '@/components/MarkCircle.vue';
   import { useHabitStore } from '@/stores/habitStore';
+  import { useHabitUtils } from '@/composables/useHabitUtils';
+  import { useModals } from '@/composables/useModals';
   import { loadPhoto, scanSheet, matchScannedTasks, ScanError } from '@/utils/sheetScan';
 
   const props = defineProps({
@@ -17,7 +19,9 @@
   ]);
 
   const store = useHabitStore();
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
+  const { monthKeyLabel } = useHabitUtils();
+  const { toastWithUndo } = useModals(t);
 
   /** Этап: 'scanning' | 'error' | 'review' */
   const status = ref('scanning');
@@ -31,15 +35,6 @@
 
   const dayIndexes = computed(() => Array.from({ length: store.daysInMonth }, (_, i) => i));
 
-  /** Название месяца 'YYYY-MM' на языке интерфейса */
-  const formatMonth = key => {
-    const [year, month] = key.split('-').map(Number);
-    return new Date(year, month - 1, 1).toLocaleString(locale.value, {
-      month: 'long',
-      year: 'numeric',
-    });
-  };
-
   const showError = text => {
     errorText.value = text;
     status.value = 'error';
@@ -51,7 +46,7 @@
       photo = await loadPhoto(props.file);
       const scan = await scanSheet(photo.image, photo.readRegion);
       if (scan.month !== store.currentMonthKey) {
-        showError(t('scan.error.month', { month: formatMonth(scan.month) }));
+        showError(t('scan.error.month', { month: monthKeyLabel(scan.month) }));
         return;
       }
       const result = matchScannedTasks(scan, store.tasks);
@@ -127,6 +122,7 @@
       }))
     );
     emit('close');
+    toastWithUndo(t('scan.applied'));
   };
 </script>
 

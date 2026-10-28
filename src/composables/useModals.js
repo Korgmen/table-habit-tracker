@@ -1,5 +1,6 @@
-import { useHabitStore, MAX_TASKS } from '@/stores/habitStore';
+import { useHabitStore } from '@/stores/habitStore';
 import { useModalStore } from '@/stores/modalStore';
+import { MAX_TASKS } from '@/utils/archive';
 
 export function useModals(t) {
   const store = useHabitStore();
@@ -17,15 +18,37 @@ export function useModals(t) {
   /** Открывает окно привычки для правки */
   const openHabit = taskId => modalStore.showModal('habit', { taskId });
 
+  /** Тост о только что сделанном изменении с кнопкой, которая отменяет именно его */
+  const toastWithUndo = text => {
+    const id = store.lastChangeId;
+    modalStore.showToast(text, {
+      actionText: t('history.undo'),
+      onAction: () => {
+        if (!store.undoTo(id)) modalStore.showToast(t('history.gone'));
+      },
+    });
+  };
+
+  /** Отменяет последний шаг и предлагает вернуть его */
+  const undoLast = () => {
+    const label = store.undo();
+    if (!label) return;
+    modalStore.showToast(t('history.undone', { action: t(`history.action.${label}`) }), {
+      actionText: t('history.redo'),
+      onAction: redoLast,
+    });
+  };
+
+  /** Повторяет отменённый шаг */
+  const redoLast = () => {
+    const label = store.redo();
+    if (label) modalStore.showToast(t('history.redone', { action: t(`history.action.${label}`) }));
+  };
+
   /** Удаляет привычку и предлагает вернуть её из тоста */
   const deleteHabit = taskId => {
     const title = store.tasks.find(task => task.id === taskId)?.title;
-    const removed = store.deleteTask(taskId);
-    if (!removed) return;
-    modalStore.showToast(t('habit.deleted', { title }), {
-      actionText: t('habit.undo'),
-      onAction: () => store.restoreTask(removed),
-    });
+    if (store.deleteTask(taskId)) toastWithUndo(t('habit.deleted', { title }));
   };
 
   /** Показывает приветствие, если пользователь его ещё не видел */
@@ -50,6 +73,9 @@ export function useModals(t) {
   return {
     openNewHabit,
     openHabit,
+    toastWithUndo,
+    undoLast,
+    redoLast,
     deleteHabit,
     showWelcome,
     showUpdatePrompt,

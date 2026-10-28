@@ -3,6 +3,7 @@
   import { useHabitStore } from '@/stores/habitStore';
   import { useModalStore } from '@/stores/modalStore';
   import { useHabitUtils } from '@/composables/useHabitUtils';
+  import { useModals } from '@/composables/useModals';
   import { useI18n } from 'vue-i18n';
   import Sheet from '@/components/Sheet.vue';
 
@@ -10,6 +11,7 @@
   const modalStore = useModalStore();
   const { currentMonthLabel, realMonthLabel } = useHabitUtils();
   const { t } = useI18n();
+  const { toastWithUndo } = useModals(t);
 
   /** В текущем месяце уже есть привычки: они будут заменены */
   const replaces = computed(() => store.archive[store.realMonthKey]?.tasks?.length > 0);
@@ -20,7 +22,7 @@
     const month = realMonthLabel.value;
     store.duplicateToCurrent();
     close();
-    modalStore.showToast(t('duplicate.done', { month }));
+    toastWithUndo(t('duplicate.done', { month }));
   };
 </script>
 

@@ -10,7 +10,15 @@
   const store = useHabitStore();
   const { monthDays, isWeekStart, isWeekend, isFuture, todayDay, weekdayLabel } = useHabitUtils();
   const { t } = useI18n();
-  const { openNewHabit, openHabit } = useModals(t);
+  const { openNewHabit, openHabit, toastWithUndo } = useModals(t);
+
+  /** Отметка всего дня меняет много клеток сразу: тост предлагает отменить */
+  const markDay = (day, state) => {
+    if (isFuture(day)) return;
+    const before = store.lastChangeId;
+    store.toggleDay(day - 1, state);
+    if (store.lastChangeId !== before) toastWithUndo(t('history.dayChanged', { day }));
+  };
 
   /** Колонка дня: разделитель недели и подсветка сегодняшнего дня */
   const columnClass = day => [
@@ -49,8 +57,8 @@
           :disabled="isFuture(day) || store.tasks.length === 0"
           :title="isFuture(day) ? undefined : t('grid.dayHint')"
           :aria-label="t('mark.headerDay', { day })"
-          @click="store.toggleDay(day - 1, true)"
-          @contextmenu.prevent="!isFuture(day) && store.toggleDay(day - 1, false)"
+          @click="markDay(day, true)"
+          @contextmenu.prevent="markDay(day, false)"
         >
           <span class="text-muted text-[10px]">{{ weekdayLabel(day) }}</span>
           <span
@@ -67,11 +75,11 @@
 
       <!-- Строки привычек -->
       <VueDraggableNext
-        v-model="store.tasks"
+        :model-value="store.tasks"
         item-key="id"
         handle=".drag-handle"
         ghost-class="opacity-40"
-        @end="store.saveState"
+        @update:model-value="store.reorderTasks"
       >
         <div v-for="task in store.tasks" :key="task.id" class="border-line flex border-b">
           <div

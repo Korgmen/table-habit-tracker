@@ -12,7 +12,8 @@
       "month": "Esta hoja es de {month}. Abre ese mes e inténtalo de nuevo.",
       "noTasks": "Ninguna tarea de esta hoja existe en este mes. Vuelve a imprimir la hoja.",
       "failed": "No se pudo procesar la foto."
-    }
+    },
+    "applied": "Marcas de la foto transferidas"
   },
   "mark": {
     "cell": "{title}, día {day}, subtarea {subtask}: {state}",
@@ -26,7 +27,9 @@
     "invalid": "El archivo no contiene datos válidos del rastreador",
     "error": "No se pudo importar el archivo",
     "done": "Datos importados",
-    "other": "Elegir otro"
+    "other": "Elegir otro",
+    "newer": "El archivo se creó con una versión más reciente de la app. Actualiza la app e inténtalo de nuevo.",
+    "empty": "El archivo no tiene hábitos"
   },
   "common": {
     "add": "Añadir",
@@ -47,8 +50,29 @@
     "today": "Hoy"
   },
   "sync": {
-    "synced": "Sincronizado",
-    "waiting": "Sincronizando…"
+    "state": {
+      "off": "Sin sesión",
+      "connecting": "Conectando…",
+      "conflict": "Elige la versión",
+      "pending": "Guardando…",
+      "saving": "Guardando…",
+      "synced": "Sincronizado",
+      "offline": "Sin conexión",
+      "error": "Error de sincronización"
+    },
+    "reason": {
+      "offline": "Sin conexión. Los cambios se guardan en este dispositivo y se sincronizan al volver la red.",
+      "conflict": "Los datos de este dispositivo y de la nube difieren. La sincronización espera tu elección.",
+      "permissionDenied": "Sin acceso a los datos en la nube. Vuelve a iniciar sesión.",
+      "unauthenticated": "La sesión ha caducado. Vuelve a iniciar sesión.",
+      "resourceExhausted": "Se superó la cuota de la nube. Se reintentará más tarde.",
+      "tooLarge": "Demasiados datos para la nube (más de 1 MB). Se guardan en este dispositivo, expórtalos a un archivo.",
+      "unknown": "No se pudo conectar con la nube. Los datos se guardan en este dispositivo, reintentando."
+    },
+    "choose": "Elegir",
+    "retry": "Reintentar",
+    "usage": "El almacenamiento en la nube está al {pct}% (límite 1 MB).",
+    "failed": "Falló la sincronización con la nube. Los datos se guardaron en este dispositivo."
   },
   "header": {
     "newHabit": "Hábito",
@@ -108,11 +132,11 @@
     "order": "Posición en la lista",
     "up": "Subir",
     "down": "Bajar",
-    "deleteConfirm": "¿Eliminar «{title}» y todas sus marcas de {month}? No se podrá deshacer.",
+    "deleteConfirm": "¿Eliminar «{title}» y todas sus marcas de {month}?",
     "limitLine": "{count} de {max} hábitos este mes",
     "added": "Hábito «{title}» añadido",
     "deleted": "«{title}» eliminado",
-    "undo": "Deshacer"
+    "subsRemoved": "Se eliminaron las marcas de las subtareas quitadas"
   },
   "settings": {
     "title": "Configuración",
@@ -157,7 +181,10 @@
       "sheet": "Hoja",
       "sheetHint": "para foto",
       "scan": "Desde foto",
-      "scanHint": "pasar marcas"
+      "scanHint": "pasar marcas",
+      "backup": "Copia",
+      "backupHint": "del {date}",
+      "backupHintNoDate": "restaurar"
     },
     "hotkeys": {
       "title": "Atajos de teclado",
@@ -166,13 +193,20 @@
       "arrowLeft": "Mes anterior",
       "arrowRight": "Mes siguiente",
       "t": "Mes actual",
-      "escape": "Cerrar ventana"
+      "escape": "Cerrar ventana",
+      "undo": "Deshacer",
+      "redo": "Rehacer"
     },
     "showWelcome": "Cómo funciona"
   },
   "auth": {
     "login": "Iniciar sesión con Google",
-    "logout": "Cerrar sesión"
+    "logout": "Cerrar sesión",
+    "loggingOut": "Cerrando sesión…",
+    "unsaved": "Los cambios de este dispositivo no llegaron a la nube. Si cierras sesión ahora, se eliminarán de este dispositivo.",
+    "saveFile": "Guardar archivo",
+    "logoutAnyway": "Cerrar sesión igualmente",
+    "logoutFailed": "No se pudo cerrar la sesión"
   },
   "duplicate": {
     "title": "¿Pasar los hábitos a {month}?",
@@ -203,7 +237,9 @@
     "summary": "Hábitos ahora: {tasks} · meses: {months}",
     "changed": "modificado {date}",
     "keptLocal": "La nube se actualizó con los datos de este dispositivo",
-    "loadedCloud": "Datos cargados desde la nube"
+    "loadedCloud": "Datos cargados desde la nube",
+    "postponed": "No elegiste versión, la sincronización está en pausa. Puedes elegir luego desde el estado de sincronización.",
+    "invalid": "Los datos de la nube están dañados y no se pueden cargar"
   },
   "update": {
     "message": "Hay una nueva versión de la aplicación",
@@ -211,7 +247,56 @@
   },
   "toast": {
     "exported": "Archivo {name} guardado",
-    "signedIn": "Sesión iniciada"
+    "signedIn": "Sesión iniciada",
+    "signedOut": "Sesión cerrada"
   },
-  "taskLimit": "Límite alcanzado: {max} hábitos al mes"
+  "taskLimit": "Límite alcanzado: {max} hábitos al mes",
+  "history": {
+    "undo": "Deshacer",
+    "redo": "Rehacer",
+    "undoHint": "Deshacer ({key})",
+    "redoHint": "Rehacer ({key})",
+    "undone": "Deshecho: {action}",
+    "redone": "Rehecho: {action}",
+    "gone": "Este cambio ya no se puede deshacer",
+    "dayChanged": "Día {day} cambiado en todos los hábitos",
+    "action": {
+      "mark": "marca",
+      "day": "marcas del día",
+      "scan": "marcas desde foto",
+      "add": "nuevo hábito",
+      "edit": "edición del hábito",
+      "move": "orden de hábitos",
+      "delete": "eliminación del hábito",
+      "duplicate": "traslado de hábitos",
+      "import": "importación",
+      "cloud": "carga desde la nube"
+    }
+  },
+  "importSheet": {
+    "title": "Importar datos",
+    "titleBackup": "Restaurar copia",
+    "summary": "Meses: {months} · hábitos: {tasks} · {from} – {to}",
+    "truncated": "Los nombres de más de {max} caracteres se acortarán: {count}",
+    "merge": "Combinar",
+    "mergeHint": "Los meses del archivo se añaden a los datos actuales.",
+    "replace": "Reemplazar todo",
+    "replaceHint": "Todos los datos actuales se reemplazan por el archivo.",
+    "settingsHint": "También se aplican los ajustes del archivo.",
+    "overlap": "Estos meses están aquí y en el archivo. ¿Qué versión conservar?",
+    "keepCurrent": "Actual",
+    "takeFile": "Del archivo",
+    "safety": "Antes se guarda una copia de los datos actuales, y la importación se puede deshacer.",
+    "confirm": "Importar",
+    "confirmReplace": "Reemplazar",
+    "restored": "Copia restaurada"
+  },
+  "backup": {
+    "invalid": "No se puede leer la copia de seguridad",
+    "download": "Descargar"
+  },
+  "storage": {
+    "quota": "El almacenamiento del navegador está lleno, los cambios no se guardan en este dispositivo. Exporta tus datos a un archivo.",
+    "failed": "No se pudieron guardar los datos en este dispositivo. Expórtalos a un archivo."
+  }
 }

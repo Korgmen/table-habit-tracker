@@ -3,6 +3,7 @@
   import { useHabitStore } from '@/stores/habitStore';
   import { useModalStore } from '@/stores/modalStore';
   import { useHabitUtils } from '@/composables/useHabitUtils';
+  import { useModals } from '@/composables/useModals';
   import { useI18n } from 'vue-i18n';
   import { resolveLang } from '@/i18n';
   import Sheet from '@/components/Sheet.vue';
@@ -11,6 +12,7 @@
   const modalStore = useModalStore();
   const { realMonthLabel } = useHabitUtils();
   const { t } = useI18n();
+  const { toastWithUndo } = useModals(t);
 
   /** Сколько месяцев с привычками в архиве и привычек в текущем месяце */
   const summary = archive => {
@@ -19,8 +21,13 @@
     return t('conflict.summary', { months, tasks, month: realMonthLabel.value });
   };
 
+  /** Облачный архив не прошёл проверку: загрузить его нельзя, можно только перезаписать */
+  const cloudInvalid = computed(() => !!store.cloudConflict?.invalid);
+
   const localSummary = computed(() => summary(store.archive));
-  const cloudSummary = computed(() => summary(store.cloudConflict?.archive));
+  const cloudSummary = computed(() =>
+    cloudInvalid.value ? t('conflict.invalid') : summary(store.cloudConflict?.archive)
+  );
   const cloudDate = computed(() => {
     const updatedAt = store.cloudConflict?.updatedAt;
     if (!updatedAt) return '';
@@ -35,11 +42,15 @@
   const resolve = keepLocal => {
     store.resolveCloudConflict(keepLocal);
     modalStore.closeModal();
-    modalStore.showToast(t(keepLocal ? 'conflict.keptLocal' : 'conflict.loadedCloud'));
+    if (keepLocal) modalStore.showToast(t('conflict.keptLocal'));
+    else toastWithUndo(t('conflict.loadedCloud'));
   };
 
-  /** Закрытие без выбора оставляет синхронизацию выключенной до следующего входа */
-  const dismiss = () => modalStore.closeModal();
+  /** Закрытие без выбора откладывает решение: статус синхронизации предлагает вернуться к нему */
+  const dismiss = () => {
+    modalStore.closeModal();
+    if (store.cloudConflict) modalStore.showToast(t('conflict.postponed'));
+  };
 </script>
 
 <template>
@@ -62,14 +73,17 @@
         <span class="text-[13px] font-semibold">{{ t('conflict.keep') }}</span>
       </button>
       <button
-        class="border-line2 hover:bg-soft flex items-center gap-3 rounded-[14px] border p-4 text-start"
+        class="border-line2 enabled:hover:bg-soft flex items-center gap-3 rounded-[14px] border p-4 text-start disabled:opacity-50"
+        :disabled="cloudInvalid"
         @click="resolve(false)"
       >
         <span class="flex flex-1 flex-col gap-[3px]">
           <span class="text-[15px] font-semibold">{{ t('conflict.cloud') }}</span>
           <span class="text-muted text-[13px]">
             {{ cloudSummary }}
-            <template v-if="cloudDate">· {{ t('conflict.changed', { date: cloudDate }) }}</template>
+            <template v-if="cloudDate && !cloudInvalid">
+              · {{ t('conflict.changed', { date: cloudDate }) }}
+            </template>
           </span>
         </span>
         <span class="text-[13px] font-semibold">{{ t('conflict.load') }}</span>

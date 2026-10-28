@@ -6,7 +6,7 @@
   import { useModals } from '@/composables/useModals';
   import { useI18n } from 'vue-i18n';
   import { resolveLang } from '@/i18n';
-  import { Ellipsis, Plus } from 'lucide-vue-next';
+  import { Ellipsis, Plus, Undo2, Redo2 } from 'lucide-vue-next';
   import MonthNav from '@/components/MonthNav.vue';
   import ArchiveBanner from '@/components/ArchiveBanner.vue';
   import EmptyState from '@/components/EmptyState.vue';
@@ -17,7 +17,7 @@
   const { monthDays, isFuture, todayDay, isCurrentMonth, weekdayLabel, currentMonthLabel } =
     useHabitUtils();
   const { t } = useI18n();
-  const { openNewHabit, openHabit } = useModals(t);
+  const { openNewHabit, openHabit, undoLast, redoLast } = useModals(t);
 
   /** Выбранный день: по умолчанию сегодня или последний день архивного месяца */
   const selected = ref(store.today);
@@ -157,8 +157,8 @@
 
       <!-- Отметки за выбранный день -->
       <div class="flex-1 overflow-auto">
-        <div class="flex items-end justify-between gap-3 px-4 pt-4 pb-2.5">
-          <div class="flex min-w-0 flex-col gap-0.5">
+        <div class="flex items-end gap-2 px-4 pt-4 pb-2.5">
+          <div class="flex min-w-0 flex-1 flex-col gap-0.5">
             <span class="text-[17px] font-semibold">{{ dayTitle }}</span>
             <span class="text-muted text-[13px]">
               {{
@@ -169,6 +169,25 @@
                 })
               }}
             </span>
+          </div>
+          <!-- Отмена и повтор: в шапке телефона нет места рядом с месяцем -->
+          <div class="flex shrink-0 items-center self-center">
+            <button
+              class="disabled:text-line2 flex size-10 items-center justify-center"
+              :disabled="!store.canUndo"
+              :aria-label="t('history.undo')"
+              @click="undoLast"
+            >
+              <Undo2 class="size-5 rtl:-scale-x-100" />
+            </button>
+            <button
+              class="disabled:text-line2 flex size-10 items-center justify-center"
+              :disabled="!store.canRedo"
+              :aria-label="t('history.redo')"
+              @click="redoLast"
+            >
+              <Redo2 class="size-5 rtl:-scale-x-100" />
+            </button>
           </div>
           <!-- flex убирает пробел между числами, который prettier оставляет переносом строки -->
           <span class="flex shrink-0 items-baseline text-[22px] font-bold tracking-tight">

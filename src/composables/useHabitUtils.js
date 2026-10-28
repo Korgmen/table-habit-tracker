@@ -19,6 +19,9 @@ const prefersDark = mediaRef('(prefers-color-scheme: dark)');
 /** Десктопная раскладка (таблица) или телефонная (лента дней) */
 const isDesktop = mediaRef('(min-width: 768px)');
 
+/** Модификатор горячих клавиш для подписей: ⌘ на Apple, Ctrl на остальных */
+const modKey = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? '⌘' : 'Ctrl';
+
 export function useHabitUtils() {
   const store = useHabitStore();
 
@@ -89,6 +92,15 @@ export function useHabitUtils() {
   /** Название месяца для середины фразы: регистр как принято в языке («апрель», «April») */
   const monthWord = date => date.toLocaleString(resolveLang(store.lang), { month: 'long' });
 
+  /** Месяц с годом по ключу 'YYYY-MM': «октябрь 2026 г.» */
+  const monthKeyLabel = key => {
+    const [year, month] = key.split('-').map(Number);
+    return new Date(year, month - 1, 1).toLocaleString(resolveLang(store.lang), {
+      month: 'long',
+      year: 'numeric',
+    });
+  };
+
   /** Открытый, предыдущий и реальный текущий месяц для текстов */
   const currentMonthLabel = computed(() => monthWord(store.currentDate));
   const prevMonthLabel = computed(() =>
@@ -98,6 +110,7 @@ export function useHabitUtils() {
 
   return {
     isDesktop,
+    modKey,
     weekdayOf,
     isWeekStart,
     isWeekend,
@@ -113,5 +126,6 @@ export function useHabitUtils() {
     currentMonthLabel,
     prevMonthLabel,
     realMonthLabel,
+    monthKeyLabel,
   };
 }

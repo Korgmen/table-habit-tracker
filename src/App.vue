@@ -17,6 +17,7 @@
   import DuplicateSheet from '@/components/DuplicateSheet.vue';
   import WelcomeSheet from '@/components/WelcomeSheet.vue';
   import ConflictSheet from '@/components/ConflictSheet.vue';
+  import ImportSheet from '@/components/ImportSheet.vue';
   import PaperSheet from '@/components/PaperSheet.vue';
   import PhotoImport from '@/components/PhotoImport.vue';
 
@@ -24,7 +25,8 @@
   const modalStore = useModalStore();
   const { currentTheme, canNextMonth, isDesktop, isCurrentMonth } = useHabitUtils();
   const { t } = useI18n();
-  const { openNewHabit, showWelcome, showUpdatePrompt, showCloudConflict } = useModals(t);
+  const { openNewHabit, showWelcome, showUpdatePrompt, showCloudConflict, undoLast, redoLast } =
+    useModals(t);
 
   /** Тема применяется к <html>, чтобы её видели и окна, вынесенные в body */
   watchEffect(() => {
@@ -39,12 +41,33 @@
     }
   );
 
+  /** Сбой облака сообщается один раз при появлении ошибки, повторы видны в статусе */
+  watch(
+    () => store.syncError,
+    (code, previous) => {
+      if (code && !previous) modalStore.showToast(t('sync.failed'));
+    }
+  );
+
+  /** Браузер отказал в записи: данные живут только в памяти вкладки */
+  watch(
+    () => store.localSaveError,
+    error => {
+      if (!error) return;
+      modalStore.showToast(t(error === 'quota' ? 'storage.quota' : 'storage.failed'), {
+        actionText: t('settings.data.export'),
+        onAction: () => modalStore.showToast(t('toast.exported', { name: store.exportData() })),
+      });
+    }
+  );
+
   /** Окна по имени из modalStore */
   const sheets = {
     habit: HabitSheet,
     duplicate: DuplicateSheet,
     welcome: WelcomeSheet,
     conflict: ConflictSheet,
+    import: ImportSheet,
   };
 
   /** Ссылка на скрытый input для импорта файла */
@@ -65,6 +88,16 @@
       return;
     }
     if (['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)) return;
+
+    /** Ctrl/⌘+Z – отмена, Ctrl/⌘+Shift+Z и Ctrl+Y – повтор */
+    if ((event.metaKey || event.ctrlKey) && !event.altKey) {
+      const redo = event.code === 'KeyY' || (event.code === 'KeyZ' && event.shiftKey);
+      if (event.code !== 'KeyZ' && !redo) return;
+      event.preventDefault();
+      if (redo) redoLast();
+      else undoLast();
+      return;
+    }
     if (event.metaKey || event.ctrlKey || event.altKey) return;
 
     const keyActions = {
@@ -89,11 +122,11 @@
     const file = event.target.files[0];
     event.target.value = '';
     if (!file) return;
-    const error = await store.importData(file);
+    const error = await store.readImportFile(file);
     if (error) {
       modalStore.showToast(t(error), { actionText: t('import.other'), onAction: triggerImport });
     } else {
-      modalStore.showToast(t('import.done'));
+      modalStore.showModal('import');
     }
   };
 
@@ -116,11 +149,22 @@
     event.target.value = '';
   };
 
-  /** Свёрнутое приложение дописывает отложенную запись в облако, вернувшееся сверяет дату */
+  /** Свёрнутое приложение дописывает отложенные записи, вернувшееся сверяет дату */
   const handleVisibilityChange = () => {
-    if (document.visibilityState === 'hidden') store.flushCloudSave();
-    else store.syncRealDate();
+    if (document.visibilityState === 'hidden') {
+      store.flushLocalSave();
+      store.flushCloudSave();
+    } else {
+      store.syncRealDate();
+    }
   };
+
+  const handlePageHide = () => store.flushLocalSave();
+
+  /** Сеть вернулась: синхронизация продолжается сразу, без ожидания очередного повтора */
+  const handleOnline = () => store.retrySync();
+
+  const handleOffline = () => store.markOffline();
 
   /** Проверка смены дня, пока приложение открыто */
   let realDateTimer = null;
@@ -138,6 +182,9 @@
     window.addEventListener('keydown', handleKeydown);
     window.addEventListener('afterprint', handleAfterPrint);
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', handlePageHide);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
     realDateTimer = setInterval(() => store.syncRealDate(), 60 * 1000);
     /** Показывает приветствие при первом запуске */
     showWelcome();
@@ -147,6 +194,9 @@
     window.removeEventListener('keydown', handleKeydown);
     window.removeEventListener('afterprint', handleAfterPrint);
     document.removeEventListener('visibilitychange', handleVisibilityChange);
+    window.removeEventListener('pagehide', handlePageHide);
+    window.removeEventListener('online', handleOnline);
+    window.removeEventListener('offline', handleOffline);
     clearInterval(realDateTimer);
   });
 </script>

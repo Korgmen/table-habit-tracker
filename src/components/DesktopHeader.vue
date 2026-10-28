@@ -5,14 +5,15 @@
   import { useHabitUtils } from '@/composables/useHabitUtils';
   import { useModals } from '@/composables/useModals';
   import { useI18n } from 'vue-i18n';
-  import { Plus } from 'lucide-vue-next';
+  import { Plus, Undo2, Redo2 } from 'lucide-vue-next';
   import MonthNav from '@/components/MonthNav.vue';
+  import SyncStatus from '@/components/SyncStatus.vue';
 
   const store = useHabitStore();
   const modalStore = useModalStore();
-  const { isCurrentMonth, todayDay } = useHabitUtils();
+  const { isCurrentMonth, todayDay, modKey } = useHabitUtils();
   const { t } = useI18n();
-  const { openNewHabit } = useModals(t);
+  const { openNewHabit, undoLast, redoLast } = useModals(t);
 
   /** Выполнено отметок за сегодня из учитываемых (без пропусков) */
   const todayStats = computed(() => {
@@ -54,13 +55,27 @@
     <div class="flex-1"></div>
 
     <div class="hide-print flex items-center gap-2">
-      <span v-if="store.user" class="text-muted flex items-center gap-1.5 pe-1.5 text-[13px]">
-        <span
-          class="size-[7px] rounded-full"
-          :class="store.isAuthReady ? 'bg-ok' : 'bg-line2'"
-        ></span>
-        {{ store.isAuthReady ? t('sync.synced') : t('sync.waiting') }}
-      </span>
+      <SyncStatus v-if="store.user" class="pe-1.5" />
+      <div class="border-line bg-surface flex h-[38px] items-center rounded-[10px] border">
+        <button
+          class="enabled:hover:bg-soft disabled:text-line2 flex h-full w-9 items-center justify-center rounded-s-[10px]"
+          :disabled="!store.canUndo"
+          :aria-label="t('history.undo')"
+          :title="t('history.undoHint', { key: `${modKey}+Z` })"
+          @click="undoLast"
+        >
+          <Undo2 class="size-4 rtl:-scale-x-100" />
+        </button>
+        <button
+          class="enabled:hover:bg-soft disabled:text-line2 flex h-full w-9 items-center justify-center rounded-e-[10px]"
+          :disabled="!store.canRedo"
+          :aria-label="t('history.redo')"
+          :title="t('history.redoHint', { key: `${modKey}+Shift+Z` })"
+          @click="redoLast"
+        >
+          <Redo2 class="size-4 rtl:-scale-x-100" />
+        </button>
+      </div>
       <button
         class="border-line bg-surface hover:bg-soft h-[38px] rounded-[10px] border px-3.5 text-sm"
         :title="t('header.settingsHint')"

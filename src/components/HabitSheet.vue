@@ -1,6 +1,7 @@
 <script setup>
   import { ref, computed, watch } from 'vue';
-  import { useHabitStore, MAX_TASKS, MAX_SUBTASKS } from '@/stores/habitStore';
+  import { useHabitStore } from '@/stores/habitStore';
+  import { MAX_TASKS, MAX_SUBTASKS, MAX_TITLE } from '@/utils/archive';
   import { useModalStore } from '@/stores/modalStore';
   import { useHabitUtils } from '@/composables/useHabitUtils';
   import { useModals } from '@/composables/useModals';
@@ -26,7 +27,7 @@
     currentMonthLabel,
   } = useHabitUtils();
   const { t } = useI18n();
-  const { deleteHabit } = useModals(t);
+  const { deleteHabit, toastWithUndo } = useModals(t);
 
   const task = computed(() => store.tasks.find(item => item.id === props.taskId) || null);
   const isNew = props.taskId === null;
@@ -73,7 +74,9 @@
       }
       modalStore.showToast(t('habit.added', { title: draftTitle.value.trim() }));
     } else {
+      const removesMarks = draftSubs.value < task.value.subtasks.length;
       store.updateTask(props.taskId, draftTitle.value, draftSubs.value);
+      if (removesMarks) toastWithUndo(t('habit.subsRemoved'));
     }
     close();
   };
@@ -108,7 +111,7 @@
             v-model="draftTitle"
             :autofocus="isNew"
             :placeholder="t('habit.namePlaceholder')"
-            maxlength="60"
+            :maxlength="MAX_TITLE"
             class="border-line2 bg-bg focus:border-ink h-12 rounded-xl border-[1.5px] px-3.5 text-base outline-none"
           />
         </label>

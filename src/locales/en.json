@@ -12,7 +12,8 @@
       "month": "This sheet is for {month}. Open that month and try again.",
       "noTasks": "None of the tasks on this sheet exist in this month. Print the sheet again.",
       "failed": "Could not process the photo."
-    }
+    },
+    "applied": "Marks from the photo transferred"
   },
   "mark": {
     "cell": "{title}, day {day}, subtask {subtask}: {state}",
@@ -26,7 +27,9 @@
     "invalid": "The file does not contain valid tracker data",
     "error": "Failed to import the file",
     "done": "Data imported",
-    "other": "Choose another"
+    "other": "Choose another",
+    "newer": "The file was made by a newer version of the app. Update the app and try again.",
+    "empty": "The file has no habits"
   },
   "common": {
     "add": "Add",
@@ -47,8 +50,29 @@
     "today": "Today"
   },
   "sync": {
-    "synced": "Synced",
-    "waiting": "Syncing…"
+    "state": {
+      "off": "Not signed in",
+      "connecting": "Connecting…",
+      "conflict": "Choose data version",
+      "pending": "Saving…",
+      "saving": "Saving…",
+      "synced": "Synced",
+      "offline": "Offline",
+      "error": "Sync error"
+    },
+    "reason": {
+      "offline": "No connection. Changes are kept on this device and sync when the network is back.",
+      "conflict": "Data on this device and in the cloud differ. Sync is paused until you choose.",
+      "permissionDenied": "No access to cloud data. Try signing in again.",
+      "unauthenticated": "The session has expired. Sign in again.",
+      "resourceExhausted": "The cloud quota is exceeded. Retrying later.",
+      "tooLarge": "Too much data for the cloud (over 1 MB). Data is kept on this device, export it to a file.",
+      "unknown": "Could not reach the cloud. Data is kept on this device, retrying."
+    },
+    "choose": "Choose",
+    "retry": "Retry",
+    "usage": "Cloud storage is {pct}% full (limit 1 MB).",
+    "failed": "Cloud sync failed. Data is saved on this device."
   },
   "header": {
     "newHabit": "Habit",
@@ -108,11 +132,11 @@
     "order": "Position in list",
     "up": "Up",
     "down": "Down",
-    "deleteConfirm": "Delete “{title}” and all its marks for {month}? This can’t be undone.",
+    "deleteConfirm": "Delete “{title}” and all its marks for {month}?",
     "limitLine": "{count} of {max} habits this month",
     "added": "Habit “{title}” added",
     "deleted": "“{title}” deleted",
-    "undo": "Undo"
+    "subsRemoved": "Extra subtasks deleted along with their marks"
   },
   "settings": {
     "title": "Settings",
@@ -157,7 +181,10 @@
       "sheet": "Sheet",
       "sheetHint": "for a photo",
       "scan": "From photo",
-      "scanHint": "transfer marks"
+      "scanHint": "transfer marks",
+      "backup": "Backup",
+      "backupHint": "from {date}",
+      "backupHintNoDate": "restore"
     },
     "hotkeys": {
       "title": "Keyboard shortcuts",
@@ -166,13 +193,20 @@
       "arrowLeft": "Previous month",
       "arrowRight": "Next month",
       "t": "Current month",
-      "escape": "Close window"
+      "escape": "Close window",
+      "undo": "Undo",
+      "redo": "Redo"
     },
     "showWelcome": "How it works"
   },
   "auth": {
     "login": "Sign in with Google",
-    "logout": "Sign out"
+    "logout": "Sign out",
+    "loggingOut": "Signing out…",
+    "unsaved": "Changes on this device have not reached the cloud. If you sign out now, they will be removed from this device.",
+    "saveFile": "Save file",
+    "logoutAnyway": "Sign out anyway",
+    "logoutFailed": "Could not sign out"
   },
   "duplicate": {
     "title": "Move habits to {month}?",
@@ -203,7 +237,9 @@
     "summary": "Habits now: {tasks} · months: {months}",
     "changed": "changed {date}",
     "keptLocal": "Cloud updated with data from this device",
-    "loadedCloud": "Data loaded from the cloud"
+    "loadedCloud": "Data loaded from the cloud",
+    "postponed": "Version not chosen, sync is paused. You can choose later from the sync status.",
+    "invalid": "Cloud data is damaged and cannot be loaded"
   },
   "update": {
     "message": "A new version of the app is available",
@@ -211,7 +247,56 @@
   },
   "toast": {
     "exported": "File {name} saved",
-    "signedIn": "Signed in"
+    "signedIn": "Signed in",
+    "signedOut": "Signed out"
   },
-  "taskLimit": "Limit reached: {max} habits per month"
+  "taskLimit": "Limit reached: {max} habits per month",
+  "history": {
+    "undo": "Undo",
+    "redo": "Redo",
+    "undoHint": "Undo ({key})",
+    "redoHint": "Redo ({key})",
+    "undone": "Undone: {action}",
+    "redone": "Redone: {action}",
+    "gone": "This change can no longer be undone",
+    "dayChanged": "Day {day} changed for all habits",
+    "action": {
+      "mark": "mark",
+      "day": "day marks",
+      "scan": "marks from photo",
+      "add": "new habit",
+      "edit": "habit edit",
+      "move": "habit order",
+      "delete": "habit deletion",
+      "duplicate": "habits moved to month",
+      "import": "import",
+      "cloud": "cloud data load"
+    }
+  },
+  "importSheet": {
+    "title": "Import data",
+    "titleBackup": "Restore backup",
+    "summary": "Months: {months} · habits: {tasks} · {from} – {to}",
+    "truncated": "Names longer than {max} characters will be shortened: {count}",
+    "merge": "Merge",
+    "mergeHint": "Months from the file are added to the current data.",
+    "replace": "Replace all",
+    "replaceHint": "All current data is replaced with the file.",
+    "settingsHint": "Settings from the file are applied too.",
+    "overlap": "These months exist both here and in the file. Which version to keep?",
+    "keepCurrent": "Current",
+    "takeFile": "From file",
+    "safety": "A backup of the current data is saved first, and the import can be undone.",
+    "confirm": "Import",
+    "confirmReplace": "Replace",
+    "restored": "Backup restored"
+  },
+  "backup": {
+    "invalid": "The backup cannot be read",
+    "download": "Download"
+  },
+  "storage": {
+    "quota": "Browser storage is full, changes are not saved on this device. Export your data to a file.",
+    "failed": "Could not save data on this device. Export your data to a file."
+  }
 }
