@@ -25,7 +25,7 @@
     <button
       v-if="store.tasks.length > 0"
       class="border-line2 bg-surface hover:bg-soft h-9 rounded-[10px] border px-3 text-[13px] font-semibold whitespace-nowrap md:h-[34px] md:px-3.5"
-      @click="modalStore.showModal('duplicate')"
+      @click="modalStore.showModal('duplicate', { from: store.currentMonthKey })"
     >
       {{
         compact

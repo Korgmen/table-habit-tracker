@@ -6,7 +6,8 @@
   import { useModals } from '@/composables/useModals';
   import { useI18n } from 'vue-i18n';
   import { resolveLang } from '@/i18n';
-  import { Ellipsis, Plus, Undo2, Redo2 } from 'lucide-vue-next';
+  import { taskStreak, dayTotals } from '@/utils/habitMath';
+  import { Ellipsis, Plus, Undo2, Redo2, NotebookPen } from 'lucide-vue-next';
   import MonthNav from '@/components/MonthNav.vue';
   import ArchiveBanner from '@/components/ArchiveBanner.vue';
   import EmptyState from '@/components/EmptyState.vue';
@@ -14,10 +15,17 @@
 
   const store = useHabitStore();
   const modalStore = useModalStore();
-  const { monthDays, isFuture, todayDay, isCurrentMonth, weekdayLabel, currentMonthLabel } =
-    useHabitUtils();
+  const {
+    monthDays,
+    isFuture,
+    todayDay,
+    isCurrentMonth,
+    weekdayLabel,
+    currentMonthLabel,
+    habitColorStyle,
+  } = useHabitUtils();
   const { t } = useI18n();
-  const { openNewHabit, openHabit, undoLast, redoLast } = useModals(t);
+  const { openNewHabit, openHabit, openNote, undoLast, redoLast } = useModals(t);
 
   /** Выбранный день: по умолчанию сегодня или последний день архивного месяца */
   const selected = ref(store.today);
@@ -63,37 +71,21 @@
     return label.charAt(0).toUpperCase() + label.slice(1);
   });
 
-  /** Выполнено из учитываемых отметок за выбранный день */
-  const dayStats = computed(() => {
-    let done = 0;
-    let total = 0;
-    store.tasks.forEach(task =>
-      task.subtasks.forEach(subtask => {
-        if (subtask.marks[index.value] !== false) total++;
-        if (subtask.marks[index.value] === true) done++;
-      })
-    );
-    return { done, total };
-  });
+  /** Выполнено из учитываемых отметок за выбранный день (без пропусков и пауз) */
+  const dayStats = computed(() => dayTotals(store.tasks, index.value));
 
-  /** Серия дней подряд до выбранного, когда выполнены все отметки; дни-пропуски не прерывают */
-  const streak = task => {
-    let count = 0;
-    for (let i = index.value; i >= 0; i--) {
-      const marks = task.subtasks.map(subtask => subtask.marks[i]);
-      if (marks.every(mark => mark === true)) count++;
-      else if (!marks.every(mark => mark === false)) break;
-    }
-    return count;
-  };
-
-  /** Подпись под названием привычки */
+  /** Подпись под названием привычки: пропуск, пауза, серия и процент */
   const meta = task => {
     const marks = task.subtasks.map(subtask => subtask.marks[index.value]);
-    if (marks.every(mark => mark === false)) return { skipped: true, text: t('list.skipped') };
+    if (marks.every(mark => mark === false)) return { muted: true, text: t('list.skipped') };
     const parts = [];
-    const days = streak(task);
-    if (days > 1) parts.push(t('list.streak', { count: days }));
+    if (task.paused) parts.push(t('list.paused'));
+    const streak = taskStreak(task, store.monthCtx, index.value);
+    if (streak.unit === 'week' && streak.count > 0) {
+      parts.push(t('list.streakWeeks', { count: streak.count }));
+    } else if (streak.count > 1) {
+      parts.push(t('list.streak', { count: streak.count }));
+    }
     parts.push(
       t('list.monthPct', {
         pct: Math.round(parseFloat(task.progress) || 0),
@@ -105,8 +97,11 @@
         t('list.ofSubs', { done: marks.filter(mark => mark === true).length, total: marks.length })
       );
     }
-    return { skipped: false, text: parts.join(' · ') };
+    return { muted: !!task.paused, text: parts.join(' · ') };
   };
+
+  /** Подписи строк по id привычки: пересчитываются при смене данных или выбранного дня */
+  const metas = computed(() => Object.fromEntries(store.tasks.map(task => [task.id, meta(task)])));
 
   const markState = mark =>
     t(mark === true ? 'mark.done' : mark === false ? 'mark.skip' : 'mark.notDone');
@@ -203,15 +198,37 @@
         >
           <button
             class="flex min-w-0 flex-1 flex-col justify-center gap-0.5 self-stretch py-2 ps-4 pe-2 text-start"
-            @click="openHabit(task.id)"
+            @click="openHabit(task.id, selected)"
           >
             <span
-              class="text-[15px] leading-tight font-medium break-words"
-              :class="meta(task).skipped ? 'text-muted' : 'text-ink'"
+              class="flex items-start gap-1.5 text-[15px] leading-tight font-medium break-words"
+              :class="metas[task.id].muted ? 'text-muted' : 'text-ink'"
             >
-              {{ task.title }}
+              <span
+                v-if="task.color"
+                class="mt-1.5 size-2 shrink-0 rounded-full bg-(--habit)"
+                :style="habitColorStyle(task)"
+              ></span>
+              <span class="min-w-0">
+                <template v-if="task.emoji">{{ task.emoji }}&nbsp;</template>
+                {{ task.title }}
+              </span>
             </span>
-            <span class="text-muted text-xs">{{ meta(task).text }}</span>
+            <span class="text-muted text-xs">{{ metas[task.id].text }}</span>
+            <span
+              v-if="task.notes?.[index]"
+              class="text-muted line-clamp-2 text-xs break-words italic"
+            >
+              {{ task.notes[index] }}
+            </span>
+          </button>
+          <button
+            class="flex size-11 shrink-0 items-center justify-center"
+            :class="task.notes?.[index] ? 'text-accent' : 'text-line2'"
+            :aria-label="t('note.open', { title: task.title, day: selected })"
+            @click="openNote(task.id, selected)"
+          >
+            <NotebookPen class="size-[18px]" />
           </button>
           <div class="flex max-w-44 flex-wrap justify-end">
             <button
@@ -228,7 +245,7 @@
               "
               @click="store.cycleMark(task.id, subtask.id, index)"
             >
-              <MarkCircle :mark="subtask.marks[index]" size="md" />
+              <MarkCircle :mark="subtask.marks[index]" size="md" :color="task.color" />
             </button>
           </div>
         </div>

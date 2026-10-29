@@ -18,26 +18,43 @@
   import WelcomeSheet from '@/components/WelcomeSheet.vue';
   import ConflictSheet from '@/components/ConflictSheet.vue';
   import ImportSheet from '@/components/ImportSheet.vue';
+  import NoteSheet from '@/components/NoteSheet.vue';
   import PaperSheet from '@/components/PaperSheet.vue';
   import PhotoImport from '@/components/PhotoImport.vue';
 
   const store = useHabitStore();
   const modalStore = useModalStore();
-  const { currentTheme, canNextMonth, isDesktop, isCurrentMonth } = useHabitUtils();
+  const { currentTheme, canNextMonth, isDesktop, isCurrentMonth, monthKeyLabel } = useHabitUtils();
   const { t } = useI18n();
-  const { openNewHabit, showWelcome, showUpdatePrompt, showCloudConflict, undoLast, redoLast } =
-    useModals(t);
+  const {
+    openNewHabit,
+    showWelcome,
+    showUpdatePrompt,
+    showCloudConflict,
+    undoLast,
+    redoLast,
+    toastWithUndo,
+  } = useModals(t);
 
   /** Тема применяется к <html>, чтобы её видели и окна, вынесенные в body */
   watchEffect(() => {
     document.documentElement.dataset.theme = currentTheme.value;
   });
 
-  /** Конфликт определяет стор после входа, диалог показывается здесь */
+  /** Конфликт определяет стор, диалог показывается здесь, когда конфликт появился */
   watch(
     () => store.cloudConflict,
-    conflict => {
-      if (conflict) showCloudConflict();
+    (conflict, previous) => {
+      if (conflict && !previous) showCloudConflict();
+    }
+  );
+
+  /** Автоперенос привычек в новый месяц сообщается тостом с отменой */
+  watch(
+    () => store.lastCarry,
+    carry => {
+      if (!carry || store.lastChangeId !== carry.id) return;
+      toastWithUndo(t('carry.auto', { count: carry.count, month: monthKeyLabel(carry.from) }));
     }
   );
 
@@ -68,6 +85,7 @@
     welcome: WelcomeSheet,
     conflict: ConflictSheet,
     import: ImportSheet,
+    note: NoteSheet,
   };
 
   /** Ссылка на скрытый input для импорта файла */
@@ -186,6 +204,8 @@
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     realDateTimer = setInterval(() => store.syncRealDate(), 60 * 1000);
+    /** Первый запуск в новом месяце переносит привычки прошлого */
+    store.autoCarryOver();
     /** Показывает приветствие при первом запуске */
     showWelcome();
   });

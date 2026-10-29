@@ -5,6 +5,7 @@
   import { useHabitUtils } from '@/composables/useHabitUtils';
   import { useModals } from '@/composables/useModals';
   import { useI18n } from 'vue-i18n';
+  import { dayTotals } from '@/utils/habitMath';
   import { Plus, Undo2, Redo2 } from 'lucide-vue-next';
   import MonthNav from '@/components/MonthNav.vue';
   import SyncStatus from '@/components/SyncStatus.vue';
@@ -15,19 +16,8 @@
   const { t } = useI18n();
   const { openNewHabit, undoLast, redoLast } = useModals(t);
 
-  /** Выполнено отметок за сегодня из учитываемых (без пропусков) */
-  const todayStats = computed(() => {
-    const index = todayDay.value - 1;
-    let done = 0;
-    let total = 0;
-    store.tasks.forEach(task =>
-      task.subtasks.forEach(subtask => {
-        if (subtask.marks[index] !== false) total++;
-        if (subtask.marks[index] === true) done++;
-      })
-    );
-    return { done, total };
-  });
+  /** Выполнено отметок за сегодня из учитываемых (без пропусков и пауз) */
+  const todayStats = computed(() => dayTotals(store.tasks, todayDay.value - 1));
 </script>
 
 <template>

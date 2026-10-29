@@ -1,20 +1,28 @@
 <script setup>
   import { computed } from 'vue';
   import { useHabitStore } from '@/stores/habitStore';
+  import { useModalStore } from '@/stores/modalStore';
   import { useHabitUtils } from '@/composables/useHabitUtils';
   import { useModals } from '@/composables/useModals';
   import { useI18n } from 'vue-i18n';
-  import { monthKey } from '@/utils/archive';
+  import { monthKey, lastFilledBefore } from '@/utils/archive';
   import { Plus } from 'lucide-vue-next';
 
   const store = useHabitStore();
-  const { isDesktop, prevMonthLabel } = useHabitUtils();
+  const modalStore = useModalStore();
+  const { isDesktop, isCurrentMonth, prevMonthLabel, monthKeyLabel } = useHabitUtils();
   const { t } = useI18n();
   const { openNewHabit } = useModals(t);
 
-  /** В прошлом месяце есть привычки: можно открыть его и перенести их */
+  /** Текущий месяц: привычки можно перенести из последнего месяца, где они были */
+  const carrySource = computed(() =>
+    isCurrentMonth.value ? lastFilledBefore(store.archive, store.currentMonthKey) : null
+  );
+
+  /** Архивный месяц: в прошлом месяце есть привычки, его можно открыть */
   const prevHasTasks = computed(
     () =>
+      !isCurrentMonth.value &&
       store.archive[monthKey(new Date(store.currentYear, store.currentMonth - 1, 1))]?.tasks
         ?.length > 0
   );
@@ -37,7 +45,14 @@
         {{ t('header.newHabitLong') }}
       </button>
       <button
-        v-if="prevHasTasks"
+        v-if="carrySource"
+        class="border-line bg-surface hover:bg-soft h-[42px] rounded-[10px] border px-[18px] text-sm"
+        @click="modalStore.showModal('duplicate', { from: carrySource })"
+      >
+        {{ t('empty.carry', { month: monthKeyLabel(carrySource) }) }}
+      </button>
+      <button
+        v-else-if="prevHasTasks"
         class="border-line bg-surface hover:bg-soft h-[42px] rounded-[10px] border px-[18px] text-sm"
         @click="store.prevMonth()"
       >

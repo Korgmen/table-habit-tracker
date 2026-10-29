@@ -1,8 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
-import { getDoc, setDoc } from 'firebase/firestore';
+import { getDoc, getDocs, onSnapshot } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useHabitStore } from '@/stores/habitStore';
+import { hashTasks, carryId } from '@/utils/archive';
+
+/** Пакетные записи Firestore: fs.commit(ops) получает операции { path, data, options } */
+const fs = vi.hoisted(() => ({ commit: null }));
 
 vi.mock('@/firebase', () => ({ auth: {}, provider: {}, db: {} }));
 vi.mock('firebase/auth', () => ({
@@ -11,9 +15,19 @@ vi.mock('firebase/auth', () => ({
   onAuthStateChanged: vi.fn(),
 }));
 vi.mock('firebase/firestore', () => ({
-  doc: vi.fn(() => ({})),
+  doc: vi.fn((_db, ...path) => ({ path: path.join('/') })),
+  collection: vi.fn((_db, ...path) => ({ path: path.join('/') })),
   getDoc: vi.fn(),
-  setDoc: vi.fn(() => Promise.resolve()),
+  getDocs: vi.fn(),
+  onSnapshot: vi.fn(() => () => {}),
+  writeBatch: vi.fn(() => {
+    const ops = [];
+    return {
+      set: (ref, data, options) =>
+        ops.push({ path: ref.path, data: JSON.parse(JSON.stringify(data)), options }),
+      commit: () => fs.commit(ops),
+    };
+  }),
 }));
 
 const task = (marks, id = 1) => ({
@@ -34,9 +48,10 @@ const createStore = (now, archive) => {
 beforeEach(() => {
   vi.useFakeTimers();
   localStorage.clear();
-  vi.mocked(setDoc).mockReset();
-  vi.mocked(setDoc).mockImplementation(() => Promise.resolve());
+  fs.commit = vi.fn(() => Promise.resolve());
   vi.mocked(getDoc).mockReset();
+  vi.mocked(getDocs).mockReset();
+  vi.mocked(onSnapshot).mockClear();
   vi.mocked(signOut).mockClear();
 });
 
@@ -45,6 +60,32 @@ const signIn = store => {
   store.user = { uid: 'u1' };
   store.isAuthReady = true;
 };
+
+/** Облако для connectCloud: корневой документ и документы месяцев */
+const setCloud = ({ root = null, months = {} } = {}) => {
+  vi.mocked(getDoc).mockResolvedValue({ exists: () => !!root, data: () => root });
+  vi.mocked(getDocs).mockResolvedValue({
+    forEach: callback =>
+      Object.entries(months).forEach(([id, data]) => callback({ id, data: () => data })),
+  });
+};
+
+/** Операции пакетной записи номер index */
+const commitOps = index => fs.commit.mock.calls[index][0];
+const monthOp = (ops, key) => ops.find(op => op.path === `users/u1/months/${key}`);
+const rootOp = ops => ops.find(op => op.path === 'users/u1');
+/** Операции всех записей подряд */
+const allOps = () => fs.commit.mock.calls.flatMap(([ops]) => ops);
+
+/** Изменение месяца из подписки onSnapshot */
+const monthChange = (key, data) => ({
+  type: 'modified',
+  doc: {
+    id: key,
+    data: () => data,
+    metadata: { hasPendingWrites: false, fromCache: false },
+  },
+});
 
 /** Файл импорта: в jsdom у File нет text(), нужен только этот интерфейс */
 const fileOf = data => {
@@ -268,49 +309,6 @@ describe('задачи', () => {
       expect.stringMatching(/^[0-9a-f-]{36}$/),
     ]);
   });
-
-  it('duplicateToCurrent копирует задачи архива в текущий месяц без отметок', () => {
-    const store = createStore(new Date(2026, 9, 4, 12), {
-      '2026-09': { tasks: [task(Array(30).fill(true))] },
-    });
-    store.prevMonth();
-    store.duplicateToCurrent();
-    expect(store.currentMonthKey).toBe('2026-10');
-    expect(store.tasks[0].title).toBe('Task');
-    expect(store.tasks[0].subtasks[0].marks).toEqual(Array(31).fill(null));
-    expect(store.archive['2026-09'].tasks[0].subtasks[0].marks[0]).toBe(true);
-  });
-});
-
-describe('синхронизация', () => {
-  it('серия отметок уходит в Firestore одной записью', async () => {
-    const store = createStore(new Date(2026, 9, 10, 12), {
-      '2026-10': { tasks: [task(Array(31).fill(null))] },
-    });
-    store.user = { uid: 'u1' };
-    store.isAuthReady = true;
-
-    store.updateMark(1, 2, 0, true);
-    store.updateMark(1, 2, 1, true);
-    store.updateHeaderDay(2, false);
-    expect(setDoc).not.toHaveBeenCalled();
-
-    await vi.advanceTimersByTimeAsync(1000);
-    expect(setDoc).toHaveBeenCalledTimes(1);
-  });
-
-  it('настройки из облака применяются только с допустимыми значениями', () => {
-    const store = createStore(new Date(2026, 9, 10, 12));
-    store.applyCloudData({
-      archive: {},
-      settings: { theme: 'dark', weekStart: 'friday', calculationMode: 'passedDays', user: 'x' },
-    });
-    expect(store.theme).toBe('dark');
-    expect(store.weekStart).toBe('monday');
-    expect(store.calculationMode).toBe('passedDays');
-    expect(store.user).toBe(null);
-    expect(localStorage.getItem('theme')).toBe('dark');
-  });
 });
 
 describe('syncRealDate', () => {
@@ -322,17 +320,6 @@ describe('syncRealDate', () => {
     vi.setSystemTime(new Date(2026, 9, 11, 0, 1));
     store.syncRealDate();
     expect(store.today).toBe(11);
-  });
-
-  it('при смене месяца переключается с реального месяца на новый', () => {
-    const store = createStore(new Date(2026, 9, 31, 23, 59), {
-      '2026-10': { tasks: [task(Array(31).fill(null))] },
-    });
-    vi.setSystemTime(new Date(2026, 10, 1, 0, 1));
-    store.syncRealDate();
-    expect(store.currentMonthKey).toBe('2026-11');
-    expect(store.tasks).toEqual([]);
-    expect(store.archive['2026-10'].tasks).toHaveLength(1);
   });
 
   it('прошлый месяц, открытый для просмотра, остаётся на месте', () => {
@@ -400,7 +387,7 @@ describe('история', () => {
       '2026-10': { tasks: [task(Array(31).fill(null), 7)] },
     });
     store.prevMonth();
-    store.duplicateToCurrent();
+    store.carryOver('2026-09');
     expect(store.currentMonthKey).toBe('2026-10');
     store.undo();
     expect(store.currentMonthKey).toBe('2026-09');
@@ -533,28 +520,285 @@ describe('localStorage', () => {
   });
 });
 
+describe('настройки привычки', () => {
+  it('addTask и updateTask сохраняют поля, undefined убирает поле, без изменений истории нет', () => {
+    const store = createStore(new Date(2026, 9, 4, 12));
+    store.addTask('A', 1, { color: 'blue', emoji: '📚', schedule: [1, 3], goal: undefined });
+    const [created] = store.tasks;
+    expect(created).toMatchObject({ color: 'blue', emoji: '📚', schedule: [1, 3] });
+    expect(created).not.toHaveProperty('goal');
+
+    const steps = store.undoStack.length;
+    store.updateTask(created.id, 'A', 1, { color: 'blue', emoji: '📚', schedule: [1, 3] });
+    expect(store.undoStack).toHaveLength(steps);
+
+    store.updateTask(created.id, 'A', 1, { color: undefined, schedule: undefined, goal: 2 });
+    expect(store.tasks[0]).toMatchObject({ emoji: '📚', goal: 2 });
+    expect(store.tasks[0]).not.toHaveProperty('color');
+    expect(store.tasks[0]).not.toHaveProperty('schedule');
+    store.undo();
+    expect(store.tasks[0]).toMatchObject({ color: 'blue', schedule: [1, 3] });
+  });
+
+  it('расписание и цель пересчитывают прогресс, начало недели тоже', () => {
+    /** 1–4 октября 2026: чт, пт, сб, вс */
+    const marks = [true, null, null, null, ...Array(27).fill(null)];
+    const store = createStore(new Date(2026, 9, 4, 12), { '2026-10': { tasks: [task(marks)] } });
+    store.setCalculationMode('passedDays');
+    expect(store.tasks[0].progress).toBe('25.0');
+
+    store.updateTask(1, 'Task', 1, { schedule: [4] });
+    expect(store.tasks[0].subtasks[0].marks.slice(0, 8)).toEqual([
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      null,
+    ]);
+    expect(store.tasks[0].progress).toBe('100.0');
+    store.undo();
+    expect(store.tasks[0].subtasks[0].marks[1]).toBe(null);
+    store.redo();
+
+    /** Недели с воскресенья: 1–3 октября – цель набрана, 2–3 закрыты пропуском;
+     *  4-е – новая неделя, цель 1/7 не набрана */
+    store.setWeekStart('sunday');
+    store.updateTask(1, 'Task', 1, { schedule: undefined, goal: 1 });
+    expect(store.tasks[0].subtasks[0].marks.slice(0, 4)).toEqual([true, false, false, null]);
+    expect(store.tasks[0].progress).toBe('50.0');
+    /** С понедельника 1–4 октября – одна неделя, её цель набрана */
+    store.setWeekStart('monday');
+    expect(store.tasks[0].progress).toBe('100.0');
+  });
+
+  it('цель недели набрана – пустые дни недели закрываются, перестала – открываются', () => {
+    /** 5–11 октября 2026 – неделя с понедельника */
+    const store = createStore(new Date(2026, 9, 10, 12), {
+      '2026-10': { tasks: [{ ...task(Array(31).fill(null)), goal: 2 }] },
+    });
+    const marks = () => store.tasks[0].subtasks[0].marks;
+    store.updateMark(1, 2, 4, true);
+    expect(marks().slice(4, 11)).toEqual([true, ...Array(6).fill(null)]);
+    store.updateMark(1, 2, 5, true);
+    expect(marks().slice(4, 11)).toEqual([true, true, false, false, false, false, false]);
+    expect(marks()[11]).toBe(null);
+
+    /** Снятый вручную пропуск в набранной неделе не возвращается */
+    store.cycleMark(1, 2, 6);
+    expect(marks()[6]).toBe(null);
+    store.updateMark(1, 2, 3, true);
+    expect(marks()[6]).toBe(null);
+
+    store.updateMark(1, 2, 5, null);
+    expect(marks().slice(4, 11)).toEqual([true, null, null, null, null, null, null]);
+    store.undo();
+    expect(marks().slice(4, 11)).toEqual([true, true, null, false, false, false, false]);
+  });
+
+  it('привычка на паузе не входит в общий процент, пауза отменяется', () => {
+    const store = createStore(new Date(2026, 9, 1, 12), {
+      '2026-10': {
+        tasks: [task([true, ...Array(30).fill(null)]), task(Array(31).fill(null), 5)],
+      },
+    });
+    store.setCalculationMode('passedDays');
+    expect(store.overallProgress).toBe('50.0');
+    store.togglePause(5);
+    expect(store.tasks[1].paused).toBe(true);
+    expect(store.overallProgress).toBe('100.0');
+    store.undo();
+    expect(store.tasks[1]).not.toHaveProperty('paused');
+  });
+});
+
+describe('заметки', () => {
+  it('ставятся до сегодня включительно, пустой текст удаляет, отменяются', () => {
+    const store = createStore(new Date(2026, 9, 4, 12), {
+      '2026-10': { tasks: [task(Array(31).fill(null))] },
+    });
+    expect(store.setNote(1, 3, '  Бег 5 км ')).toBe(true);
+    expect(store.tasks[0].notes).toEqual({ 3: 'Бег 5 км' });
+    expect(store.setNote(1, 4, 'завтра')).toBe(false);
+    expect(store.setNote(1, 0, 'x'.repeat(900))).toBe(true);
+    expect(store.tasks[0].notes[0]).toHaveLength(500);
+
+    store.setNote(1, 3, '');
+    expect(store.tasks[0].notes).toEqual({ 0: 'x'.repeat(500) });
+    store.setNote(1, 0, ' ');
+    expect(store.tasks[0]).not.toHaveProperty('notes');
+    store.undo();
+    store.undo();
+    expect(store.tasks[0].notes[3]).toBe('Бег 5 км');
+  });
+
+  it('заметки за дни, которых нет в месяце, убираются при подгонке', () => {
+    const store = createStore(new Date(2026, 1, 15, 12), {
+      '2026-02': { tasks: [{ ...task(Array(31).fill(null)), notes: { 1: 'a', 29: 'b' } }] },
+    });
+    store.adaptMarksToNewMonth();
+    expect(store.tasks[0].notes).toEqual({ 1: 'a' });
+  });
+});
+
+describe('перенос в новый месяц', () => {
+  const source = () => ({
+    ...task([true, ...Array(29).fill(false)], 1),
+    color: 'green',
+    schedule: [1, 2],
+    paused: true,
+    notes: { 0: 'x' },
+  });
+
+  it('автоперенос берёт последний месяц с привычками, id одинаковы на всех устройствах', () => {
+    const store = createStore(new Date(2026, 10, 1, 9), {
+      '2026-09': { tasks: [source()] },
+    });
+    store.autoCarryOver();
+    expect(store.tasks).toHaveLength(1);
+    expect(store.tasks[0]).toMatchObject({
+      id: carryId('2026-11', 1, null),
+      title: 'Task',
+      color: 'green',
+      schedule: [1, 2],
+      paused: true,
+    });
+    /** 1 ноября 2026 – воскресенье: расписание пн, вт, остальные дни – пропуски */
+    expect(store.tasks[0].subtasks[0]).toEqual({
+      id: carryId('2026-11', 1, 0),
+      marks: Array.from({ length: 30 }, (_, i) => ([1, 2].includes(i % 7) ? null : false)),
+    });
+    expect(store.tasks[0]).not.toHaveProperty('notes');
+    expect(store.lastCarry).toMatchObject({ from: '2026-09', count: 1 });
+
+    store.undo();
+    expect(store.tasks).toEqual([]);
+    store.autoCarryOver();
+    expect(store.tasks).toEqual([]);
+  });
+
+  it('автоперенос не срабатывает в архивном и уже открытом месяце', () => {
+    const store = createStore(new Date(2026, 10, 1, 9), {
+      '2026-10': { tasks: [source()] },
+      '2026-11': { tasks: [] },
+    });
+    store.autoCarryOver();
+    expect(store.tasks).toEqual([]);
+  });
+
+  it('смена месяца в открытом приложении переносит привычки', () => {
+    const store = createStore(new Date(2026, 9, 31, 23, 59), {
+      '2026-10': { tasks: [task(Array(31).fill(true))] },
+    });
+    vi.setSystemTime(new Date(2026, 10, 1, 0, 1));
+    store.syncRealDate();
+    expect(store.currentMonthKey).toBe('2026-11');
+    expect(store.tasks[0].subtasks[0].marks).toEqual(Array(30).fill(null));
+    expect(store.archive['2026-10'].tasks[0].subtasks[0].marks[0]).toBe(true);
+  });
+
+  it('ручной перенос: выбранные привычки, замена или добавление, лимит', () => {
+    const store = createStore(new Date(2026, 9, 4, 12), {
+      '2026-09': { tasks: [source(), task(Array(30).fill(null), 3)] },
+      '2026-10': { tasks: [task(Array(31).fill(null), 7)] },
+    });
+    expect(store.carryOver('2026-09', { taskIds: [3], replace: false })).toBe(true);
+    expect(store.currentMonthKey).toBe('2026-10');
+    expect(store.tasks.map(t => t.id)[0]).toBe(7);
+    expect(store.tasks).toHaveLength(2);
+
+    expect(store.carryOver('2026-09')).toBe(true);
+    expect(store.tasks).toHaveLength(2);
+    expect(store.tasks[0]).toMatchObject({ title: 'Task', color: 'green' });
+    expect(store.tasks[0].id).not.toBe(1);
+
+    store.archive['2026-09'].tasks = Array.from({ length: 19 }, (_, i) => task([], 100 + i * 2));
+    expect(store.carryOver('2026-09', { replace: false })).toBe(false);
+    expect(store.carryOver('2026-10')).toBe(false);
+  });
+});
+
+describe('экспорт CSV', () => {
+  it('сохраняет месяц или весь архив файлом с датой', () => {
+    const store = createStore(new Date(2026, 9, 4, 12), {
+      '2026-09': { tasks: [task(Array(30).fill(true))] },
+      '2026-10': { tasks: [task(Array(31).fill(null))] },
+    });
+    URL.createObjectURL = vi.fn(() => 'blob:x');
+    URL.revokeObjectURL = vi.fn();
+    const labels = { month: 'M', habit: 'H', mark: '#', progress: '%', notes: 'N' };
+    expect(store.exportCsv('month', labels)).toBe('habit_2026-10_2026-10-04.csv');
+    expect(store.exportCsv('all', labels)).toBe('habit_data_2026-10-04.csv');
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('облако', () => {
+  it('серия отметок уходит одной пакетной записью: месяц и корень', async () => {
+    const store = createStore(new Date(2026, 9, 10, 12), {
+      '2026-10': { tasks: [task(Array(31).fill(null))] },
+    });
+    signIn(store);
+
+    store.updateMark(1, 2, 0, true);
+    store.updateMark(1, 2, 1, true);
+    store.updateHeaderDay(2, false);
+    expect(fs.commit).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(fs.commit).toHaveBeenCalledTimes(1);
+    const ops = commitOps(0);
+    expect(monthOp(ops, '2026-10').data).toMatchObject({ revision: 1, base: 0 });
+    expect(monthOp(ops, '2026-10').data.tasks[0].subtasks[0].marks.slice(0, 3)).toEqual([
+      true,
+      true,
+      false,
+    ]);
+    expect(rootOp(ops)).toMatchObject({ data: { schemaVersion: 2 }, options: { merge: true } });
+  });
+
+  it('пишутся только изменённые месяцы, ревизия растёт от известной', async () => {
+    const store = createStore(new Date(2026, 9, 10, 12), {
+      '2026-09': { tasks: [task(Array(30).fill(true), 7)] },
+      '2026-10': { tasks: [task(Array(31).fill(null))] },
+    });
+    signIn(store);
+    await store.saveToCloud();
+    expect(commitOps(0).filter(op => op.path.includes('/months/'))).toHaveLength(2);
+
+    store.updateMark(1, 2, 0, true);
+    await vi.advanceTimersByTimeAsync(1000);
+    const ops = commitOps(1);
+    expect(ops.map(op => op.path)).toEqual(['users/u1/months/2026-10']);
+    expect(monthOp(ops, '2026-10').data).toMatchObject({ revision: 2, base: 1 });
+
+    store.updateMark(1, 2, 0, true);
+    await store.flushCloudSave();
+    expect(fs.commit).toHaveBeenCalledTimes(2);
+  });
+
   it('правки во время записи уходят следующей записью, а не параллельно', async () => {
     const store = createStore(new Date(2026, 9, 10, 12), {
       '2026-10': { tasks: [task(Array(31).fill(null))] },
     });
     signIn(store);
     let finish;
-    vi.mocked(setDoc).mockImplementationOnce(() => new Promise(resolve => (finish = resolve)));
+    fs.commit.mockImplementationOnce(() => new Promise(resolve => (finish = resolve)));
 
     store.updateMark(1, 2, 0, true);
     await vi.advanceTimersByTimeAsync(1000);
     expect(store.syncState).toBe('saving');
     store.updateMark(1, 2, 1, true);
     await vi.advanceTimersByTimeAsync(1000);
-    expect(setDoc).toHaveBeenCalledTimes(1);
+    expect(fs.commit).toHaveBeenCalledTimes(1);
 
     finish();
     await vi.advanceTimersByTimeAsync(0);
-    expect(setDoc).toHaveBeenCalledTimes(2);
-    expect(
-      vi.mocked(setDoc).mock.calls[1][1].archive['2026-10'].tasks[0].subtasks[0].marks[1]
-    ).toBe(true);
+    expect(fs.commit).toHaveBeenCalledTimes(2);
+    expect(monthOp(commitOps(1), '2026-10').data).toMatchObject({ revision: 2, base: 1 });
+    expect(monthOp(commitOps(1), '2026-10').data.tasks[0].subtasks[0].marks[1]).toBe(true);
     expect(store.syncState).toBe('synced');
   });
 
@@ -562,14 +806,14 @@ describe('облако', () => {
     const store = createStore(new Date(2026, 9, 10, 12));
     signIn(store);
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.mocked(setDoc).mockRejectedValueOnce(Object.assign(new Error('x'), { code: 'internal' }));
+    fs.commit.mockRejectedValueOnce(Object.assign(new Error('x'), { code: 'internal' }));
 
     expect(await store.saveToCloud()).toBe(false);
     expect(store.syncState).toBe('error');
     expect(store.syncError).toBe('internal');
 
     await vi.advanceTimersByTimeAsync(2000);
-    expect(setDoc).toHaveBeenCalledTimes(2);
+    expect(fs.commit).toHaveBeenCalledTimes(2);
     expect(store.syncState).toBe('synced');
     expect(store.syncError).toBe(null);
   });
@@ -578,73 +822,249 @@ describe('облако', () => {
     const store = createStore(new Date(2026, 9, 10, 12));
     signIn(store);
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.mocked(setDoc).mockRejectedValueOnce({ code: 'permission-denied' });
+    fs.commit.mockRejectedValueOnce({ code: 'permission-denied' });
     await store.saveToCloud();
     await vi.advanceTimersByTimeAsync(60000);
-    expect(setDoc).toHaveBeenCalledTimes(1);
+    expect(fs.commit).toHaveBeenCalledTimes(1);
     expect(store.syncError).toBe('permission-denied');
   });
 
-  it('слишком большой документ не отправляется', async () => {
-    const big = Array.from({ length: 20 }, (_, i) => ({
-      id: i,
-      title: 'x'.repeat(60),
-      progress: 0,
-      subtasks: Array.from({ length: 8 }, (_, k) => ({ id: k, marks: Array(31).fill(false) })),
-    }));
-    const archive = Object.fromEntries(
-      Array.from({ length: 30 }, (_, i) => [`${2000 + i}-01`, { tasks: big }])
-    );
-    const store = createStore(new Date(2026, 9, 10, 12), archive);
+  it('слишком большой документ месяца не отправляется', async () => {
+    const store = createStore(new Date(2026, 9, 10, 12), {
+      '2026-10': { tasks: [{ ...task(Array(31).fill(null)), title: 'x'.repeat(1100000) }] },
+    });
     signIn(store);
     vi.spyOn(console, 'error').mockImplementation(() => {});
     await store.saveToCloud();
-    expect(setDoc).not.toHaveBeenCalled();
+    expect(fs.commit).not.toHaveBeenCalled();
     expect(store.syncError).toBe('too-large');
-    expect(store.cloudUsage).toBeGreaterThan(1);
   });
 
-  it('ошибка чтения облака при входе повторяется, конфликт ждёт выбора', async () => {
+  it('новый пользователь: данные устройства уходят в облако, подписка включается', async () => {
     const store = createStore(new Date(2026, 9, 10, 12), {
       '2026-10': { tasks: [task(Array(31).fill(null))] },
     });
     store.user = { uid: 'u1' };
+    setCloud();
+    await store.connectCloud();
+
+    expect(store.isAuthReady).toBe(true);
+    expect(onSnapshot).toHaveBeenCalledTimes(2);
+    const ops = commitOps(0);
+    expect(monthOp(ops, '2026-10').data.revision).toBe(1);
+    expect(rootOp(ops).data.schemaVersion).toBe(2);
+    expect(store.syncState).toBe('synced');
+  });
+
+  it('миграция старого документа: месяцы пишутся в подколлекцию, поле archive не удаляется', async () => {
+    const store = createStore(new Date(2026, 9, 10, 12));
+    store.user = { uid: 'u1' };
+    const legacyTasks = [task([true, ...Array(30).fill(null)], 5)];
+    setCloud({
+      root: {
+        archive: { '2026-10': { tasks: legacyTasks }, '2026-09': { tasks: [task([], 9)] } },
+        settings: { theme: 'dark', weekStart: 'friday' },
+        updatedAt: 1,
+      },
+    });
+    await store.connectCloud();
+
+    expect(store.cloudConflict).toBe(null);
+    expect(store.tasks[0].id).toBe(5);
+    expect(store.theme).toBe('dark');
+    expect(store.weekStart).toBe('monday');
+    const ops = commitOps(0);
+    expect(monthOp(ops, '2026-10').data).toMatchObject({
+      revision: 1,
+      legacyHash: hashTasks(legacyTasks),
+      legacyRevision: 1,
+    });
+    expect(monthOp(ops, '2026-09')).toBeDefined();
+    expect(rootOp(ops).options).toEqual({ merge: true });
+    expect(rootOp(ops).data).not.toHaveProperty('archive');
+  });
+
+  it('при входе расходятся только месяцы, изменённые с обеих сторон', async () => {
+    const synced = [task(Array(31).fill(null))];
+    const store = createStore(new Date(2026, 9, 10, 12), {
+      '2026-08': { tasks: synced },
+      '2026-09': { tasks: synced },
+      '2026-10': { tasks: [task(Array(31).fill(true))] },
+    });
+    localStorage.setItem(
+      'habitSyncMeta',
+      JSON.stringify({
+        uid: 'u1',
+        months: Object.fromEntries(
+          ['2026-08', '2026-09', '2026-10'].map(key => [
+            key,
+            { revision: 2, hash: hashTasks(synced) },
+          ])
+        ),
+        settingsHash: null,
+        legacy: {},
+      })
+    );
+    store.user = { uid: 'u1' };
+    setCloud({
+      root: { schemaVersion: 2, settings: {} },
+      months: {
+        '2026-08': { tasks: [task(Array(31).fill(false), 5)], revision: 3, base: 2 },
+        '2026-09': { tasks: synced, revision: 2 },
+        '2026-10': { tasks: [task(Array(31).fill(false), 7)], revision: 5, base: 2 },
+      },
+    });
+    await store.connectCloud();
+
+    expect(store.archive['2026-08'].tasks[0].id).toBe(5);
+    expect(Object.keys(store.cloudConflict.months)).toEqual(['2026-10']);
+    expect(store.syncState).toBe('conflict');
+    expect(allOps().filter(op => op.path.includes('/months/'))).toEqual([]);
+
+    store.resolveCloudConflict({ '2026-10': 'local' });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(store.cloudConflict).toBe(null);
+    const month = monthOp(allOps(), '2026-10').data;
+    expect(month).toMatchObject({ revision: 6, base: 5 });
+    expect(month.tasks[0].subtasks[0].marks[0]).toBe(true);
+    expect(store.syncState).toBe('synced');
+  });
+
+  it('запись старого клиента после миграции вливается в месяцы', async () => {
+    const before = [task(Array(31).fill(null))];
+    const changed = [task([true, ...Array(30).fill(null)])];
+    const store = createStore(new Date(2026, 9, 10, 12), {
+      '2026-09': { tasks: before },
+      '2026-10': { tasks: before },
+    });
+    localStorage.setItem(
+      'habitSyncMeta',
+      JSON.stringify({
+        uid: 'u1',
+        months: {
+          '2026-09': { revision: 4, hash: hashTasks(before) },
+          '2026-10': { revision: 6, hash: hashTasks(before) },
+        },
+        settingsHash: null,
+        legacy: {},
+      })
+    );
+    store.user = { uid: 'u1' };
+    const legacyFields = { legacyHash: hashTasks(before), legacyRevision: 4 };
+    setCloud({
+      root: {
+        archive: { '2026-09': { tasks: changed }, '2026-10': { tasks: changed } },
+        settings: {},
+        updatedAt: 2,
+      },
+      months: {
+        '2026-09': { tasks: before, revision: 4, ...legacyFields },
+        '2026-10': { tasks: before, revision: 6, ...legacyFields },
+      },
+    });
+    await store.connectCloud();
+
+    expect(store.archive['2026-09'].tasks[0].subtasks[0].marks[0]).toBe(true);
+    expect(store.cloudConflict.months['2026-10'].source).toBe('legacy');
+    const month = monthOp(commitOps(0), '2026-09').data;
+    expect(month).toMatchObject({ revision: 6, legacyHash: hashTasks(changed), legacyRevision: 6 });
+    expect(rootOp(commitOps(0)).data.schemaVersion).toBe(2);
+  });
+
+  it('изменение с другого устройства: чистый месяц обновляется, с правками – конфликт', async () => {
+    const store = createStore(new Date(2026, 9, 10, 12), {
+      '2026-09': { tasks: [task(Array(30).fill(null), 7)] },
+      '2026-10': { tasks: [task(Array(31).fill(null))] },
+    });
+    signIn(store);
+    await store.saveToCloud();
+
+    const remote = [task([true, ...Array(30).fill(null)])];
+    store.handleMonthChange(
+      monthChange('2026-10', { tasks: remote, revision: 2, base: 1, deviceId: 'other' })
+    );
+    expect(store.tasks[0].subtasks[0].marks[0]).toBe(true);
+    await store.flushCloudSave();
+    expect(fs.commit).toHaveBeenCalledTimes(1);
+
+    store.updateMark(1, 2, 1, true);
+    store.handleMonthChange(
+      monthChange('2026-10', { tasks: remote, revision: 3, base: 2, deviceId: 'other' })
+    );
+    expect(store.cloudConflict).toBe(null);
+    store.handleMonthChange(
+      monthChange('2026-10', {
+        tasks: [task(Array(31).fill(false))],
+        revision: 4,
+        base: 3,
+        deviceId: 'other',
+      })
+    );
+    expect(Object.keys(store.cloudConflict.months)).toEqual(['2026-10']);
+    expect(store.tasks[0].subtasks[0].marks[1]).toBe(true);
+
+    /** Месяц в конфликте не пишется, остальные – да */
+    store.updateMark(7, 8, 0, true);
+    store.prevMonth();
+    store.updateMark(7, 8, 0, true);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(commitOps(1).map(op => op.path)).toEqual(['users/u1/months/2026-09']);
+
+    store.resolveCloudConflict(false);
+    expect(store.archive['2026-10'].tasks[0].subtasks[0].marks[0]).toBe(false);
+    store.undo();
+    expect(store.archive['2026-10'].tasks[0].subtasks[0].marks[1]).toBe(true);
+  });
+
+  it('повреждённый облачный месяц нельзя загрузить, только перезаписать', async () => {
+    const store = createStore(new Date(2026, 9, 10, 12));
+    store.user = { uid: 'u1' };
+    setCloud({ root: { schemaVersion: 2 }, months: { '2026-10': { tasks: [{ title: 5 }] } } });
+    await store.connectCloud();
+    expect(store.cloudConflict.months['2026-10'].tasks).toBe(null);
+    store.resolveCloudConflict(false);
+    expect(store.cloudConflict).not.toBe(null);
+    store.resolveCloudConflict(true);
+    expect(store.cloudConflict).toBe(null);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(monthOp(allOps(), '2026-10').data.tasks).toEqual([]);
+  });
+
+  it('ошибка чтения облака при входе повторяется', async () => {
+    const store = createStore(new Date(2026, 9, 10, 12));
+    store.user = { uid: 'u1' };
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.mocked(getDoc)
-      .mockRejectedValueOnce({ code: 'internal' })
-      .mockResolvedValueOnce({
-        exists: () => true,
-        data: () => ({ archive: { '2026-10': { tasks: [task(Array(31).fill(true), 5)] } } }),
-      });
+    vi.mocked(getDoc).mockRejectedValueOnce({ code: 'internal' });
+    vi.mocked(getDocs).mockResolvedValue({ forEach: () => {} });
 
     await store.connectCloud();
     expect(store.syncState).toBe('error');
     expect(store.isAuthReady).toBe(false);
 
+    vi.mocked(getDoc).mockResolvedValue({ exists: () => false });
     await vi.advanceTimersByTimeAsync(2000);
-    expect(store.syncState).toBe('conflict');
-    expect(store.cloudConflict).not.toBe(null);
-
-    store.resolveCloudConflict(false);
-    expect(store.tasks[0].id).toBe(5);
     expect(store.isAuthReady).toBe(true);
-    store.undo();
-    expect(store.tasks[0].id).toBe(1);
+    expect(store.syncState).toBe('synced');
   });
 
-  it('повреждённый облачный архив нельзя загрузить, только перезаписать', async () => {
+  it('настройки с другого устройства применяются, если здесь их не меняли', async () => {
     const store = createStore(new Date(2026, 9, 10, 12));
     store.user = { uid: 'u1' };
-    vi.mocked(getDoc).mockResolvedValueOnce({
-      exists: () => true,
-      data: () => ({ archive: { october: 1 } }),
-    });
+    setCloud({ root: { schemaVersion: 2, settings: { theme: 'light' } } });
     await store.connectCloud();
-    expect(store.cloudConflict.invalid).toBe(true);
-    store.resolveCloudConflict(false);
-    expect(store.cloudConflict).not.toBe(null);
-    store.resolveCloudConflict(true);
-    expect(store.isAuthReady).toBe(true);
+
+    const rootSnap = settings => ({
+      exists: () => true,
+      data: () => ({ schemaVersion: 2, settings, deviceId: 'other' }),
+      metadata: { hasPendingWrites: false, fromCache: false },
+    });
+    store.handleRootSnapshot(rootSnap({ theme: 'dark', calculationMode: 'passedDays' }));
+    expect(store.theme).toBe('dark');
+    expect(store.calculationMode).toBe('passedDays');
+
+    store.setTheme('light');
+    store.handleRootSnapshot(rootSnap({ theme: 'system' }));
+    expect(store.theme).toBe('light');
   });
 });
 
@@ -655,7 +1075,7 @@ describe('выход из аккаунта', () => {
     });
     signIn(store);
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.mocked(setDoc).mockRejectedValueOnce({ code: 'permission-denied' });
+    fs.commit.mockRejectedValueOnce({ code: 'permission-denied' });
     store.cycleMark(1, 2, 0);
 
     expect(await store.logout()).toBe(false);
@@ -668,6 +1088,7 @@ describe('выход из аккаунта', () => {
     expect(store.canUndo).toBe(false);
     vi.advanceTimersByTime(1000);
     expect(localStorage.getItem('habitArchive')).toBe(null);
+    expect(localStorage.getItem('habitSyncMeta')).toBe(null);
   });
 
   it('без сети и без несохранённых правок выход не блокируется', async () => {
@@ -685,6 +1106,19 @@ describe('выход из аккаунта', () => {
     store.user = { uid: 'u1' };
     expect(await store.logout()).toBe(false);
     expect(await store.logout({ force: true })).toBe(true);
-    expect(setDoc).not.toHaveBeenCalled();
+    expect(fs.commit).not.toHaveBeenCalled();
+  });
+
+  it('нерешённый конфликт блокирует выход: версия устройства есть только здесь', async () => {
+    const store = createStore(new Date(2026, 9, 10, 12), {
+      '2026-10': { tasks: [task(Array(31).fill(true))] },
+    });
+    store.user = { uid: 'u1' };
+    setCloud({
+      root: { schemaVersion: 2 },
+      months: { '2026-10': { tasks: [task(Array(31).fill(false), 5)], revision: 1 } },
+    });
+    await store.connectCloud();
+    expect(await store.logout()).toBe(false);
   });
 });

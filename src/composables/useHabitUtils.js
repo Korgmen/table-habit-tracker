@@ -59,6 +59,24 @@ export function useHabitUtils() {
     return label.charAt(0).toUpperCase() + label.slice(1);
   };
 
+  /** Короткое название дня недели по номеру (0 – воскресенье) */
+  const weekdayName = weekday => {
+    /** 4 января 2026 – воскресенье */
+    const label = new Date(2026, 0, 4 + weekday).toLocaleDateString(resolveLang(store.lang), {
+      weekday: 'short',
+    });
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  };
+
+  /** Номера дней недели (0 – воскресенье) по порядку, начиная с первого дня недели */
+  const weekOrder = computed(() =>
+    Array.from({ length: 7 }, (_, i) => (i + firstWeekday.value) % 7)
+  );
+
+  /** Стиль с цветом привычки для классов вида bg-(--habit) */
+  const habitColorStyle = task =>
+    task?.color ? { '--habit': `var(--habit-${task.color})` } : undefined;
+
   /** Подписи дней недели для календаря, начиная с первого дня недели */
   const weekHeaders = computed(() => {
     const locale = resolveLang(store.lang);
@@ -120,6 +138,9 @@ export function useHabitUtils() {
     isFuture,
     weekdayLabel,
     weekHeaders,
+    weekdayName,
+    weekOrder,
+    habitColorStyle,
     leadingBlanks,
     currentTheme,
     canNextMonth,

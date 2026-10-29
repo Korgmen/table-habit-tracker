@@ -63,9 +63,17 @@
     modalStore.showToast(t('toast.exported', { name }));
   };
 
-  /** С какой доли лимита облачного документа показывать предупреждение */
-  const CLOUD_USAGE_WARNING = 0.8;
-  const cloudUsagePct = computed(() => Math.round(store.cloudUsage * 100));
+  /** Таблица CSV: открытый месяц или весь архив, заголовки на языке интерфейса */
+  const exportCsv = scope => {
+    const name = store.exportCsv(scope, {
+      month: t('csv.month'),
+      habit: t('csv.habit'),
+      mark: t('csv.mark'),
+      progress: t('csv.progress'),
+      notes: t('csv.notes'),
+    });
+    modalStore.showToast(t('toast.exported', { name }));
+  };
 
   /** Выход ждёт записи в облако; если она не подтвердилась, спрашиваем, что делать */
   const loggingOut = ref(false);
@@ -117,6 +125,17 @@
 
   const dataActions = computed(() => [
     { title: t('settings.data.export'), hint: t('settings.data.exportHint'), run: exportData },
+    {
+      title: t('settings.data.csv'),
+      hint: t('settings.data.csvMonthHint'),
+      run: () => exportCsv('month'),
+      disabled: store.tasks.length === 0,
+    },
+    {
+      title: t('settings.data.csv'),
+      hint: t('settings.data.csvAllHint'),
+      run: () => exportCsv('all'),
+    },
     {
       title: t('settings.data.import'),
       hint: t('settings.data.importHint'),
@@ -191,12 +210,6 @@
               {{ loggingOut ? t('auth.loggingOut') : t('auth.logout') }}
             </button>
           </div>
-          <span
-            v-if="store.cloudUsage >= CLOUD_USAGE_WARNING"
-            class="text-danger text-xs leading-snug"
-          >
-            {{ t('sync.usage', { pct: cloudUsagePct }) }}
-          </span>
           <div
             v-if="logoutBlocked"
             class="border-danger flex flex-col gap-3 rounded-xl border-[1.5px] p-3"
@@ -350,7 +363,7 @@
         <div class="grid grid-cols-2 gap-2">
           <button
             v-for="action in dataActions"
-            :key="action.title"
+            :key="action.title + action.hint"
             class="border-line enabled:hover:bg-soft flex h-16 flex-col items-center justify-center gap-0.5 rounded-xl border px-1 disabled:opacity-40"
             :disabled="action.disabled"
             @click="action.run"

@@ -2,23 +2,37 @@ import { defineStore } from 'pinia';
 import { markRaw } from 'vue';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { auth, provider, db } from '@/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, collection, getDoc, getDocs, writeBatch, onSnapshot } from 'firebase/firestore';
 import { resolveLang, applyLang, SUPPORTED_LANGS } from '@/i18n';
 import {
   monthKey,
-  normalizeArchive,
   isValidArchive,
   prepareArchive,
+  repairTaskFields,
   createId,
   countTasks,
   mergeArchives,
   unwrapExport,
   exportFileName,
+  hashTasks,
+  lastFilledBefore,
+  carryTasks,
+  carryId,
   SCHEMA_VERSION,
   MAX_TASKS,
   MAX_SUBTASKS,
   MAX_TITLE,
+  MAX_NOTE,
 } from '@/utils/archive';
+import { taskProgress, applySchedule, goalWeeks, applyGoal } from '@/utils/habitMath';
+import { archiveToCsv } from '@/utils/csv';
+import {
+  CLOUD_SCHEMA_VERSION,
+  planConnect,
+  classifyRemote,
+  mergeLegacy,
+  readCloudTasks,
+} from '@/utils/cloudSync';
 
 /** Допустимые значения настроек: облачный документ и файл импорта применяются только по ним */
 const SETTINGS_VALUES = {
@@ -40,14 +54,28 @@ let localSaveTimer = null;
 /** Серия правок подряд (клики по отметкам, переход месяца) уходит в Firestore одной записью */
 const CLOUD_SAVE_DELAY = 1000;
 let cloudSaveTimer = null;
-/** Есть изменения, которые ещё не записаны в Firestore */
+/** Возможно, есть изменения, которые ещё не записаны в Firestore (какие именно – по отпечаткам) */
 let cloudDirty = false;
 /** Идущая запись в Firestore: следующая начинается только после неё */
 let cloudWrite = null;
 
-/** Лимит документа Firestore 1 МиБ; размер считается по JSON приблизительно, поэтому с запасом */
-const CLOUD_DOC_LIMIT = 1024 * 1024;
+/** Лимит документа Firestore 1 МиБ на месяц; размер считается по JSON приблизительно, с запасом */
 const CLOUD_DOC_MAX = 1000 * 1000;
+/** Документов в одной пакетной записи (лимит Firestore – 500) */
+const CLOUD_BATCH_SIZE = 400;
+
+/**
+ * Метаданные синхронизации (см. src/utils/cloudSync.js), хранятся в localStorage между запусками:
+ * { uid, months: { key: { revision, hash, device } }, settingsHash, legacy: { key: { hash, revision, pending } } }
+ */
+const SYNC_META_KEY = 'habitSyncMeta';
+const emptySyncMeta = uid => ({ uid, months: {}, settingsHash: null, legacy: {} });
+
+/**
+ * Идентификатор вкладки: свои записи в подписке пропускаются.
+ * Вкладки одного браузера – разные устройства, у каждой свои несохранённые правки.
+ */
+const DEVICE_ID = createId();
 
 /** Повторы после сбоя синхронизации: паузы растут до минуты */
 const RETRY_DELAYS = [2000, 5000, 15000, 30000, 60000];
@@ -71,6 +99,76 @@ let historyId = 0;
 
 const clone = value => (value == null ? null : JSON.parse(JSON.stringify(value)));
 
+/** Настраиваемые поля задачи, кроме названия и подзадач (см. repairTaskFields) */
+const TASK_FIELDS = ['color', 'emoji', 'schedule', 'goal', 'paused'];
+
+/**
+ * Поля TASK_FIELDS из source. С keepMissing ключ, явно переданный как undefined,
+ * тоже попадает в результат: так правка окна привычки убирает цвет или расписание.
+ */
+const pickTaskFields = (source, keepMissing = false) =>
+  Object.fromEntries(
+    TASK_FIELDS.filter(key =>
+      keepMissing ? Object.hasOwn(source, key) : source[key] !== undefined
+    ).map(key => [key, Array.isArray(source[key]) ? [...source[key]] : source[key]])
+  );
+
+const sameTaskFields = (a, b) =>
+  TASK_FIELDS.every(key => JSON.stringify(a[key]) === JSON.stringify(b[key]));
+
+/** Отпечаток настроек в фиксированном порядке ключей */
+const hashSettings = settings =>
+  JSON.stringify(Object.keys(SETTINGS_VALUES).map(key => settings?.[key] ?? null));
+
+const loadSyncMeta = uid => {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SYNC_META_KEY));
+    if (saved?.uid === uid) {
+      return {
+        ...emptySyncMeta(uid),
+        ...saved,
+        months: { ...saved.months },
+        legacy: { ...saved.legacy },
+      };
+    }
+  } catch (error) {
+    console.error(error);
+  }
+  return emptySyncMeta(uid);
+};
+
+const saveSyncMeta = meta => {
+  try {
+    localStorage.setItem(SYNC_META_KEY, JSON.stringify(meta));
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+const rootRef = uid => doc(db, 'users', uid);
+const monthsRef = uid => collection(db, 'users', uid, 'months');
+const monthRef = (uid, key) => doc(db, 'users', uid, 'months', key);
+
+const isMonthKey = key => /^\d{4}-(0[1-9]|1[0-2])$/.test(key);
+
+/** Документ месяца из Firestore: задачи (null, если повреждены) и служебные поля */
+const readMonthDoc = (key, data) => ({
+  tasks: readCloudTasks(key, data?.tasks),
+  revision: Number.isInteger(data?.revision) ? data.revision : 0,
+  base: Number.isInteger(data?.base) ? data.base : 0,
+  deviceId: data?.deviceId ?? null,
+  updatedAt: data?.updatedAt ?? null,
+  legacyHash: data?.legacyHash,
+  legacyRevision: data?.legacyRevision,
+  source: 'cloud',
+});
+
+/** Делит список на части по size элементов */
+const chunks = (items, size) =>
+  Array.from({ length: Math.ceil(items.length / size) }, (_, i) =>
+    items.slice(i * size, (i + 1) * size)
+  );
+
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 const isQuotaError = error =>
@@ -79,8 +177,8 @@ const isQuotaError = error =>
   error?.code === 22;
 
 /** Сохраняет текст файлом через ссылку на Blob */
-const downloadText = (text, name) => {
-  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+const downloadText = (text, name, type = 'application/json') => {
+  const url = URL.createObjectURL(new Blob([text], { type }));
   const anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = name;
@@ -152,7 +250,11 @@ export const useHabitStore = defineStore('habit', {
       /** Авторизация */
       user: null,
       isAuthReady: false,
-      /** Данные из Firestore, расходящиеся с локальными и ждущие выбора пользователя */
+      /**
+       * Месяцы, где версии устройства и облака разошлись и ждут выбора пользователя:
+       * { months: { key: { tasks|null (повреждён), revision, updatedAt, source: 'cloud'|'legacy' } } }.
+       * Остальные месяцы синхронизируются как обычно.
+       */
       cloudConflict: null,
       /**
        * Состояние синхронизации: 'off' без входа, 'connecting' чтение облака после входа,
@@ -162,8 +264,6 @@ export const useHabitStore = defineStore('habit', {
       syncState: 'off',
       /** Код последней ошибки облака: код Firestore или 'too-large'; null после успешной записи */
       syncError: null,
-      /** Доля лимита документа Firestore, которую занимают данные */
-      cloudUsage: 0,
       /** Ошибка записи в localStorage: 'quota' | 'unknown' | null */
       localSaveError: null,
       /** Время резервной копии архива (см. readBackupAt) */
@@ -173,6 +273,20 @@ export const useHabitStore = defineStore('habit', {
       /** Шаги отмены и повтора: { id, label, viewKey, months, settings } */
       undoStack: [],
       redoStack: [],
+      /** Последний автоперенос привычек в новый месяц для тоста: { from, count, id } */
+      lastCarry: null,
+      /**
+       * Служебное состояние синхронизации, без реактивности: meta – метаданные (SYNC_META_KEY),
+       * rootNeedsWrite – корневой документ ещё нужно записать (новая структура, миграция, его нет),
+       * unsubscribers – отписки от onSnapshot, пусто без подписки;
+       * listenFailed – подписка оборвалась ошибкой, повтор начинается со сверки заново
+       */
+      sync: markRaw({
+        meta: emptySyncMeta(null),
+        rootNeedsWrite: false,
+        unsubscribers: [],
+        listenFailed: false,
+      }),
     };
   },
 
@@ -216,14 +330,21 @@ export const useHabitStore = defineStore('habit', {
         : state.daysInMonth;
     },
 
-    /** Средний процент выполнения всех задач */
+    /** Месяц для расчётов по отметкам (src/utils/habitMath.js) */
+    monthCtx: state => ({
+      year: state.currentYear,
+      month: state.currentMonth,
+      days: state.daysInMonth,
+      maxDay: state.calculationMode === 'fullMonth' ? state.daysInMonth : state.today,
+      firstWeekday: state.weekStart === 'monday' ? 1 : 0,
+    }),
+
+    /** Средний процент выполнения задач; привычки на паузе не учитываются */
     overallProgress: state => {
-      if (state.tasks.length === 0) return 0.0;
-      const totalProgress = state.tasks.reduce(
-        (sum, task) => sum + (parseFloat(task.progress) || 0),
-        0
-      );
-      return (totalProgress / state.tasks.length).toFixed(1);
+      const active = state.tasks.filter(task => !task.paused);
+      if (active.length === 0) return 0.0;
+      const totalProgress = active.reduce((sum, task) => sum + (parseFloat(task.progress) || 0), 0);
+      return (totalProgress / active.length).toFixed(1);
     },
 
     /** Оценка по 5-балльной шкале на основе среднего прогресса */
@@ -254,39 +375,92 @@ export const useHabitStore = defineStore('habit', {
       return { id: createId(), marks: Array(this.daysInMonth).fill(null) };
     },
 
-    /** Добавляет задачу с заданным числом подзадач, false при достижении лимита */
-    addTask(title, subtaskCount = 1) {
+    /**
+     * Добавляет задачу с заданным числом подзадач, false при достижении лимита.
+     * @param {Object} fields - необязательные поля: color, emoji, schedule, goal, paused
+     */
+    addTask(title, subtaskCount = 1, fields = {}) {
       if (this.tasks.length >= MAX_TASKS) return false;
 
       const count = Math.min(Math.max(subtaskCount, 1), MAX_SUBTASKS);
       this.recordChange('add');
-      this.tasks.push({
+      const task = repairTaskFields({
         id: createId(),
         title: title.trim().slice(0, MAX_TITLE),
         subtasks: Array.from({ length: count }, () => this.createSubtask()),
         progress: 0.0,
+        ...pickTaskFields(fields),
       });
+      this.tasks.push(task);
+      applySchedule(task, this.monthCtx);
+      this.updateTaskProgress(task.id);
       this.saveState();
       return true;
     },
 
-    /** Переименовывает задачу и подгоняет число подзадач: лишние удаляются с конца вместе с отметками */
-    updateTask(taskId, title, subtaskCount) {
+    /**
+     * Меняет название, число подзадач (лишние удаляются с конца вместе с отметками)
+     * и необязательные поля задачи (color, emoji, schedule, goal, paused; undefined – убрать).
+     */
+    updateTask(taskId, title, subtaskCount, fields) {
       const task = this.tasks.find(t => t.id === taskId);
       if (!task) return;
 
       const count = Math.min(Math.max(subtaskCount, 1), MAX_SUBTASKS);
       const newTitle = title.trim().slice(0, MAX_TITLE) || task.title;
-      if (newTitle === task.title && count === task.subtasks.length) return;
+      const newFields = fields
+        ? repairTaskFields({ ...pickTaskFields(task), ...pickTaskFields(fields, true) })
+        : pickTaskFields(task);
+      if (
+        newTitle === task.title &&
+        count === task.subtasks.length &&
+        sameTaskFields(newFields, task)
+      ) {
+        return;
+      }
 
       this.recordChange('edit');
+      const previousSchedule = task.schedule ?? null;
+      const goalBefore = goalWeeks(task, this.monthCtx);
       task.title = newTitle;
+      TASK_FIELDS.forEach(key => {
+        if (newFields[key] === undefined) delete task[key];
+        else task[key] = newFields[key];
+      });
       if (task.subtasks.length > count) task.subtasks.splice(count);
       while (task.subtasks.length < count) {
         task.subtasks.push(this.createSubtask());
       }
+      applySchedule(task, this.monthCtx, previousSchedule);
+      applyGoal(task, this.monthCtx, goalBefore);
       this.updateTaskProgress(taskId);
       this.saveState();
+    },
+
+    /** Ставит или снимает паузу привычки */
+    togglePause(taskId) {
+      const task = this.tasks.find(t => t.id === taskId);
+      if (!task) return;
+      this.recordChange('pause');
+      if (task.paused) delete task.paused;
+      else task.paused = true;
+      this.saveState();
+    },
+
+    /**
+     * Заметка к дню задачи; пустой текст удаляет её. Заметки, как и отметки, только до сегодня.
+     * @returns {boolean} false, если день ещё не наступил или задачи нет
+     */
+    setNote(taskId, dayIndex, text) {
+      const task = this.tasks.find(t => t.id === taskId);
+      if (!task || dayIndex < 0 || dayIndex >= this.today) return false;
+      const value = text.trim().slice(0, MAX_NOTE);
+      if ((task.notes?.[dayIndex] || '') === value) return true;
+      this.recordChange('note');
+      task.notes = { ...task.notes, [dayIndex]: value };
+      repairTaskFields(task);
+      this.saveState();
+      return true;
     },
 
     /** Сдвигает задачу в списке на offset позиций */
@@ -313,41 +487,26 @@ export const useHabitStore = defineStore('habit', {
       this.saveState();
     },
 
-    /** Пересчитывает прогресс задачи на основе отметок подзадач с учётом режима расчёта */
+    /**
+     * Пересчитывает прогресс задачи по отметкам подзадач с учётом режима расчёта,
+     * расписания и цели (формулы в taskProgress)
+     */
     updateTaskProgress(taskId) {
       const task = this.tasks.find(t => t.id === taskId);
       if (!task) return;
-      if (task.subtasks.length === 0) {
-        task.progress = 0.0;
-        return;
-      }
-
-      let totalValid = 0;
-      let completed = 0;
-
-      const maxDay = this.calculationMode === 'fullMonth' ? this.daysInMonth : this.today;
-
-      task.subtasks.forEach(subtask => {
-        for (let i = 0; i < maxDay; i++) {
-          const mark = subtask.marks[i];
-          if (mark === true) {
-            completed++;
-            totalValid++;
-          } else if (mark === null) {
-            totalValid++;
-          }
-        }
-      });
-
-      task.progress = totalValid > 0 ? ((completed / totalValid) * 100).toFixed(1) : 0.0;
+      const progress = taskProgress(task, this.monthCtx);
+      task.progress = progress === null ? 0.0 : progress.toFixed(1);
     },
 
     /** Обновляет отметку в конкретный день подзадачи */
     updateMark(taskId, subtaskId, dayIndex, state) {
-      const subtask = this.tasks.find(t => t.id === taskId)?.subtasks.find(s => s.id === subtaskId);
+      const task = this.tasks.find(t => t.id === taskId);
+      const subtask = task?.subtasks.find(s => s.id === subtaskId);
       if (!subtask || dayIndex >= this.today || subtask.marks[dayIndex] === state) return;
       this.recordChange('mark');
+      const goalBefore = goalWeeks(task, this.monthCtx);
       subtask.marks[dayIndex] = state;
+      applyGoal(task, this.monthCtx, goalBefore);
       this.updateTaskProgress(taskId);
       this.saveState();
     },
@@ -380,9 +539,11 @@ export const useHabitStore = defineStore('habit', {
       if (dayIndex >= this.today || this.tasks.length === 0) return;
       this.recordChange('day');
       this.tasks.forEach(task => {
+        const goalBefore = goalWeeks(task, this.monthCtx);
         task.subtasks.forEach(subtask => {
           subtask.marks[dayIndex] = state;
         });
+        applyGoal(task, this.monthCtx, goalBefore);
       });
       this.tasks.forEach(task => this.updateTaskProgress(task.id));
       this.saveState();
@@ -404,6 +565,9 @@ export const useHabitStore = defineStore('habit', {
             if (dayIndex < this.today) subtask.marks[dayIndex] = mark;
           });
         });
+        /** На бланке дни вне расписания и закрытые целью пустые: пропуски возвращаются */
+        applySchedule(task, this.monthCtx);
+        applyGoal(task, this.monthCtx, []);
         this.updateTaskProgress(taskId);
       });
       this.saveState();
@@ -420,23 +584,49 @@ export const useHabitStore = defineStore('habit', {
     },
 
     /**
-     * Копирует задачи открытого месяца в реальный текущий с чистыми отметками (с заменой)
+     * Переносит привычки месяца from в реальный текущий без отметок и заметок
      * и переключается на него.
+     * @param {Object} options - taskIds: какие задачи перенести (по умолчанию все);
+     *   replace: заменить привычки текущего месяца, иначе добавить к ним
+     * @returns {boolean} false, если переносить нечего или будет превышен лимит
      */
-    duplicateToCurrent() {
-      if (this.currentMonthKey === this.realMonthKey) return;
-      this.recordChange('duplicate', [this.realMonthKey]);
-      const source = this.tasks;
+    carryOver(from, { taskIds = null, replace = true } = {}) {
+      const key = this.realMonthKey;
+      const source = (this.monthTasks(from) || []).filter(
+        task => !taskIds || taskIds.includes(task.id)
+      );
+      const kept = replace ? [] : this.monthTasks(key) || [];
+      if (from === key || source.length === 0 || kept.length + source.length > MAX_TASKS) {
+        return false;
+      }
+      this.recordChange('duplicate', [key]);
+      const copies = clone(source);
       this.saveState();
       this.currentDate = new Date(this.realDate);
-      this.tasks = source.map(task => ({
-        id: createId(),
-        title: task.title,
-        progress: 0.0,
-        subtasks: task.subtasks.map(() => this.createSubtask()),
-      }));
+      this.tasks = [...kept, ...carryTasks(copies, this.daysInMonth, () => createId())];
       this.adaptMarksToNewMonth();
       this.saveState();
+      return true;
+    },
+
+    /**
+     * Новый текущий месяц, который ещё ни разу не открывался, получает привычки последнего
+     * месяца с привычками. id одинаковы на всех устройствах (carryId): два устройства,
+     * перенёсшие привычки независимо, получают совпадающие данные. Удалённые потом привычки
+     * не возвращаются: месяц уже есть в архиве, хоть и пустой.
+     */
+    autoCarryOver() {
+      const key = this.realMonthKey;
+      if (this.currentMonthKey !== key || this.tasks.length > 0 || this.archive[key]) return;
+      const from = lastFilledBefore(this.archive, key);
+      if (!from) return;
+      this.recordChange('carry');
+      this.tasks = carryTasks(this.archive[from].tasks, this.daysInMonth, (id, index) =>
+        carryId(key, id, index)
+      );
+      this.adaptMarksToNewMonth();
+      this.saveState();
+      this.lastCarry = { from, count: this.tasks.length, id: this.lastChangeId };
     },
 
     /** Задачи месяца key: у открытого месяца – рабочий список, у остальных – из архива */
@@ -572,6 +762,7 @@ export const useHabitStore = defineStore('habit', {
       this.currentDate = date;
       this.tasks = this.archive[this.currentMonthKey]?.tasks || [];
       this.adaptMarksToNewMonth();
+      this.autoCarryOver();
       this.saveState();
     },
 
@@ -606,16 +797,23 @@ export const useHabitStore = defineStore('habit', {
         this.currentDate = new Date(now.getFullYear(), now.getMonth(), 1);
         this.tasks = this.archive[this.currentMonthKey]?.tasks || [];
         this.adaptMarksToNewMonth();
+        this.autoCarryOver();
       } else {
         this.tasks.forEach(task => this.updateTaskProgress(task.id));
       }
       this.saveState();
     },
 
-    /** Адаптирует массивы отметок под новый размер месяца */
+    /** Адаптирует массивы отметок и заметки под новый размер месяца */
     adaptMarksToNewMonth() {
       const newDays = this.daysInMonth;
       this.tasks.forEach(task => {
+        if (task.notes) {
+          Object.keys(task.notes).forEach(day => {
+            if (Number(day) >= newDays) delete task.notes[day];
+          });
+          repairTaskFields(task);
+        }
         task.subtasks.forEach(subtask => {
           const oldMarks = subtask.marks || Array(newDays).fill(null);
           subtask.marks = Array(newDays).fill(null);
@@ -624,6 +822,8 @@ export const useHabitStore = defineStore('habit', {
             subtask.marks[i] = oldMarks[i];
           }
         });
+        /** Новые дни (перенос, другой месяц) получают пропуски вне расписания */
+        applySchedule(task, this.monthCtx);
         this.updateTaskProgress(task.id);
       });
     },
@@ -638,6 +838,31 @@ export const useHabitStore = defineStore('habit', {
         archive: this.archive,
       };
       downloadText(JSON.stringify(data), name);
+      return name;
+    },
+
+    /**
+     * Сохраняет таблицу CSV: открытый месяц или весь архив; возвращает имя файла.
+     * @param {Object} labels - подписи колонок на языке интерфейса (см. archiveToCsv)
+     */
+    exportCsv(scope, labels) {
+      const keys =
+        scope === 'month'
+          ? [this.currentMonthKey]
+          : Object.keys(this.archive)
+              .filter(key => this.archive[key]?.tasks?.length > 0)
+              .sort();
+      const name = exportFileName(
+        new Date(),
+        scope === 'month' ? `habit_${this.currentMonthKey}` : 'habit_data',
+        'csv'
+      );
+      const csv = archiveToCsv(this.archive, keys, {
+        labels,
+        realMonth: this.realMonthKey,
+        realDay: this.realDate.getDate(),
+      });
+      downloadText(csv, name, 'text/csv;charset=utf-8');
       return name;
     },
 
@@ -748,9 +973,10 @@ export const useHabitStore = defineStore('habit', {
       this.saveState();
     },
 
-    /** Устанавливает день начала недели */
+    /** Устанавливает день начала недели; от него зависят недели цели «N раз в неделю» */
     setWeekStart(newWeekStart) {
       this.weekStart = newWeekStart;
+      this.tasks.forEach(task => this.updateTaskProgress(task.id));
       this.saveState();
     },
 
@@ -786,6 +1012,7 @@ export const useHabitStore = defineStore('habit', {
         ]);
         if (!saved) return false;
       }
+      this.unsubscribeCloud();
       await signOut(auth);
       clearTimeout(localSaveTimer);
       clearTimeout(cloudSaveTimer);
@@ -793,16 +1020,19 @@ export const useHabitStore = defineStore('habit', {
       localSaveTimer = null;
       cloudSaveTimer = null;
       cloudDirty = false;
+      this.sync.rootNeedsWrite = false;
+      this.sync.meta = emptySyncMeta(null);
       this.user = null;
       this.cloudConflict = null;
       this.syncState = 'off';
       this.syncError = null;
-      this.cloudUsage = 0;
       this.archive = {};
       this.tasks = [];
       this.pendingImport = null;
+      this.lastCarry = null;
       this.clearHistory();
       localStorage.removeItem('habitArchive');
+      localStorage.removeItem(SYNC_META_KEY);
       localStorage.removeItem(BACKUP_KEY);
       localStorage.removeItem(BACKUP_AT_KEY);
       this.backupAt = null;
@@ -814,6 +1044,7 @@ export const useHabitStore = defineStore('habit', {
       onAuthStateChanged(auth, user => {
         if (user?.uid !== this.user?.uid) this.clearHistory();
         authGeneration++;
+        this.unsubscribeCloud();
         clearTimeout(retryTimer);
         retryAttempt = 0;
         this.user = user;
@@ -831,39 +1062,55 @@ export const useHabitStore = defineStore('habit', {
     },
 
     /**
-     * Читает облачный архив и сверяет с локальным.
+     * Читает облако после входа и сверяет его с устройством по месяцам (planConnect):
+     * неизменённые на устройстве месяцы берутся из облака, изменённые только здесь – отправляются,
+     * изменённые с обеих сторон ждут выбора пользователя. Старый документ с полем archive
+     * вливается в подколлекцию (mergeLegacy), само поле не удаляется.
      * Запись в облако открывается только после этого: до чтения в сторе локальные данные.
      */
     async connectCloud() {
       const generation = authGeneration;
+      const uid = this.user.uid;
+      this.unsubscribeCloud();
       this.syncState = 'connecting';
       try {
-        const cloudData = await this.loadFromCloud();
+        const [rootSnap, monthsSnap] = await Promise.all([
+          getDoc(rootRef(uid)),
+          getDocs(monthsRef(uid)),
+        ]);
         if (generation !== authGeneration) return;
 
-        if (!cloudData) {
-          this.isAuthReady = true;
-          await this.saveToCloud();
-          return;
+        this.sync.meta = loadSyncMeta(uid);
+        const root = rootSnap.exists() ? rootSnap.data() : null;
+        const months = {};
+        monthsSnap.forEach(snap => {
+          if (!isMonthKey(snap.id)) return;
+          months[snap.id] = readMonthDoc(snap.id, snap.data());
+          this.rememberLegacy(snap.id, months[snap.id]);
+        });
+
+        let cloud = months;
+        const isLegacyRoot = !!root && !(root.schemaVersion >= CLOUD_SCHEMA_VERSION);
+        if (isLegacyRoot && root.archive) {
+          if (isValidArchive(root.archive)) {
+            const legacy = mergeLegacy(prepareArchive(root.archive), months);
+            cloud = legacy.cloud;
+            Object.entries(legacy.absorbed).forEach(([key, hash]) => {
+              this.sync.meta.legacy[key] = { hash, revision: null, pending: true };
+            });
+          } else {
+            console.error('Legacy cloud archive is damaged and was skipped');
+          }
         }
+        this.sync.rootNeedsWrite = !root || isLegacyRoot;
 
-        cloudData.archive = cloudData.archive || {};
-        const valid = isValidArchive(cloudData.archive);
-        if (valid) prepareArchive(cloudData.archive);
-        const localArchive = normalizeArchive(this.archive);
-
-        if (
-          !valid ||
-          (localArchive !== '{}' && localArchive !== normalizeArchive(cloudData.archive))
-        ) {
-          this.cloudConflict = markRaw({ ...cloudData, invalid: !valid });
-          this.syncState = 'conflict';
-          return;
-        }
-
-        this.applyCloudData(cloudData);
+        this.applyCloudSettings(root?.settings);
+        this.applyConnectPlan(cloud);
         this.isAuthReady = true;
-        this.markSynced();
+        saveSyncMeta(this.sync.meta);
+        this.subscribeCloud();
+        if (this.cloudConflict) this.syncState = 'conflict';
+        await this.saveToCloud();
       } catch (error) {
         if (generation !== authGeneration) return;
         console.error(error);
@@ -871,33 +1118,209 @@ export const useHabitStore = defineStore('habit', {
       }
     },
 
-    /**
-     * Завершает конфликт локальных и облачных данных.
-     * @param {boolean} keepLocal - true: локальные данные перезаписывают облако, false: облачные заменяют локальные
-     */
-    resolveCloudConflict(keepLocal) {
-      const conflict = this.cloudConflict;
-      if (!conflict || (!keepLocal && conflict.invalid)) return;
-      if (!keepLocal) {
-        const keys = new Set([
-          ...Object.keys(this.archive),
-          ...Object.keys(conflict.archive),
-          this.currentMonthKey,
-        ]);
-        this.recordChange('cloud', [...keys], true);
-        this.applyCloudData(conflict);
+    /** Применяет сверку после входа к архиву и метаданным синхронизации */
+    applyConnectPlan(cloud) {
+      const plan = planConnect(this.archive, cloud, this.sync.meta.months);
+      const remember = (key, remote, hash) => {
+        this.sync.meta.months[key] = {
+          revision: remote.revision,
+          hash,
+          device: remote.deviceId ?? null,
+        };
+      };
+
+      Object.entries(plan.take).forEach(([key, remote]) => {
+        this.setMonthTasks(key, remote.tasks);
+        remember(key, remote, remote.unsaved ? null : hashTasks(remote.tasks));
+      });
+      Object.entries(plan.same).forEach(([key, remote]) =>
+        remember(key, remote, remote.unsaved ? null : hashTasks(remote.tasks))
+      );
+      /** Отправляемый месяц пишется поверх известной облачной ревизии */
+      plan.upload.forEach(key => {
+        if (cloud[key]) remember(key, cloud[key], null);
+      });
+
+      const conflicts = Object.keys(plan.conflicts);
+      this.cloudConflict = conflicts.length > 0 ? markRaw({ months: plan.conflicts }) : null;
+      if (Object.keys(plan.take).length > 0) this.saveLocal();
+    },
+
+    /** Запоминает, какая версия старого архива уже влита в месяц (поля legacyHash/legacyRevision) */
+    rememberLegacy(key, remote) {
+      if (remote.legacyHash && !this.sync.meta.legacy[key]?.pending) {
+        this.sync.meta.legacy[key] = {
+          hash: remote.legacyHash,
+          revision: remote.legacyRevision ?? 0,
+        };
       }
-      this.cloudConflict = null;
+    },
+
+    /** Кладёт задачи месяца из облака в архив; открытый месяц сразу показывает их */
+    setMonthTasks(key, tasks) {
+      this.archive[key] = { tasks: clone(tasks) };
+      if (key === this.currentMonthKey) {
+        this.tasks = this.archive[key].tasks;
+        this.adaptMarksToNewMonth();
+      }
+    },
+
+    /** Настройки из облака применяются, если на устройстве их не меняли после прошлой синхронизации */
+    applyCloudSettings(settings) {
+      const localChanged =
+        this.sync.meta.settingsHash !== null &&
+        hashSettings(this.settings) !== this.sync.meta.settingsHash;
+      if (!settings || localChanged) return;
+      const before = hashSettings(this.settings);
+      this.applySettings(settings);
+      if (hashSettings(this.settings) !== before) {
+        this.tasks.forEach(task => this.updateTaskProgress(task.id));
+        this.saveLocal();
+      }
+      /** Неполные или недопустимые настройки облака не делают локальные «изменёнными» */
+      this.sync.meta.settingsHash = hashSettings(this.settings);
+    },
+
+    /** Подписка на изменения корня и месяцев с других устройств */
+    subscribeCloud() {
+      const uid = this.user.uid;
+      const generation = authGeneration;
+      const onError = error => {
+        if (generation !== authGeneration) return;
+        console.error(error);
+        this.unsubscribeCloud();
+        this.sync.listenFailed = true;
+        this.handleSyncError(error);
+      };
+      this.sync.listenFailed = false;
+      this.sync.unsubscribers = [
+        onSnapshot(
+          rootRef(uid),
+          snap => generation === authGeneration && this.handleRootSnapshot(snap),
+          onError
+        ),
+        onSnapshot(
+          monthsRef(uid),
+          snap => {
+            if (generation !== authGeneration) return;
+            snap.docChanges().forEach(change => this.handleMonthChange(change));
+          },
+          onError
+        ),
+      ];
+    },
+
+    unsubscribeCloud() {
+      this.sync.unsubscribers.forEach(unsubscribe => unsubscribe());
+      this.sync.unsubscribers = [];
+    },
+
+    /**
+     * Корневой документ изменился на другом устройстве: новые настройки
+     * или запись клиента старой версии (без schemaVersion) – тогда сверка проводится заново.
+     */
+    handleRootSnapshot(snap) {
+      if (!snap.exists() || snap.metadata.hasPendingWrites || snap.metadata.fromCache) return;
+      const data = snap.data();
+      if (data.deviceId === DEVICE_ID) return;
+      if (!(data.schemaVersion >= CLOUD_SCHEMA_VERSION) && data.archive) {
+        this.connectCloud();
+        return;
+      }
+      if (hashSettings(data.settings) === this.sync.meta.settingsHash) return;
+      this.applyCloudSettings(data.settings);
+      saveSyncMeta(this.sync.meta);
+    },
+
+    /**
+     * Месяц изменился в облаке. Свои записи пропускаются; чужая версия берётся, если на устройстве
+     * месяц не менялся, иначе месяц попадает в конфликт и не пишется до выбора (classifyRemote).
+     */
+    handleMonthChange(change) {
+      const snap = change.doc;
+      if (change.type === 'removed' || !isMonthKey(snap.id)) return;
+      if (snap.metadata.hasPendingWrites || snap.metadata.fromCache) return;
+      const data = snap.data();
+      if (data.deviceId === DEVICE_ID) return;
+
+      const key = snap.id;
+      const remote = readMonthDoc(key, data);
+      this.rememberLegacy(key, remote);
+
+      if (this.cloudConflict?.months[key]) {
+        this.cloudConflict = markRaw({
+          months: { ...this.cloudConflict.months, [key]: remote },
+        });
+        return;
+      }
+
+      const known = this.sync.meta.months[key];
+      const result = classifyRemote(this.monthTasks(key) || [], remote, known);
+      if (result === 'ignore') return;
+      if (result === 'conflict') {
+        this.cloudConflict = markRaw({ months: { ...this.cloudConflict?.months, [key]: remote } });
+        this.syncState = 'conflict';
+        return;
+      }
+      if (result === 'take') {
+        this.setMonthTasks(key, remote.tasks);
+        this.saveLocal();
+      }
+      this.sync.meta.months[key] = {
+        revision: remote.revision,
+        hash: hashTasks(remote.tasks),
+        device: remote.deviceId,
+      };
+      saveSyncMeta(this.sync.meta);
+    },
+
+    /**
+     * Решает конфликт по месяцам.
+     * @param {boolean|Object} choice - true: все месяцы с устройства, false: все из облака,
+     *   { key: 'local' | 'cloud' } – по месяцам. Повреждённый облачный месяц можно только перезаписать.
+     */
+    resolveCloudConflict(choice) {
+      const conflict = this.cloudConflict;
+      if (!conflict) return;
+      const pick = key =>
+        typeof choice === 'boolean' ? (choice ? 'local' : 'cloud') : choice[key];
+      const entries = Object.entries(conflict.months);
+      const resolved = entries.filter(
+        ([key, remote]) => pick(key) === 'local' || (pick(key) === 'cloud' && remote.tasks)
+      );
+      if (resolved.length === 0) return;
+
+      const fromCloud = resolved.filter(([key]) => pick(key) === 'cloud');
+      if (fromCloud.length > 0) {
+        this.recordChange(
+          'cloud',
+          fromCloud.map(([key]) => key)
+        );
+      }
+      resolved.forEach(([key, remote]) => {
+        const takeCloud = pick(key) === 'cloud';
+        if (takeCloud) this.setMonthTasks(key, remote.tasks);
+        /** Своя версия пишется поверх облачной ревизии; старая версия ещё не лежит в подколлекции */
+        this.sync.meta.months[key] = {
+          revision: remote.revision ?? 0,
+          hash: takeCloud && !remote.unsaved ? hashTasks(remote.tasks) : null,
+          device: remote.deviceId ?? null,
+        };
+      });
+
+      const rest = entries.filter(([key]) => !resolved.some(([done]) => done === key));
+      this.cloudConflict = rest.length > 0 ? markRaw({ months: Object.fromEntries(rest) }) : null;
+      saveSyncMeta(this.sync.meta);
+      if (fromCloud.length > 0) this.saveLocal();
       this.isAuthReady = true;
-      if (keepLocal) this.saveToCloud();
-      else this.markSynced();
+      this.saveToCloud();
     },
 
     /** Планирует запись в Firestore после серии правок */
     scheduleCloudSave() {
       if (!this.user) return;
       cloudDirty = true;
-      if (this.isAuthReady && !['offline', 'error'].includes(this.syncState)) {
+      if (this.isAuthReady && !['offline', 'error', 'conflict'].includes(this.syncState)) {
         this.syncState = 'pending';
       }
       clearTimeout(cloudSaveTimer);
@@ -912,10 +1335,11 @@ export const useHabitStore = defineStore('habit', {
       clearTimeout(cloudSaveTimer);
       cloudSaveTimer = null;
       if (!this.user) return true;
-      /** Облако ещё не прочитано или конфликт не решён: локальные данные в нём могут отсутствовать */
+      /** Облако ещё не прочитано: локальные данные в нём могут отсутствовать */
       if (!this.isAuthReady) return countTasks(this.archive) === 0;
-      if (!cloudDirty && !cloudWrite) return true;
-      return this.saveToCloud();
+      const saved = cloudDirty || cloudWrite ? await this.saveToCloud() : true;
+      /** Месяцы в конфликте не записаны: версия устройства есть только здесь */
+      return saved && !this.cloudConflict;
     },
 
     /**
@@ -948,23 +1372,90 @@ export const useHabitStore = defineStore('habit', {
       }
     },
 
-    /** Одна запись документа пользователя: архив, настройки и время изменения */
+    /** Месяцы, отличающиеся от последней известной облачной версии; месяцы в конфликте ждут */
+    dirtyMonths() {
+      const keys = new Set([...Object.keys(this.archive), ...Object.keys(this.sync.meta.months)]);
+      return [...keys]
+        .filter(key => isMonthKey(key) && !this.cloudConflict?.months[key])
+        .map(key => {
+          const tasks = this.archive[key]?.tasks || [];
+          return { key, tasks, hash: hashTasks(tasks) };
+        })
+        .filter(({ key, tasks, hash }) => {
+          const known = this.sync.meta.months[key];
+          return known ? known.hash !== hash : tasks.length > 0;
+        });
+    },
+
+    /**
+     * Пакетная запись изменённых месяцев и корня (настройки, версия структуры).
+     * Ревизия месяца растёт на 1 от известной, base – ревизия, поверх которой пишет устройство.
+     */
     async writeCloud() {
-      const data = { archive: this.archive, settings: this.settings, updatedAt: Date.now() };
-      const size = new TextEncoder().encode(JSON.stringify(data)).length;
-      this.cloudUsage = size / CLOUD_DOC_LIMIT;
-      if (size > CLOUD_DOC_MAX) {
-        throw Object.assign(new Error('Cloud document is too large'), { code: 'too-large' });
-      }
+      const uid = this.user.uid;
+      const meta = this.sync.meta;
+      const months = this.dirtyMonths();
+      const settings = { ...this.settings };
+      const settingsHash = hashSettings(settings);
+      const writeRoot = this.sync.rootNeedsWrite || settingsHash !== this.sync.meta.settingsHash;
+      if (months.length === 0 && !writeRoot) return;
+
+      const now = Date.now();
+      const writes = months.map(({ key, tasks, hash }) => {
+        const known = this.sync.meta.months[key];
+        const revision = (known?.revision || 0) + 1;
+        const legacy = this.sync.meta.legacy[key];
+        const data = {
+          tasks,
+          revision,
+          base: known?.revision || 0,
+          deviceId: DEVICE_ID,
+          updatedAt: now,
+        };
+        if (legacy?.hash) {
+          data.legacyHash = legacy.hash;
+          data.legacyRevision = legacy.pending ? revision : legacy.revision;
+        }
+        const size = new TextEncoder().encode(JSON.stringify(data)).length;
+        if (size > CLOUD_DOC_MAX) {
+          throw Object.assign(new Error(`Cloud month ${key} is too large`), { code: 'too-large' });
+        }
+        return { key, data, hash };
+      });
+
       /** Без сети Firestore держит запись в очереди и завершает её после подключения */
       this.syncState = navigator.onLine ? 'saving' : 'offline';
-      await setDoc(doc(db, 'users', this.user.uid), data);
+      const parts = writes.length > 0 ? chunks(writes, CLOUD_BATCH_SIZE) : [[]];
+      for (const [index, part] of parts.entries()) {
+        const batch = writeBatch(db);
+        part.forEach(({ key, data }) => batch.set(monthRef(uid, key), data));
+        if (writeRoot && index === parts.length - 1) {
+          batch.set(
+            rootRef(uid),
+            { settings, schemaVersion: CLOUD_SCHEMA_VERSION, updatedAt: now, deviceId: DEVICE_ID },
+            { merge: true }
+          );
+        }
+        await batch.commit();
+        /** Пока шла запись, пользователь вышел или сменился: метаданные уже не его */
+        if (meta !== this.sync.meta) return;
+        part.forEach(({ key, data, hash }) => {
+          this.sync.meta.months[key] = { revision: data.revision, hash, device: DEVICE_ID };
+          if (data.legacyHash) {
+            this.sync.meta.legacy[key] = { hash: data.legacyHash, revision: data.legacyRevision };
+          }
+        });
+        saveSyncMeta(this.sync.meta);
+      }
+      this.sync.meta.settingsHash = settingsHash;
+      this.sync.rootNeedsWrite = false;
+      saveSyncMeta(this.sync.meta);
     },
 
     markSynced() {
       clearTimeout(retryTimer);
       retryAttempt = 0;
-      this.syncState = 'synced';
+      this.syncState = this.cloudConflict ? 'conflict' : 'synced';
       this.syncError = null;
     },
 
@@ -988,8 +1479,9 @@ export const useHabitStore = defineStore('habit', {
 
     /** Продолжает синхронизацию с того места, где она остановилась */
     resumeSync() {
-      if (!this.user || this.cloudConflict) return Promise.resolve(false);
-      if (!this.isAuthReady) return this.connectCloud();
+      if (!this.user) return Promise.resolve(false);
+      /** Облако не прочитано или подписка оборвалась ошибкой: сверка заново */
+      if (!this.isAuthReady || this.sync.listenFailed) return this.connectCloud();
       if (!cloudDirty && !cloudWrite) {
         if (navigator.onLine) this.markSynced();
         return Promise.resolve(true);
@@ -1002,32 +1494,6 @@ export const useHabitStore = defineStore('habit', {
       clearTimeout(retryTimer);
       retryAttempt = 0;
       return this.resumeSync();
-    },
-
-    /** Читает документ пользователя из Firestore, возвращает null, если его ещё нет */
-    async loadFromCloud() {
-      if (!this.user) return null;
-
-      const ref = doc(db, 'users', this.user.uid);
-      const snap = await getDoc(ref);
-
-      return snap.exists() ? snap.data() : null;
-    },
-
-    /**
-     * Применяет данные из Firestore к стору и localStorage.
-     * @returns {boolean} false, если архив в облаке повреждён и не применён
-     */
-    applyCloudData(data) {
-      const archive = data.archive || {};
-      if (!isValidArchive(archive)) return false;
-      this.archive = prepareArchive(archive);
-      this.tasks = this.archive[this.currentMonthKey]?.tasks || [];
-      this.applySettings(data.settings);
-      this.adaptMarksToNewMonth();
-      cloudDirty = false;
-      this.saveLocal();
-      return true;
     },
   },
 });

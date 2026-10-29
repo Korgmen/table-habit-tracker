@@ -3,7 +3,7 @@ import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import {
   initializeFirestore,
   persistentLocalCache,
-  persistentSingleTabManager,
+  persistentMultipleTabManager,
 } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -20,9 +20,13 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const provider = new GoogleAuthProvider();
 
-/** Инициализация Firestore с включённым IndexedDB persistence */
+/**
+ * Инициализация Firestore с кэшем IndexedDB, общим для всех вкладок.
+ * Поля со значением undefined при записи пропускаются.
+ */
 export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({
-    tabManager: persistentSingleTabManager(),
+    tabManager: persistentMultipleTabManager(),
   }),
+  ignoreUndefinedProperties: true,
 });

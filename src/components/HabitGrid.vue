@@ -8,9 +8,43 @@
   import MarkCircle from '@/components/MarkCircle.vue';
 
   const store = useHabitStore();
-  const { monthDays, isWeekStart, isWeekend, isFuture, todayDay, weekdayLabel } = useHabitUtils();
+  const {
+    monthDays,
+    isWeekStart,
+    isWeekend,
+    isFuture,
+    todayDay,
+    weekdayLabel,
+    habitColorStyle,
+    weekdayName,
+    weekOrder,
+  } = useHabitUtils();
   const { t } = useI18n();
-  const { openNewHabit, openHabit, toastWithUndo } = useModals(t);
+  const { openNewHabit, openHabit, openNote, toastWithUndo } = useModals(t);
+
+  /** Клик по отметке меняет её, Alt+клик открывает заметку к дню */
+  const clickMark = (event, task, subtask, day) => {
+    if (isFuture(day)) return;
+    if (event.altKey) openNote(task.id, day);
+    else store.cycleMark(task.id, subtask.id, day - 1);
+  };
+
+  /** Вторая строка под названием: пауза, отметок в день, расписание или цель */
+  const habitMeta = task => {
+    const parts = [];
+    if (task.paused) parts.push(t('grid.paused'));
+    if (task.subtasks.length > 1) parts.push(t('grid.perDay', { count: task.subtasks.length }));
+    if (task.schedule) {
+      parts.push(
+        weekOrder.value
+          .filter(weekday => task.schedule.includes(weekday))
+          .map(weekdayName)
+          .join(', ')
+      );
+    }
+    if (task.goal) parts.push(t('habit.goalCount', { count: task.goal }));
+    return parts.join(' · ');
+  };
 
   /** Отметка всего дня меняет много клеток сразу: тост предлагает отменить */
   const markDay = (day, state) => {
@@ -96,9 +130,22 @@
               :title="t('grid.edit')"
               @click="openHabit(task.id)"
             >
-              <span class="text-sm leading-tight font-medium break-words">{{ task.title }}</span>
-              <span v-if="task.subtasks.length > 1" class="text-muted text-[11px]">
-                {{ t('grid.perDay', { count: task.subtasks.length }) }}
+              <span
+                class="flex items-start gap-1.5 text-sm leading-tight font-medium break-words"
+                :class="task.paused ? 'text-muted' : ''"
+              >
+                <span
+                  v-if="task.color"
+                  class="mt-1 size-2 shrink-0 rounded-full bg-(--habit)"
+                  :style="habitColorStyle(task)"
+                ></span>
+                <span class="min-w-0">
+                  <template v-if="task.emoji">{{ task.emoji }}&nbsp;</template>
+                  {{ task.title }}
+                </span>
+              </span>
+              <span v-if="habitMeta(task)" class="text-muted text-[11px]">
+                {{ habitMeta(task) }}
               </span>
             </button>
           </div>
@@ -106,9 +153,19 @@
           <div
             v-for="day in monthDays"
             :key="day"
-            class="flex w-7 shrink-0 flex-col justify-center border-s py-0.5"
+            class="relative flex w-7 shrink-0 flex-col justify-center border-s py-0.5"
             :class="columnClass(day)"
           >
+            <!-- Заметка к дню: точка в углу клетки, текст в подсказке -->
+            <button
+              v-if="task.notes?.[day - 1]"
+              class="hide-print absolute end-0 top-0 z-[1] flex size-3 items-center justify-center"
+              :title="task.notes[day - 1]"
+              :aria-label="t('note.open', { title: task.title, day })"
+              @click="openNote(task.id, day)"
+            >
+              <span class="bg-accent size-1.5 rounded-full"></span>
+            </button>
             <button
               v-for="(subtask, index) in task.subtasks"
               :key="subtask.id"
@@ -123,21 +180,31 @@
                   state: markState(subtask.marks[day - 1]),
                 })
               "
-              @click="store.cycleMark(task.id, subtask.id, day - 1)"
+              @click="clickMark($event, task, subtask, day)"
               @contextmenu.prevent="
                 !isFuture(day) && store.toggleSkip(task.id, subtask.id, day - 1)
               "
             >
-              <MarkCircle :mark="subtask.marks[day - 1]" :future="isFuture(day)" />
+              <MarkCircle
+                :mark="subtask.marks[day - 1]"
+                :future="isFuture(day)"
+                :color="task.color"
+              />
             </button>
           </div>
 
           <div class="flex w-[110px] shrink-0 flex-col justify-center gap-[5px] px-4">
-            <span class="text-[13px] font-semibold">{{ task.progress }}%</span>
+            <span class="text-[13px] font-semibold" :class="task.paused ? 'text-muted' : ''">
+              {{ task.progress }}%
+            </span>
             <span class="bg-line flex h-1 rounded-full">
               <span
-                class="bg-ink rounded-full"
-                :style="{ width: `${Math.min(100, parseFloat(task.progress) || 0)}%` }"
+                class="rounded-full"
+                :class="task.color ? 'bg-(--habit)' : 'bg-ink'"
+                :style="{
+                  ...habitColorStyle(task),
+                  width: `${Math.min(100, parseFloat(task.progress) || 0)}%`,
+                }"
               ></span>
             </span>
           </div>
@@ -167,6 +234,7 @@
         </span>
         <span>{{ t('grid.legendClear') }}</span>
         <span>{{ t('grid.legendDay') }}</span>
+        <span>{{ t('grid.legendNote') }}</span>
       </div>
     </div>
   </div>

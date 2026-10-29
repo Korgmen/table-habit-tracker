@@ -32,6 +32,15 @@
   --danger: oklch(0.55 0.2 25);
   --ok: oklch(0.65 0.15 150);
   --scrim: rgba(20, 20, 18, 0.42);
+  /* Цвета привычек (ключи HABIT_COLORS в src/utils/archive.js), элементы читают var(--habit-<цвет>) */
+  --habit-red: oklch(0.6 0.2 25);
+  --habit-orange: oklch(0.66 0.17 55);
+  --habit-yellow: oklch(0.7 0.14 90);
+  --habit-green: oklch(0.6 0.15 150);
+  --habit-teal: oklch(0.6 0.1 195);
+  --habit-blue: oklch(0.57 0.16 255);
+  --habit-violet: oklch(0.55 0.18 295);
+  --habit-pink: oklch(0.62 0.19 350);
   color-scheme: light;
 }
 
@@ -47,6 +56,14 @@
   --danger: oklch(0.65 0.19 25);
   --ok: oklch(0.65 0.15 150);
   --scrim: rgba(0, 0, 0, 0.6);
+  --habit-red: oklch(0.66 0.18 25);
+  --habit-orange: oklch(0.72 0.15 55);
+  --habit-yellow: oklch(0.78 0.13 90);
+  --habit-green: oklch(0.68 0.14 150);
+  --habit-teal: oklch(0.68 0.1 195);
+  --habit-blue: oklch(0.66 0.14 255);
+  --habit-violet: oklch(0.65 0.16 295);
+  --habit-pink: oklch(0.7 0.17 350);
   color-scheme: dark;
 }
 

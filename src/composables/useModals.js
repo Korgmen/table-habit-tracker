@@ -15,8 +15,18 @@ export function useModals(t) {
     modalStore.showModal('habit');
   };
 
-  /** Открывает окно привычки для правки */
-  const openHabit = taskId => modalStore.showModal('habit', { taskId });
+  /**
+   * Открывает окно привычки для правки.
+   * @param {number} focusDay - число для заметки из окна (выбранный день на телефоне)
+   */
+  const openHabit = (taskId, focusDay = null) =>
+    modalStore.showModal('habit', { taskId, focusDay });
+
+  /** Открывает заметку к дню привычки; back – после закрытия вернуться в окно привычки */
+  const openNote = (taskId, day, back = false) => {
+    if (back) modalStore.replaceModal('note', { taskId, day, back });
+    else modalStore.showModal('note', { taskId, day });
+  };
 
   /** Тост о только что сделанном изменении с кнопкой, которая отменяет именно его */
   const toastWithUndo = text => {
@@ -73,6 +83,7 @@ export function useModals(t) {
   return {
     openNewHabit,
     openHabit,
+    openNote,
     toastWithUndo,
     undoLast,
     redoLast,

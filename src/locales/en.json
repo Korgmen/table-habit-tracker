@@ -62,7 +62,7 @@
     },
     "reason": {
       "offline": "No connection. Changes are kept on this device and sync when the network is back.",
-      "conflict": "Data on this device and in the cloud differ. Sync is paused until you choose.",
+      "conflict": "Some months differ on this device and in the cloud. They are not synced until you choose a version.",
       "permissionDenied": "No access to cloud data. Try signing in again.",
       "unauthenticated": "The session has expired. Sign in again.",
       "resourceExhausted": "The cloud quota is exceeded. Retrying later.",
@@ -71,7 +71,6 @@
     },
     "choose": "Choose",
     "retry": "Retry",
-    "usage": "Cloud storage is {pct}% full (limit 1 MB).",
     "failed": "Cloud sync failed. Data is saved on this device."
   },
   "header": {
@@ -97,7 +96,9 @@
     "legendDone": "Click – done",
     "legendSkip": "Right-click or second click – skip, the day is not counted",
     "legendClear": "Third click – clear",
-    "legendDay": "Click a date – whole day"
+    "legendDay": "Click a date – whole day",
+    "paused": "paused",
+    "legendNote": "Alt+click – note for the day"
   },
   "list": {
     "today": "Today",
@@ -106,13 +107,16 @@
     "streak": "{count}-day streak",
     "monthPct": "{pct}% in {month}",
     "ofSubs": "{done} of {total}",
-    "hint": "Tap a circle: done → skip (the day is not counted) → empty. Tap a name for habit settings and the month’s marks."
+    "hint": "Tap a circle: done → skip (the day is not counted) → empty. Tap a name for habit settings and the month’s marks.",
+    "paused": "paused",
+    "streakWeeks": "{count}-week streak"
   },
   "empty": {
     "title": "No habits yet",
     "text": "Add your first one, like “Workout” or “Reading”. Mark it every day and see the percentage and grade at the end of the month.",
     "openPrev": "Open {month}",
-    "hotkey": "Press N for a new habit"
+    "hotkey": "Press N for a new habit",
+    "carry": "Move habits from {month}"
   },
   "habit": {
     "title": "Habit",
@@ -136,7 +140,33 @@
     "limitLine": "{count} of {max} habits this month",
     "added": "Habit “{title}” added",
     "deleted": "“{title}” deleted",
-    "subsRemoved": "Extra subtasks deleted along with their marks"
+    "subsRemoved": "Extra subtasks deleted along with their marks",
+    "emoji": "Emoji",
+    "emojiPick": "Choose emoji",
+    "emojiNone": "No emoji",
+    "color": "Color",
+    "colorNone": "No color",
+    "colors": {
+      "red": "Red",
+      "orange": "Orange",
+      "yellow": "Yellow",
+      "green": "Green",
+      "teal": "Teal",
+      "blue": "Blue",
+      "violet": "Violet",
+      "pink": "Pink"
+    },
+    "schedule": "Schedule",
+    "scheduleDaily": "Every day",
+    "scheduleDays": "On days",
+    "scheduleGoal": "Times a week",
+    "scheduleHint": "Other days get a skip (cross), as when you skip a day yourself. Tap it to clear if you did the habit anyway.",
+    "goalCount": "{count} times a week",
+    "goalHint": "Each week counts up to the goal. When the goal is reached, the remaining empty days of the week get a skip (cross). Short weeks at the edges of the month have a proportionally lower goal.",
+    "paused": "Paused",
+    "pausedHint": "Not counted in the overall percentage. You can still mark it.",
+    "notes": "Notes for {month}",
+    "addNote": "Note for {date}"
   },
   "settings": {
     "title": "Settings",
@@ -184,7 +214,10 @@
       "scanHint": "transfer marks",
       "backup": "Backup",
       "backupHint": "from {date}",
-      "backupHintNoDate": "restore"
+      "backupHintNoDate": "restore",
+      "csv": "CSV",
+      "csvMonthHint": "this month",
+      "csvAllHint": "all months"
     },
     "hotkeys": {
       "title": "Keyboard shortcuts",
@@ -210,11 +243,14 @@
   },
   "duplicate": {
     "title": "Move habits to {month}?",
-    "message": "Habits ({count}) will be moved to {to} with empty marks.",
+    "message": "Selected habits ({count}) from {from} will be moved to {to} with empty marks. Tap a habit to leave it out.",
     "replaceWarning": "The current list and marks of that month will be replaced.",
     "confirm": "Move",
     "confirmReplace": "Replace list",
-    "done": "Habits moved to {month}"
+    "done": "Habits moved to {month}",
+    "from": "From month",
+    "modeAppend": "Add to current",
+    "modeReplace": "Replace current"
   },
   "welcome": {
     "title": "A simple table to keep the rhythm",
@@ -229,17 +265,20 @@
   },
   "conflict": {
     "title": "Data differs",
-    "message": "This device and the cloud have different versions. Choose which one to keep, the other will be overwritten.",
+    "message": "These months differ between this device and the cloud. Choose a version for each month, the other one will be overwritten.",
     "local": "This device",
     "cloud": "Cloud",
-    "keep": "Keep",
-    "load": "Load",
-    "summary": "Habits now: {tasks} · months: {months}",
+    "summary": "habits: {tasks} · done: {marks}",
     "changed": "changed {date}",
     "keptLocal": "Cloud updated with data from this device",
     "loadedCloud": "Data loaded from the cloud",
-    "postponed": "Version not chosen, sync is paused. You can choose later from the sync status.",
-    "invalid": "Cloud data is damaged and cannot be loaded"
+    "postponed": "Version not chosen. These months are not synced, the rest are. You can choose later from the sync status.",
+    "invalid": "Cloud data is damaged and cannot be loaded",
+    "legacy": "from an old app version",
+    "allLocal": "All from this device",
+    "allCloud": "All from the cloud",
+    "apply": "Apply",
+    "later": "Later"
   },
   "update": {
     "message": "A new version of the app is available",
@@ -270,7 +309,10 @@
       "delete": "habit deletion",
       "duplicate": "habits moved to month",
       "import": "import",
-      "cloud": "cloud data load"
+      "cloud": "cloud data load",
+      "carry": "habits moved to the new month",
+      "note": "note",
+      "pause": "pause"
     }
   },
   "importSheet": {
@@ -298,5 +340,43 @@
   "storage": {
     "quota": "Browser storage is full, changes are not saved on this device. Export your data to a file.",
     "failed": "Could not save data on this device. Export your data to a file."
+  },
+  "note": {
+    "title": "Note",
+    "placeholder": "What happened that day?",
+    "prevDay": "Previous day",
+    "nextDay": "Next day",
+    "open": "{title}, note for day {day}",
+    "saved": "Note saved",
+    "deleted": "Note deleted"
+  },
+  "csv": {
+    "month": "Month",
+    "habit": "Habit",
+    "mark": "Mark",
+    "progress": "Progress, %",
+    "notes": "Notes"
+  },
+  "carry": {
+    "auto": "Habits moved to the new month: {count}. Source: {month}"
+  },
+  "emoji": {
+    "search": "Search emoji",
+    "suggested": "Suggested for this habit",
+    "loading": "Loading emoji…",
+    "failed": "Could not load emoji",
+    "empty": "Nothing found. You can paste any emoji into the search.",
+    "groups": {
+      "title": "Categories",
+      "smileys": "Smileys",
+      "people": "People",
+      "animals": "Animals and nature",
+      "food": "Food and drink",
+      "travel": "Travel and places",
+      "activities": "Activities",
+      "objects": "Objects",
+      "symbols": "Symbols",
+      "flags": "Flags"
+    }
   }
 }

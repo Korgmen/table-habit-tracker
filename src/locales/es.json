@@ -62,7 +62,7 @@
     },
     "reason": {
       "offline": "Sin conexión. Los cambios se guardan en este dispositivo y se sincronizan al volver la red.",
-      "conflict": "Los datos de este dispositivo y de la nube difieren. La sincronización espera tu elección.",
+      "conflict": "Algunos meses no coinciden entre este dispositivo y la nube. No se sincronizan hasta que elijas una versión.",
       "permissionDenied": "Sin acceso a los datos en la nube. Vuelve a iniciar sesión.",
       "unauthenticated": "La sesión ha caducado. Vuelve a iniciar sesión.",
       "resourceExhausted": "Se superó la cuota de la nube. Se reintentará más tarde.",
@@ -71,7 +71,6 @@
     },
     "choose": "Elegir",
     "retry": "Reintentar",
-    "usage": "El almacenamiento en la nube está al {pct}% (límite 1 MB).",
     "failed": "Falló la sincronización con la nube. Los datos se guardaron en este dispositivo."
   },
   "header": {
@@ -97,7 +96,9 @@
     "legendDone": "Clic – hecho",
     "legendSkip": "Clic derecho o segundo clic – omitido, el día no cuenta",
     "legendClear": "Tercer clic – borrar",
-    "legendDay": "Clic en la fecha – todo el día"
+    "legendDay": "Clic en la fecha – todo el día",
+    "paused": "en pausa",
+    "legendNote": "Alt+clic – nota del día"
   },
   "list": {
     "today": "Hoy",
@@ -106,13 +107,16 @@
     "streak": "racha de {count} días",
     "monthPct": "{pct}% en {month}",
     "ofSubs": "{done} de {total}",
-    "hint": "Toca un círculo: hecho → omitido (el día no cuenta) → vacío. Toca un nombre para ver los ajustes del hábito y las marcas del mes."
+    "hint": "Toca un círculo: hecho → omitido (el día no cuenta) → vacío. Toca un nombre para ver los ajustes del hábito y las marcas del mes.",
+    "paused": "en pausa",
+    "streakWeeks": "racha de {count} semanas"
   },
   "empty": {
     "title": "Aún no hay hábitos",
     "text": "Añade el primero, por ejemplo «Ejercicio» o «Lectura». Márcalo cada día y al final del mes verás el porcentaje y la nota.",
     "openPrev": "Abrir {month}",
-    "hotkey": "Tecla N – nuevo hábito"
+    "hotkey": "Tecla N – nuevo hábito",
+    "carry": "Pasar hábitos de {month}"
   },
   "habit": {
     "title": "Hábito",
@@ -136,7 +140,33 @@
     "limitLine": "{count} de {max} hábitos este mes",
     "added": "Hábito «{title}» añadido",
     "deleted": "«{title}» eliminado",
-    "subsRemoved": "Se eliminaron las marcas de las subtareas quitadas"
+    "subsRemoved": "Se eliminaron las marcas de las subtareas quitadas",
+    "emoji": "Emoji",
+    "emojiPick": "Elegir emoji",
+    "emojiNone": "Sin emoji",
+    "color": "Color",
+    "colorNone": "Sin color",
+    "colors": {
+      "red": "Rojo",
+      "orange": "Naranja",
+      "yellow": "Amarillo",
+      "green": "Verde",
+      "teal": "Turquesa",
+      "blue": "Azul",
+      "violet": "Violeta",
+      "pink": "Rosa"
+    },
+    "schedule": "Horario",
+    "scheduleDaily": "Cada día",
+    "scheduleDays": "Por días",
+    "scheduleGoal": "Veces por semana",
+    "scheduleHint": "Los demás días se marcan como omitidos (cruz), igual que al omitir un día a mano. Si practicaste ese día, quita la marca.",
+    "goalCount": "{count} veces por semana",
+    "goalHint": "Cada semana cuenta hasta la meta. Al alcanzarla, los días vacíos que quedan de esa semana se marcan como omitidos (cruz). Las semanas incompletas al inicio y al final del mes tienen una meta proporcionalmente menor.",
+    "paused": "En pausa",
+    "pausedHint": "No cuenta en el porcentaje general. Puedes seguir marcándolo.",
+    "notes": "Notas de {month}",
+    "addNote": "Nota del {date}"
   },
   "settings": {
     "title": "Configuración",
@@ -184,7 +214,10 @@
       "scanHint": "pasar marcas",
       "backup": "Copia",
       "backupHint": "del {date}",
-      "backupHintNoDate": "restaurar"
+      "backupHintNoDate": "restaurar",
+      "csv": "CSV",
+      "csvMonthHint": "este mes",
+      "csvAllHint": "todos los meses"
     },
     "hotkeys": {
       "title": "Atajos de teclado",
@@ -210,11 +243,14 @@
   },
   "duplicate": {
     "title": "¿Pasar los hábitos a {month}?",
-    "message": "Los hábitos ({count}) pasarán a {to} con las marcas vacías.",
+    "message": "Los hábitos elegidos ({count}) de {from} pasarán a {to} con las marcas vacías. Toca un hábito para no pasarlo.",
     "replaceWarning": "La lista actual y las marcas de ese mes se reemplazarán.",
     "confirm": "Pasar",
     "confirmReplace": "Reemplazar lista",
-    "done": "Hábitos pasados a {month}"
+    "done": "Hábitos pasados a {month}",
+    "from": "Del mes",
+    "modeAppend": "Añadir a los actuales",
+    "modeReplace": "Reemplazar los actuales"
   },
   "welcome": {
     "title": "Una tabla sencilla para mantener el ritmo",
@@ -229,17 +265,20 @@
   },
   "conflict": {
     "title": "Los datos no coinciden",
-    "message": "Este dispositivo y la nube tienen versiones distintas. Elige cuál conservar, la otra se sobrescribirá.",
+    "message": "Estos meses no coinciden entre este dispositivo y la nube. Elige una versión para cada mes, la otra se sobrescribirá.",
     "local": "Este dispositivo",
     "cloud": "Nube",
-    "keep": "Conservar",
-    "load": "Cargar",
-    "summary": "Hábitos ahora: {tasks} · meses: {months}",
+    "summary": "hábitos: {tasks} · hechos: {marks}",
     "changed": "modificado {date}",
     "keptLocal": "La nube se actualizó con los datos de este dispositivo",
     "loadedCloud": "Datos cargados desde la nube",
-    "postponed": "No elegiste versión, la sincronización está en pausa. Puedes elegir luego desde el estado de sincronización.",
-    "invalid": "Los datos de la nube están dañados y no se pueden cargar"
+    "postponed": "No elegiste versión. Estos meses no se sincronizan, el resto sí. Puedes elegir luego desde el estado de sincronización.",
+    "invalid": "Los datos de la nube están dañados y no se pueden cargar",
+    "legacy": "de una versión antigua de la app",
+    "allLocal": "Todo de este dispositivo",
+    "allCloud": "Todo de la nube",
+    "apply": "Aplicar",
+    "later": "Más tarde"
   },
   "update": {
     "message": "Hay una nueva versión de la aplicación",
@@ -270,7 +309,10 @@
       "delete": "eliminación del hábito",
       "duplicate": "traslado de hábitos",
       "import": "importación",
-      "cloud": "carga desde la nube"
+      "cloud": "carga desde la nube",
+      "carry": "traslado al nuevo mes",
+      "note": "nota",
+      "pause": "pausa"
     }
   },
   "importSheet": {
@@ -298,5 +340,43 @@
   "storage": {
     "quota": "El almacenamiento del navegador está lleno, los cambios no se guardan en este dispositivo. Exporta tus datos a un archivo.",
     "failed": "No se pudieron guardar los datos en este dispositivo. Expórtalos a un archivo."
+  },
+  "note": {
+    "title": "Nota",
+    "placeholder": "¿Qué pasó ese día?",
+    "prevDay": "Día anterior",
+    "nextDay": "Día siguiente",
+    "open": "{title}, nota del día {day}",
+    "saved": "Nota guardada",
+    "deleted": "Nota eliminada"
+  },
+  "csv": {
+    "month": "Mes",
+    "habit": "Hábito",
+    "mark": "Marca",
+    "progress": "Progreso, %",
+    "notes": "Notas"
+  },
+  "carry": {
+    "auto": "Hábitos pasados al nuevo mes: {count}. Origen: {month}"
+  },
+  "emoji": {
+    "search": "Buscar emoji",
+    "suggested": "Sugeridos para este hábito",
+    "loading": "Cargando emojis…",
+    "failed": "No se pudieron cargar los emojis",
+    "empty": "No se encontró nada. Puedes pegar cualquier emoji en la búsqueda.",
+    "groups": {
+      "title": "Categorías",
+      "smileys": "Caras",
+      "people": "Personas",
+      "animals": "Animales y naturaleza",
+      "food": "Comida y bebida",
+      "travel": "Viajes y lugares",
+      "activities": "Actividades",
+      "objects": "Objetos",
+      "symbols": "Símbolos",
+      "flags": "Banderas"
+    }
   }
 }

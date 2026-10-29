@@ -62,7 +62,7 @@
     },
     "reason": {
       "offline": "无网络连接。更改保存在本设备上，联网后会同步。",
-      "conflict": "本设备和云端的数据不同。同步将在你做出选择后继续。",
+      "conflict": "部分月份在此设备和云端不一致。选择版本之前，这些月份不会同步。",
       "permissionDenied": "无权访问云端数据。请重新登录。",
       "unauthenticated": "会话已过期。请重新登录。",
       "resourceExhausted": "超出云端配额。稍后将重试。",
@@ -71,7 +71,6 @@
     },
     "choose": "选择",
     "retry": "重试",
-    "usage": "云端存储已使用 {pct}%（上限 1 MB）。",
     "failed": "云端同步失败。数据已保存在本设备上。"
   },
   "header": {
@@ -97,7 +96,9 @@
     "legendDone": "点击 – 完成",
     "legendSkip": "右键或第二次点击 – 跳过，这一天不计入",
     "legendClear": "第三次点击 – 清除",
-    "legendDay": "点击日期 – 整天"
+    "legendDay": "点击日期 – 整天",
+    "paused": "已暂停",
+    "legendNote": "Alt+点击 – 当天备注"
   },
   "list": {
     "today": "今天",
@@ -106,13 +107,16 @@
     "streak": "连续 {count} 天",
     "monthPct": "{month} {pct}%",
     "ofSubs": "{done}/{total}",
-    "hint": "点击圆圈：完成 → 跳过（不计入）→ 空。点击名称可打开习惯设置和本月标记。"
+    "hint": "点击圆圈：完成 → 跳过（不计入）→ 空。点击名称可打开习惯设置和本月标记。",
+    "paused": "已暂停",
+    "streakWeeks": "连续 {count} 周"
   },
   "empty": {
     "title": "还没有习惯",
     "text": "添加第一个习惯，比如“锻炼”或“阅读”。每天标记，月底就能看到完成率和评分。",
     "openPrev": "打开{month}",
-    "hotkey": "按 N 新建习惯"
+    "hotkey": "按 N 新建习惯",
+    "carry": "从{month}转移习惯"
   },
   "habit": {
     "title": "习惯",
@@ -136,7 +140,33 @@
     "limitLine": "本月 {count}/{max} 个习惯",
     "added": "已添加习惯“{title}”",
     "deleted": "已删除“{title}”",
-    "subsRemoved": "已删除移除的子任务的标记"
+    "subsRemoved": "已删除移除的子任务的标记",
+    "emoji": "表情",
+    "emojiPick": "选择表情",
+    "emojiNone": "无表情",
+    "color": "颜色",
+    "colorNone": "无颜色",
+    "colors": {
+      "red": "红色",
+      "orange": "橙色",
+      "yellow": "黄色",
+      "green": "绿色",
+      "teal": "青色",
+      "blue": "蓝色",
+      "violet": "紫色",
+      "pink": "粉色"
+    },
+    "schedule": "计划",
+    "scheduleDaily": "每天",
+    "scheduleDays": "按星期",
+    "scheduleGoal": "每周次数",
+    "scheduleHint": "其他日子会标记为跳过（叉号），和手动跳过一样。如果那天也做了，可以取消跳过。",
+    "goalCount": "每周 {count} 次",
+    "goalHint": "每周最多计入到目标次数。达成本周目标后，这一周剩下的空白日子会标记为跳过（叉号）。月初月末不完整的周，目标按比例减少。",
+    "paused": "暂停",
+    "pausedHint": "不计入总体百分比。仍然可以标记。",
+    "notes": "{month}的备注",
+    "addNote": "{date}的备注"
   },
   "settings": {
     "title": "设置",
@@ -184,7 +214,10 @@
       "scanHint": "导入标记",
       "backup": "备份",
       "backupHint": "{date}",
-      "backupHintNoDate": "恢复"
+      "backupHintNoDate": "恢复",
+      "csv": "CSV",
+      "csvMonthHint": "本月",
+      "csvAllHint": "所有月份"
     },
     "hotkeys": {
       "title": "快捷键",
@@ -210,11 +243,14 @@
   },
   "duplicate": {
     "title": "将习惯转到{month}？",
-    "message": "{count} 个习惯将转到{to}，标记清空。",
+    "message": "选中的 {count} 个习惯将从{from}转到{to}，标记清空。点击习惯可取消选择。",
     "replaceWarning": "该月当前的列表和标记将被替换。",
     "confirm": "转移",
     "confirmReplace": "替换列表",
-    "done": "习惯已转到{month}"
+    "done": "习惯已转到{month}",
+    "from": "来源月份",
+    "modeAppend": "添加到当前",
+    "modeReplace": "替换当前"
   },
   "welcome": {
     "title": "用一张简单的表格保持节奏",
@@ -229,17 +265,20 @@
   },
   "conflict": {
     "title": "数据不一致",
-    "message": "此设备和云端的版本不同。请选择保留哪一个，另一个将被覆盖。",
+    "message": "这些月份在此设备和云端不一致。请为每个月选择一个版本，另一个将被覆盖。",
     "local": "此设备",
     "cloud": "云端",
-    "keep": "保留",
-    "load": "加载",
-    "summary": "当前习惯：{tasks} · 月份：{months}",
+    "summary": "习惯：{tasks} · 完成：{marks}",
     "changed": "修改于 {date}",
     "keptLocal": "已用此设备的数据更新云端",
     "loadedCloud": "已从云端加载数据",
-    "postponed": "未选择版本，同步已暂停。稍后可在同步状态中选择。",
-    "invalid": "云端数据已损坏，无法加载"
+    "postponed": "未选择版本。这些月份暂不同步，其余月份照常同步。稍后可在同步状态中选择。",
+    "invalid": "云端数据已损坏，无法加载",
+    "legacy": "来自旧版应用",
+    "allLocal": "全部用此设备",
+    "allCloud": "全部用云端",
+    "apply": "应用",
+    "later": "稍后"
   },
   "update": {
     "message": "应用有新版本",
@@ -270,7 +309,10 @@
       "delete": "删除习惯",
       "duplicate": "迁移习惯",
       "import": "导入",
-      "cloud": "从云端加载"
+      "cloud": "从云端加载",
+      "carry": "转到新月份",
+      "note": "备注",
+      "pause": "暂停"
     }
   },
   "importSheet": {
@@ -298,5 +340,43 @@
   "storage": {
     "quota": "浏览器存储已满，更改未保存在本设备上。请将数据导出为文件。",
     "failed": "无法在本设备上保存数据。请将数据导出为文件。"
+  },
+  "note": {
+    "title": "备注",
+    "placeholder": "这一天发生了什么？",
+    "prevDay": "前一天",
+    "nextDay": "后一天",
+    "open": "{title}，{day} 日的备注",
+    "saved": "备注已保存",
+    "deleted": "备注已删除"
+  },
+  "csv": {
+    "month": "月份",
+    "habit": "习惯",
+    "mark": "标记",
+    "progress": "进度，%",
+    "notes": "备注"
+  },
+  "carry": {
+    "auto": "已将习惯转到新月份：{count} 个。来源：{month}"
+  },
+  "emoji": {
+    "search": "搜索表情",
+    "suggested": "适合这个习惯",
+    "loading": "正在加载表情…",
+    "failed": "无法加载表情",
+    "empty": "没有找到。可以把任意表情粘贴到搜索框。",
+    "groups": {
+      "title": "分类",
+      "smileys": "笑脸",
+      "people": "人物",
+      "animals": "动物和自然",
+      "food": "食物和饮料",
+      "travel": "旅行和地点",
+      "activities": "活动",
+      "objects": "物品",
+      "symbols": "符号",
+      "flags": "旗帜"
+    }
   }
 }
