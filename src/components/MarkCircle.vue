@@ -17,8 +17,13 @@
     color: { type: String, default: null },
   });
 
-  const sizeClass = { sm: 'size-[18px]', md: 'size-[30px]', lg: 'size-[34px] text-[13px]' };
-  const iconClass = { sm: 'size-3', md: 'size-4', lg: 'size-4' };
+  /** sm на сенсорном экране (планшет с таблицей) крупнее: в него проще попасть пальцем */
+  const sizeClass = {
+    sm: 'size-[18px] pointer-coarse:size-6',
+    md: 'size-[30px]',
+    lg: 'size-[34px] text-[13px]',
+  };
+  const iconClass = { sm: 'size-3 pointer-coarse:size-4', md: 'size-4', lg: 'size-4' };
 
   const stateClass = computed(() => {
     if (props.mark === true) {

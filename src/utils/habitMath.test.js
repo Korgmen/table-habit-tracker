@@ -3,6 +3,8 @@ import {
   monthWeeks,
   taskProgress,
   taskStreak,
+  streakUnits,
+  streakRuns,
   dayTotals,
   applySchedule,
   goalWeeks,
@@ -121,6 +123,33 @@ describe('taskStreak', () => {
     const task = habit(marksWith({ 0: true, 4: true, 6: true, 11: true }), { goal: 2 });
     expect(taskStreak(task, ctx(), 12)).toEqual({ count: 2, unit: 'week' });
     expect(taskStreak(task, ctx(), 20)).toEqual({ count: 0, unit: 'week' });
+  });
+});
+
+describe('streakUnits и streakRuns', () => {
+  it('день с пропуском части подзадач засчитывается, сегодня без отметки не прерывает серию', () => {
+    const task = {
+      id: 1,
+      title: 'T',
+      subtasks: [
+        { id: 2, marks: marksWith({ 0: true, 1: true, 2: null }) },
+        { id: 3, marks: marksWith({ 0: true, 1: false, 2: null }) },
+      ],
+    };
+    expect(streakUnits(task, ctx(), 2)).toEqual(['done', 'done', 'miss']);
+    expect(streakUnits(task, ctx(), 2, true)).toEqual(['done', 'done', 'open']);
+    expect(streakRuns(streakUnits(task, ctx(), 2, true))).toEqual({ current: 2, best: 2 });
+    expect(streakRuns(streakUnits(task, ctx(), 2))).toEqual({ current: 0, best: 2 });
+  });
+
+  it('неделя цели целиком в пропусках не засчитывается и не прерывает серию', () => {
+    const marks = marksWith({ 0: true, 1: true });
+    for (let i = 4; i < 11; i++) marks[i] = false;
+    marks[11] = true;
+    marks[12] = true;
+    const task = habit(marks, { goal: 2 });
+    expect(streakUnits(task, ctx(), 17)).toEqual(['done', 'skip', 'done']);
+    expect(streakRuns(['done', 'skip', 'done', 'miss', 'done'])).toEqual({ current: 1, best: 2 });
   });
 });
 

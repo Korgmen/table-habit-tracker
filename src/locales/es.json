@@ -47,7 +47,30 @@
   "stats": {
     "average": "Promedio",
     "grade": "Nota",
-    "today": "Hoy"
+    "today": "Hoy",
+    "title": "Estadísticas",
+    "open": "Estadísticas",
+    "yearAvg": "Promedio de {year}",
+    "doneMarks": "Marcas hechas",
+    "bestStreak": "Mejor racha",
+    "heatMonth": "{month} por días",
+    "byMonth": "Promedio por mes",
+    "heatYear": "El año por días",
+    "habits": "Hábitos de {year}",
+    "empty": "No hay hábitos en {year}",
+    "colAvg": "Prom.",
+    "colDone": "Hechas",
+    "colBest": "Racha",
+    "colMonths": "Meses",
+    "less": "Menos",
+    "more": "Más",
+    "noData": "nada que contar",
+    "dayCell": "{date}: {done} de {total}",
+    "monthCell": "{month}: {pct}%",
+    "prevYear": "Año anterior",
+    "nextYear": "Año siguiente",
+    "days": "{count} d",
+    "weeks": "{count} sem."
   },
   "sync": {
     "state": {
@@ -77,7 +100,9 @@
     "newHabit": "Hábito",
     "newHabitLong": "Nuevo hábito",
     "newHabitHint": "Nuevo hábito (N)",
-    "settingsHint": "Configuración (S)"
+    "settingsHint": "Configuración (S)",
+    "statsHint": "Estadísticas de todos los meses",
+    "searchHint": "Filtrar hábitos (/)"
   },
   "archive": {
     "banner": "Archivo de {month}. Puedes corregir las marcas, las estadísticas se recalcularán.",
@@ -98,22 +123,30 @@
     "legendClear": "Tercer clic – borrar",
     "legendDay": "Clic en la fecha – todo el día",
     "paused": "en pausa",
-    "legendNote": "Alt+clic – nota del día"
+    "legendNote": "Alt+clic – nota del día",
+    "streak": "racha {value}"
   },
   "list": {
     "today": "Hoy",
-    "stat": "{month}: {avg}% · nota {grade}",
     "skipped": "omitido – el día no cuenta",
     "streak": "racha de {count} días",
     "monthPct": "{pct}% en {month}",
     "ofSubs": "{done} de {total}",
-    "hint": "Toca un círculo: hecho → omitido (el día no cuenta) → vacío. Toca un nombre para ver los ajustes del hábito y las marcas del mes.",
+    "hint": "Toca un círculo: hecho → omitido (el día no cuenta) → vacío. Mantén pulsado un círculo para omitir. Desliza la lista para cambiar de día y el nombre del mes para cambiar de mes. Toca un nombre para ver los ajustes y las estadísticas del hábito.",
     "paused": "en pausa",
-    "streakWeeks": "racha de {count} semanas"
+    "streakWeeks": "racha de {count} semanas",
+    "statAvg": "{month}: {avg}%",
+    "goToday": "Hoy",
+    "goYesterday": "Ayer",
+    "goUnmarked": "Días sin marcar: {count}",
+    "markAll": "Marcar todo",
+    "clearAll": "Quitar hechos",
+    "dayFilled": "Día {day}: todos los hábitos hechos",
+    "dayCleared": "Día {day}: marcas de hecho quitadas"
   },
   "empty": {
     "title": "Aún no hay hábitos",
-    "text": "Añade el primero, por ejemplo «Ejercicio» o «Lectura». Márcalo cada día y al final del mes verás el porcentaje y la nota.",
+    "text": "Añade el primero, por ejemplo «Ejercicio» o «Lectura». Márcalo cada día y verás crecer el porcentaje y las rachas.",
     "openPrev": "Abrir {month}",
     "hotkey": "Tecla N – nuevo hábito",
     "carry": "Pasar hábitos de {month}"
@@ -166,7 +199,11 @@
     "paused": "En pausa",
     "pausedHint": "No cuenta en el porcentaje general. Puedes seguir marcándolo.",
     "notes": "Notas de {month}",
-    "addNote": "Nota del {date}"
+    "addNote": "Nota del {date}",
+    "statCurrent": "Racha actual",
+    "statBest": "Mejor racha",
+    "statAvg": "Todos los meses",
+    "history": "Por mes"
   },
   "settings": {
     "title": "Configuración",
@@ -228,9 +265,20 @@
       "t": "Mes actual",
       "escape": "Cerrar ventana",
       "undo": "Deshacer",
-      "redo": "Rehacer"
+      "redo": "Rehacer",
+      "search": "Buscar hábitos"
     },
-    "showWelcome": "Cómo funciona"
+    "showWelcome": "Cómo funciona",
+    "summary": {
+      "title": "Resumen del mes",
+      "hint": "Junto al porcentaje promedio",
+      "auto": "Según el idioma",
+      "percent": "Solo porcentaje",
+      "stars": "Estrellas 0–5",
+      "letter": "Letra A–F",
+      "school": "Nota 2–5",
+      "hidden": "Ocultar"
+    }
   },
   "auth": {
     "login": "Iniciar sesión con Google",
@@ -254,7 +302,7 @@
   },
   "welcome": {
     "title": "Una tabla sencilla para mantener el ritmo",
-    "text": "Añade hábitos y márcalos cada día. Al final del mes verás el porcentaje de cada uno, el promedio general y una nota en escala de cinco puntos.",
+    "text": "Añade hábitos y márcalos cada día. Al final del mes verás el porcentaje de cada uno y el promedio general; las estadísticas muestran rachas y progreso por meses.",
     "done": "Hecho",
     "notDone": "No hecho",
     "notDoneHint": "déjalo vacío",
@@ -378,5 +426,22 @@
       "symbols": "Símbolos",
       "flags": "Banderas"
     }
+  },
+  "summary": {
+    "grade": "nota {grade}",
+    "stars": "{count} de 5 estrellas"
+  },
+  "search": {
+    "open": "Buscar",
+    "title": "Buscar",
+    "placeholder": "Hábito o nota",
+    "clear": "Borrar búsqueda",
+    "archive": "Buscar «{query}» en todos los meses",
+    "noneMonth": "Ningún hábito coincide este mes",
+    "habits": "Hábitos",
+    "notes": "Notas",
+    "none": "No se encontró nada",
+    "hint": "Busca en nombres de hábitos, emoji y notas de todos los meses.",
+    "openMonth": "Abrir {month}"
   }
 }

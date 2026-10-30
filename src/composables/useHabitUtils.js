@@ -16,11 +16,26 @@ const mediaRef = query => {
 /** Системная тема */
 const prefersDark = mediaRef('(prefers-color-scheme: dark)');
 
-/** Десктопная раскладка (таблица) или телефонная (лента дней) */
+/**
+ * Десктопная раскладка (таблица) или телефонная (лента дней). Планшет от 768px тоже получает
+ * таблицу: при сенсорном экране (pointer: coarse) клетки таблицы крупнее (классы pointer-coarse:).
+ */
 const isDesktop = mediaRef('(min-width: 768px)');
 
 /** Модификатор горячих клавиш для подписей: ⌘ на Apple, Ctrl на остальных */
 const modKey = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? '⌘' : 'Ctrl';
+
+/**
+ * Цвет клетки тепловой карты по доле выполненного 0–1: от бледного к цвету отметки «выполнено».
+ * null – учитывать нечего (нет привычек или всё в пропусках).
+ */
+const heatColor = ratio =>
+  ratio === null
+    ? 'var(--soft)'
+    : `color-mix(in oklch, var(--ink) ${Math.round(12 + ratio * 88)}%, var(--soft))`;
+
+/** Оценка звёздами 0–5: «★★★☆☆» */
+const starsText = count => '★'.repeat(count) + '☆'.repeat(5 - count);
 
 export function useHabitUtils() {
   const store = useHabitStore();
@@ -119,6 +134,23 @@ export function useHabitUtils() {
     });
   };
 
+  /** Короткое название месяца по ключу 'YYYY-MM' для подписей графиков: «окт.» */
+  const monthShortLabel = key => {
+    const [year, month] = key.split('-').map(Number);
+    return new Date(year, month - 1, 1).toLocaleString(resolveLang(store.lang), {
+      month: 'short',
+    });
+  };
+
+  /** Дата по ключу месяца и числу: «12 окт.» */
+  const dayDateLabel = (key, day) => {
+    const [year, month] = key.split('-').map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString(resolveLang(store.lang), {
+      day: 'numeric',
+      month: 'short',
+    });
+  };
+
   /** Открытый, предыдущий и реальный текущий месяц для текстов */
   const currentMonthLabel = computed(() => monthWord(store.currentDate));
   const prevMonthLabel = computed(() =>
@@ -148,5 +180,9 @@ export function useHabitUtils() {
     prevMonthLabel,
     realMonthLabel,
     monthKeyLabel,
+    monthShortLabel,
+    dayDateLabel,
+    heatColor,
+    starsText,
   };
 }

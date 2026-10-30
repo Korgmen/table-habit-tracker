@@ -11,6 +11,8 @@
   import Sheet from '@/components/Sheet.vue';
   import MarkCircle from '@/components/MarkCircle.vue';
   import EmojiPicker from '@/components/EmojiPicker.vue';
+  import HabitStats from '@/components/HabitStats.vue';
+  import { useLongPress, haptic } from '@/composables/useGestures';
 
   const props = defineProps({
     /** ID привычки для правки; без него окно создаёт новую */
@@ -109,19 +111,18 @@
     () => task.value?.subtasks[Math.min(activeSub.value, task.value.subtasks.length - 1)]
   );
 
-  /** Выполнено и пропусков по учитываемым дням (как в прогрессе) */
-  const stats = computed(() => {
-    const maxDay = store.calculationMode === 'fullMonth' ? store.daysInMonth : store.today;
-    let done = 0;
-    let skips = 0;
-    task.value?.subtasks.forEach(item => {
-      for (let i = 0; i < maxDay; i++) {
-        if (item.marks[i] === true) done++;
-        else if (item.marks[i] === false) skips++;
-      }
-    });
-    return { done, skips };
+  /** Календарь на телефоне: тап меняет отметку, долгое нажатие ставит или снимает пропуск */
+  const longPress = useLongPress(day => {
+    if (isFuture(day)) return;
+    store.toggleSkip(task.value.id, subtask.value.id, day - 1);
+    haptic(30);
   });
+
+  const tapDay = day => {
+    if (longPress.consumeClick()) return;
+    store.cycleMark(task.value.id, subtask.value.id, day - 1);
+    haptic();
+  };
 
   const position = computed(() => store.tasks.findIndex(item => item.id === props.taskId));
 
@@ -358,7 +359,7 @@
         </label>
 
         <template v-if="task">
-          <!-- Телефон: календарь отметок за месяц -->
+          <!-- Телефон: календарь отметок за месяц (на десктопе отметки в таблице) -->
           <div v-if="!isDesktop" class="flex flex-col gap-2.5">
             <div class="flex items-baseline justify-between">
               <span class="text-sm font-medium">
@@ -396,9 +397,10 @@
                 v-for="day in monthDays"
                 :key="day"
                 type="button"
-                class="flex h-11 items-center justify-center disabled:cursor-default"
+                class="flex h-11 items-center justify-center select-none [-webkit-touch-callout:none] disabled:cursor-default"
                 :disabled="isFuture(day)"
-                @click="store.cycleMark(task.id, subtask.id, day - 1)"
+                v-on="longPress.bind(day)"
+                @click="tapDay(day)"
               >
                 <MarkCircle
                   :mark="subtask.marks[day - 1]"
@@ -412,23 +414,8 @@
             </div>
           </div>
 
-          <!-- Десктоп: сводка за месяц -->
-          <div v-else class="grid grid-cols-3 gap-2">
-            <div class="bg-soft flex flex-col gap-0.5 rounded-xl p-3">
-              <span class="text-muted text-xs">
-                {{ t('habit.statMonth', { month: currentMonthLabel }) }}
-              </span>
-              <span class="text-lg font-bold">{{ task.progress }}%</span>
-            </div>
-            <div class="bg-soft flex flex-col gap-0.5 rounded-xl p-3">
-              <span class="text-muted text-xs">{{ t('habit.statDone') }}</span>
-              <span class="text-lg font-bold">{{ stats.done }}</span>
-            </div>
-            <div class="bg-soft flex flex-col gap-0.5 rounded-xl p-3">
-              <span class="text-muted text-xs">{{ t('habit.statSkips') }}</span>
-              <span class="text-lg font-bold">{{ stats.skips }}</span>
-            </div>
-          </div>
+          <!-- Сводка привычки: месяц, серии, история по месяцам -->
+          <HabitStats :task="task" />
 
           <div class="flex flex-col gap-2">
             <span class="text-sm font-medium">

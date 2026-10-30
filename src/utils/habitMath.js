@@ -141,39 +141,57 @@ export const taskProgress = (task, ctx) => {
 };
 
 /**
- * Серия к дню dayIndex включительно: { count, unit: 'day' | 'week' }.
- * - Обычная привычка и расписание: дни подряд, когда выполнены все подзадачи; пропуск
- *   (в том числе день вне расписания) серию не прерывает и не увеличивает.
- * - Цель «N раз в неделю»: недели подряд, когда цель выполнена у всех подзадач (выполнено ≥ цели
- *   недели с округлением вверх). Неделя с dayIndex ещё идёт: если цель пока не набрана, она серию
- *   не прерывает, а только не засчитывается.
+ * Итоги месяца для серий по порядку до дня lastIndex включительно: дни, а для цели «N раз в неделю» –
+ * недели. 'done' засчитывается, 'miss' прерывает серию, 'skip' и 'open' не делают ни того, ни другого.
+ * - День: 'done', если выполнены все подзадачи, кроме пропущенных; 'skip', если пропущены все
+ *   (в том числе день вне расписания); иначе 'miss'.
+ * - Неделя цели: 'done', если цель недели набрана у всех подзадач (выполнено ≥ цели с округлением
+ *   вверх); 'skip', если вся неделя в пропусках. Неделя с lastIndex ещё идёт, если lastIndex не её
+ *   последний день: не набранная пока цель даёт 'open'.
+ * @param {boolean} open - lastIndex – сегодня: невыполненный день ещё может стать выполненным ('open')
  */
-export const taskStreak = (task, ctx, dayIndex) => {
+export const streakUnits = (task, ctx, lastIndex, open = false) => {
   if (task.goal) {
-    let count = 0;
-    const weeks = monthWeeks(ctx).filter(([start]) => start <= dayIndex);
-    for (let w = weeks.length - 1; w >= 0; w--) {
-      const [start, end] = weeks[w];
-      const last = Math.min(end, dayIndex + 1);
-      const met = task.subtasks.every(subtask => {
-        const { done, target } = weekGoal(subtask.marks, task.goal, start, last);
-        return done >= Math.ceil(target - 1e-9);
+    return monthWeeks(ctx)
+      .filter(([start]) => start <= lastIndex)
+      .map(([start, end]) => {
+        const last = Math.min(end, lastIndex + 1);
+        const goals = task.subtasks.map(subtask => weekGoal(subtask.marks, task.goal, start, last));
+        if (goals.every(({ target }) => target < 1e-9)) return 'skip';
+        if (goals.every(({ done, target }) => done >= Math.ceil(target - 1e-9))) return 'done';
+        return last < end || open ? 'open' : 'miss';
       });
-      if (met) count++;
-      else if (w !== weeks.length - 1) break;
-    }
-    return { count, unit: 'week' };
   }
 
-  let count = 0;
-  for (let i = dayIndex; i >= 0; i--) {
-    const marks = task.subtasks.map(subtask => subtask.marks[i]);
-    if (marks.every(mark => mark === true)) count++;
-    else if (marks.every(mark => mark === false)) continue;
-    else break;
+  const units = [];
+  for (let i = 0; i <= lastIndex && i < ctx.days; i++) {
+    const marks = task.subtasks.map(subtask => subtask.marks[i] ?? null);
+    if (marks.every(mark => mark === false)) units.push('skip');
+    else if (marks.every(mark => mark !== null)) units.push('done');
+    else units.push(open && i === lastIndex ? 'open' : 'miss');
   }
-  return { count, unit: 'day' };
+  return units;
 };
+
+/** Серии по итогам streakUnits: current – подряд к концу, best – самая длинная */
+export const streakRuns = units => {
+  let current = 0;
+  let best = 0;
+  units.forEach(unit => {
+    if (unit === 'done') best = Math.max(best, ++current);
+    else if (unit === 'miss') current = 0;
+  });
+  return { current, best };
+};
+
+/**
+ * Серия к дню dayIndex включительно в пределах месяца: { count, unit: 'day' | 'week' }.
+ * Правила дней и недель – streakUnits; серии через месяцы считает src/utils/stats.js.
+ */
+export const taskStreak = (task, ctx, dayIndex, open = false) => ({
+  count: streakRuns(streakUnits(task, ctx, dayIndex, open)).current,
+  unit: task.goal ? 'week' : 'day',
+});
 
 /**
  * Учитываемые и выполненные отметки за день по всем активным привычкам: { done, total }.

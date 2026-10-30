@@ -42,6 +42,13 @@
     ['passedDays', t('settings.calculationMode.passedDays')],
   ]);
 
+  const summaryOptions = computed(() =>
+    ['auto', 'percent', 'stars', 'letter', 'school', 'hidden'].map(value => [
+      value,
+      t(`settings.summary.${value}`),
+    ])
+  );
+
   const segmentClass = active =>
     active ? 'bg-surface font-semibold shadow-[0_1px_3px_rgba(0,0,0,.12)]' : 'hover:bg-surface/50';
 
@@ -164,6 +171,7 @@
     ['←', t('settings.hotkeys.arrowLeft')],
     ['→', t('settings.hotkeys.arrowRight')],
     ['T', t('settings.hotkeys.t')],
+    ['/', t('settings.hotkeys.search')],
     [`${modKey}+Z`, t('settings.hotkeys.undo')],
     [`${modKey}+Shift+Z`, t('settings.hotkeys.redo')],
     ['Esc', t('settings.hotkeys.escape')],
@@ -353,6 +361,21 @@
             }}
           </span>
         </div>
+        <label class="flex items-center justify-between gap-3">
+          <span class="flex flex-col gap-0.5">
+            <span class="text-sm font-medium">{{ t('settings.summary.title') }}</span>
+            <span class="text-muted text-xs">{{ t('settings.summary.hint') }}</span>
+          </span>
+          <select
+            :value="store.summaryStyle"
+            class="border-line2 bg-surface h-10 min-w-[180px] rounded-[10px] border px-3 text-sm"
+            @change="store.setSummaryStyle($event.target.value)"
+          >
+            <option v-for="[value, label] in summaryOptions" :key="value" :value="value">
+              {{ label }}
+            </option>
+          </select>
+        </label>
       </section>
 
       <!-- Данные -->

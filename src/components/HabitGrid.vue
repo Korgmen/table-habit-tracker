@@ -3,8 +3,11 @@
   import { useHabitStore } from '@/stores/habitStore';
   import { useHabitUtils } from '@/composables/useHabitUtils';
   import { useModals } from '@/composables/useModals';
+  import { useSearch } from '@/composables/useSearch';
   import { useI18n } from 'vue-i18n';
-  import { GripVertical, Plus } from 'lucide-vue-next';
+  import { computed } from 'vue';
+  import { currentStreak } from '@/utils/stats';
+  import { GripVertical, Plus, Search } from 'lucide-vue-next';
   import MarkCircle from '@/components/MarkCircle.vue';
 
   const store = useHabitStore();
@@ -20,7 +23,32 @@
     weekOrder,
   } = useHabitUtils();
   const { t } = useI18n();
-  const { openNewHabit, openHabit, openNote, toastWithUndo } = useModals(t);
+  const { openNewHabit, openHabit, openNote, openSearch, toastWithUndo } = useModals(t);
+  const { query, filteredTasks, isFiltering } = useSearch();
+
+  /** Порядок меняется перетаскиванием только в полном списке, не в отфильтрованном */
+  const reorder = list => {
+    if (!isFiltering.value) store.reorderTasks(list);
+  };
+
+  /** Текущая серия привычки (через месяцы) к сегодня или к концу открытого прошлого месяца */
+  const streaks = computed(() =>
+    Object.fromEntries(
+      store.tasks.map(task => [
+        task.id,
+        currentStreak(store.archiveView, task.title, store.statsOptions, store.currentMonthKey),
+      ])
+    )
+  );
+
+  /** Подпись серии: от двух дней или от одной недели цели */
+  const streakLabel = task => {
+    const { count, unit } = streaks.value[task.id];
+    if (unit === 'week' ? count < 1 : count < 2) return '';
+    return t('grid.streak', {
+      value: t(unit === 'week' ? 'stats.weeks' : 'stats.days', { count }),
+    });
+  };
 
   /** Клик по отметке меняет её, Alt+клик открывает заметку к дню */
   const clickMark = (event, task, subtask, day) => {
@@ -86,7 +114,7 @@
         <button
           v-for="day in monthDays"
           :key="day"
-          class="enabled:hover:bg-soft flex w-7 shrink-0 flex-col items-center gap-[3px] border-s pt-2 pb-1.5"
+          class="enabled:hover:bg-soft flex w-7 shrink-0 flex-col items-center gap-[3px] border-s pt-2 pb-1.5 pointer-coarse:w-10"
           :class="columnClass(day)"
           :disabled="isFuture(day) || store.tasks.length === 0"
           :title="isFuture(day) ? undefined : t('grid.dayHint')"
@@ -109,22 +137,24 @@
 
       <!-- Строки привычек -->
       <VueDraggableNext
-        :model-value="store.tasks"
+        :model-value="filteredTasks"
         item-key="id"
         handle=".drag-handle"
         ghost-class="opacity-40"
-        @update:model-value="store.reorderTasks"
+        @update:model-value="reorder"
       >
-        <div v-for="task in store.tasks" :key="task.id" class="border-line flex border-b">
+        <div v-for="task in filteredTasks" :key="task.id" class="border-line flex border-b">
           <div
             class="border-line bg-bg sticky start-0 z-[2] flex w-[220px] shrink-0 items-center gap-1.5 border-e ps-2 pe-1.5"
           >
             <span
+              v-if="!isFiltering"
               class="drag-handle hide-print text-line2 hover:text-muted flex w-4 cursor-grab items-center justify-center"
               :title="t('grid.drag')"
             >
               <GripVertical class="size-4" />
             </span>
+            <span v-else class="w-4 shrink-0"></span>
             <button
               class="hover:bg-soft flex min-w-0 flex-1 flex-col gap-px rounded-md px-1 py-1.5 text-start"
               :title="t('grid.edit')"
@@ -153,7 +183,7 @@
           <div
             v-for="day in monthDays"
             :key="day"
-            class="relative flex w-7 shrink-0 flex-col justify-center border-s py-0.5"
+            class="relative flex w-7 shrink-0 flex-col justify-center border-s py-0.5 pointer-coarse:w-10"
             :class="columnClass(day)"
           >
             <!-- Заметка к дню: точка в углу клетки, текст в подсказке -->
@@ -170,7 +200,9 @@
               v-for="(subtask, index) in task.subtasks"
               :key="subtask.id"
               class="flex w-full items-center justify-center disabled:cursor-default"
-              :class="task.subtasks.length > 1 ? 'h-8' : 'h-10'"
+              :class="
+                task.subtasks.length > 1 ? 'h-8 pointer-coarse:h-10' : 'h-10 pointer-coarse:h-11'
+              "
               :disabled="isFuture(day)"
               :aria-label="
                 t('mark.cell', {
@@ -207,12 +239,29 @@
                 }"
               ></span>
             </span>
+            <span v-if="streakLabel(task)" class="text-muted text-[11px] leading-none">
+              {{ streakLabel(task) }}
+            </span>
           </div>
         </div>
       </VueDraggableNext>
 
+      <!-- Поиск: ничего в месяце или переход к поиску по всем месяцам и заметкам -->
+      <div v-if="isFiltering" class="hide-print sticky start-0 flex w-fit flex-col gap-2 ps-8 pt-3">
+        <span v-if="filteredTasks.length === 0" class="text-muted text-sm">
+          {{ t('search.noneMonth') }}
+        </span>
+        <button
+          class="border-line2 hover:bg-soft flex h-10 w-fit items-center gap-1.5 rounded-[10px] border px-3 text-sm"
+          @click="openSearch(query)"
+        >
+          <Search class="size-4" />
+          {{ t('search.archive', { query: query.trim() }) }}
+        </button>
+      </div>
+
       <!-- Добавление и легенда -->
-      <div class="hide-print sticky start-0 w-fit">
+      <div v-else class="hide-print sticky start-0 w-fit">
         <button
           class="text-muted hover:text-ink flex h-12 items-center gap-1.5 ps-8 pe-4 text-sm"
           @click="openNewHabit"

@@ -246,6 +246,85 @@ describe('отметки', () => {
   });
 });
 
+describe('отметка всего дня (телефон)', () => {
+  const dayMarks = store => store.tasks.map(t => t.subtasks[0].marks[1]);
+
+  it('fillDay отмечает пустые отметки, пропуски и паузу не трогает, отменяется одним шагом', () => {
+    const store = createStore(new Date(2026, 9, 4, 12), {
+      '2026-10': {
+        tasks: [
+          task(Array(31).fill(null)),
+          task([null, false, ...Array(29).fill(null)], 5),
+          { ...task(Array(31).fill(null), 9), paused: true },
+        ],
+      },
+    });
+    expect(store.fillDay(1, true)).toBe(true);
+    expect(dayMarks(store)).toEqual([true, false, null]);
+    expect(store.tasks[0].progress).toBe(((1 / 31) * 100).toFixed(1));
+    expect(store.fillDay(1, true)).toBe(false);
+    expect(store.undoStack).toHaveLength(1);
+
+    expect(store.fillDay(1, false)).toBe(true);
+    expect(dayMarks(store)).toEqual([null, false, null]);
+    store.undo();
+    expect(dayMarks(store)).toEqual([true, false, null]);
+  });
+
+  it('fillDay не меняет будущие дни', () => {
+    const store = createStore(new Date(2026, 9, 4, 12), {
+      '2026-10': { tasks: [task(Array(31).fill(null))] },
+    });
+    expect(store.fillDay(4, true)).toBe(false);
+    expect(store.tasks[0].subtasks[0].marks[4]).toBeNull();
+  });
+
+  it('unmarkedDays: дни до сегодня с пустыми отметками без пауз, в прошлом месяце – все', () => {
+    const store = createStore(new Date(2026, 9, 4, 12), {
+      '2026-09': { tasks: [task([...Array(29).fill(true), null])] },
+      '2026-10': {
+        tasks: [
+          task([true, null, false, null, ...Array(27).fill(null)]),
+          { ...task(Array(31).fill(null), 5), paused: true },
+        ],
+      },
+    });
+    expect(store.unmarkedDays).toEqual([2]);
+    store.prevMonth();
+    expect(store.unmarkedDays).toEqual([30]);
+  });
+});
+
+describe('итог месяца', () => {
+  const progressTask = progress => ({ ...task(Array(31).fill(null)), progress });
+
+  it('по языку: школьная оценка для русского, только процент для остальных', () => {
+    const store = createStore(new Date(2026, 9, 4, 12));
+    store.tasks = [progressTask('72.0')];
+    store.lang = 'ru';
+    expect(store.summaryKind).toBe('school');
+    expect(store.overallGrade).toBe('4');
+    store.lang = 'en';
+    expect(store.summaryKind).toBe('percent');
+    expect(store.overallGrade).toBeNull();
+  });
+
+  it('звёзды, буквы и скрытие; недопустимое значение не применяется', () => {
+    const store = createStore(new Date(2026, 9, 4, 12));
+    store.tasks = [progressTask('72.0')];
+    store.setSummaryStyle('letter');
+    expect(store.overallGrade).toBe('C');
+    store.setSummaryStyle('stars');
+    expect(store.overallGrade).toBe(4);
+    store.setSummaryStyle('hidden');
+    expect(store.overallGrade).toBeNull();
+    store.setSummaryStyle('bogus');
+    expect(store.summaryStyle).toBe('hidden');
+    store.flushLocalSave();
+    expect(localStorage.getItem('summaryStyle')).toBe('hidden');
+  });
+});
+
 describe('задачи', () => {
   it('addTask создаёт задачу с подзадачами и соблюдает лимит', () => {
     const store = createStore(new Date(2026, 9, 4, 12));
@@ -1065,6 +1144,23 @@ describe('облако', () => {
     store.setTheme('light');
     store.handleRootSnapshot(rootSnap({ theme: 'system' }));
     expect(store.theme).toBe('light');
+  });
+
+  it('отпечаток настроек версии 3.0.0 (без summaryStyle) не делает их изменёнными здесь', () => {
+    localStorage.setItem(
+      'habitSyncMeta',
+      JSON.stringify({
+        uid: 'u1',
+        months: {},
+        settingsHash: JSON.stringify(['system', 'system', 'monday', true, 'fullMonth']),
+        legacy: {},
+      })
+    );
+    const store = createStore(new Date(2026, 9, 10, 12));
+    store.user = { uid: 'u1' };
+    store.sync.meta = JSON.parse(localStorage.getItem('habitSyncMeta'));
+    store.applyCloudSettings({ theme: 'dark' });
+    expect(store.theme).toBe('dark');
   });
 });
 

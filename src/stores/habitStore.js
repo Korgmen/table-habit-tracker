@@ -41,7 +41,15 @@ const SETTINGS_VALUES = {
   weekStart: ['monday', 'sunday'],
   showWeekSeparators: [true, false],
   calculationMode: ['fullMonth', 'passedDays'],
+  summaryStyle: ['auto', 'percent', 'stars', 'letter', 'school', 'hidden'],
 };
+
+/**
+ * Настройки, появившиеся после первой синхронизации, и их значения по умолчанию:
+ * значение по умолчанию не входит в отпечаток настроек, поэтому отпечатки, сохранённые
+ * прежними версиями, совпадают и настройки облака не считаются изменёнными на устройстве.
+ */
+const LATE_SETTINGS = { summaryStyle: 'auto' };
 
 /** Ключи резервной копии архива в localStorage: копия и время её создания */
 const BACKUP_KEY = 'habitArchiveBackup';
@@ -116,9 +124,17 @@ const pickTaskFields = (source, keepMissing = false) =>
 const sameTaskFields = (a, b) =>
   TASK_FIELDS.every(key => JSON.stringify(a[key]) === JSON.stringify(b[key]));
 
+/** Поздняя настройка (LATE_SETTINGS) задана и отличается от значения по умолчанию */
+const isLateValue = (settings, key) =>
+  settings?.[key] != null && settings[key] !== LATE_SETTINGS[key];
+
 /** Отпечаток настроек в фиксированном порядке ключей */
 const hashSettings = settings =>
-  JSON.stringify(Object.keys(SETTINGS_VALUES).map(key => settings?.[key] ?? null));
+  JSON.stringify(
+    Object.keys(SETTINGS_VALUES)
+      .filter(key => !Object.hasOwn(LATE_SETTINGS, key) || isLateValue(settings, key))
+      .map(key => settings?.[key] ?? null)
+  );
 
 const loadSyncMeta = uid => {
   try {
@@ -227,6 +243,7 @@ export const useHabitStore = defineStore('habit', {
     const savedWeekStart = localStorage.getItem('weekStart') || 'monday';
     const savedShowWeekSeparators = localStorage.getItem('showWeekSeparators') !== 'false';
     const savedCalculationMode = localStorage.getItem('calculationMode') || 'fullMonth';
+    const savedSummaryStyle = localStorage.getItem('summaryStyle') || 'auto';
 
     return {
       /** Реальная текущая дата (не меняется при переключении месяцев) */
@@ -247,6 +264,11 @@ export const useHabitStore = defineStore('habit', {
       showWeekSeparators: savedShowWeekSeparators,
       /** Режим расчёта прогресса: 'fullMonth' | 'passedDays' */
       calculationMode: savedCalculationMode,
+      /**
+       * Итог месяца рядом со средним процентом: 'auto' (школьная оценка для русского языка,
+       * иначе только процент) | 'percent' | 'stars' | 'letter' | 'school' | 'hidden'
+       */
+      summaryStyle: savedSummaryStyle,
       /** Авторизация */
       user: null,
       isAuthReady: false,
@@ -347,14 +369,39 @@ export const useHabitStore = defineStore('habit', {
       return (totalProgress / active.length).toFixed(1);
     },
 
-    /** Оценка по 5-балльной шкале на основе среднего прогресса */
+    /** Вид итога месяца с раскрытым 'auto' */
+    summaryKind: state => {
+      if (state.summaryStyle !== 'auto') return state.summaryStyle;
+      return resolveLang(state.lang) === 'ru' ? 'school' : 'percent';
+    },
+
+    /**
+     * Оценка месяца по среднему проценту в выбранном виде; null, если оценка не показывается
+     * ('percent' – только процент, 'hidden' – ни процента, ни оценки).
+     * - school: 5 от 90%, 4 от 70%, 3 от 50%, иначе 2;
+     * - letter: A от 90%, B от 80%, C от 70%, D от 60%, иначе F;
+     * - stars: число звёзд 0–5, по звезде за каждые полные 20% с округлением.
+     */
     overallGrade: state => {
-      const progress = parseFloat(state.overallProgress);
-      if (isNaN(progress)) return '2';
-      if (progress >= 90) return '5';
-      if (progress >= 70) return '4';
-      if (progress >= 50) return '3';
-      return '2';
+      const progress = parseFloat(state.overallProgress) || 0;
+      const scale = {
+        school: [
+          [90, '5'],
+          [70, '4'],
+          [50, '3'],
+          [0, '2'],
+        ],
+        letter: [
+          [90, 'A'],
+          [80, 'B'],
+          [70, 'C'],
+          [60, 'D'],
+          [0, 'F'],
+        ],
+      }[state.summaryKind];
+      if (scale) return scale.find(([min]) => progress >= min)[1];
+      if (state.summaryKind === 'stars') return Math.round(progress / 20);
+      return null;
     },
 
     /** Настройки для облака и файла экспорта */
@@ -367,6 +414,32 @@ export const useHabitStore = defineStore('habit', {
 
     /** id последнего шага отмены: тост с кнопкой «Отменить» отменяет именно его */
     lastChangeId: state => state.undoStack.at(-1)?.id ?? null,
+
+    /** Архив с рабочим списком открытого месяца, для статистики и поиска */
+    archiveView: state => ({ ...state.archive, [state.currentMonthKey]: { tasks: state.tasks } }),
+
+    /** Параметры расчётов по архиву (src/utils/stats.js) */
+    statsOptions: state => ({
+      today: state.realDate,
+      weekStart: state.weekStart,
+      calculationMode: state.calculationMode,
+    }),
+
+    /**
+     * Числа открытого месяца до сегодняшнего (сегодня ещё идёт), где у привычек не на паузе
+     * остались пустые отметки
+     */
+    unmarkedDays: state => {
+      const last = state.today - (state.currentMonthKey === state.realMonthKey ? 1 : 0);
+      const days = [];
+      for (let i = 0; i < last; i++) {
+        const open = state.tasks.some(
+          task => !task.paused && task.subtasks.some(subtask => (subtask.marks[i] ?? null) === null)
+        );
+        if (open) days.push(i + 1);
+      }
+      return days;
+    },
   },
 
   actions: {
@@ -547,6 +620,31 @@ export const useHabitStore = defineStore('habit', {
       });
       this.tasks.forEach(task => this.updateTaskProgress(task.id));
       this.saveState();
+    },
+
+    /**
+     * Отмечает выполненными (done) все пустые отметки дня у привычек не на паузе или снимает
+     * все отметки «выполнено» этого дня. Пропуски не трогаются.
+     * @returns {boolean} false, если менять нечего или день ещё не наступил
+     */
+    fillDay(dayIndex, done) {
+      if (dayIndex < 0 || dayIndex >= this.today) return false;
+      const [from, to] = done ? [null, true] : [true, null];
+      const tasks = this.tasks.filter(
+        task => !task.paused && task.subtasks.some(s => (s.marks[dayIndex] ?? null) === from)
+      );
+      if (tasks.length === 0) return false;
+      this.recordChange('day');
+      tasks.forEach(task => {
+        const goalBefore = goalWeeks(task, this.monthCtx);
+        task.subtasks.forEach(subtask => {
+          if ((subtask.marks[dayIndex] ?? null) === from) subtask.marks[dayIndex] = to;
+        });
+        applyGoal(task, this.monthCtx, goalBefore);
+        this.updateTaskProgress(task.id);
+      });
+      this.saveState();
+      return true;
     },
 
     /**
@@ -766,6 +864,12 @@ export const useHabitStore = defineStore('habit', {
       this.saveState();
     },
 
+    /** Открывает месяц по ключу 'YYYY-MM' (из статистики и поиска) */
+    openMonthKey(key) {
+      const [year, month] = key.split('-').map(Number);
+      if (key !== this.currentMonthKey) this.openMonth(new Date(year, month - 1, 1));
+    },
+
     /** Переход к предыдущему месяцу */
     prevMonth() {
       this.openMonth(new Date(this.currentYear, this.currentMonth - 1, 1));
@@ -977,6 +1081,13 @@ export const useHabitStore = defineStore('habit', {
     setWeekStart(newWeekStart) {
       this.weekStart = newWeekStart;
       this.tasks.forEach(task => this.updateTaskProgress(task.id));
+      this.saveState();
+    },
+
+    /** Устанавливает вид итога месяца (summaryStyle) */
+    setSummaryStyle(style) {
+      if (!SETTINGS_VALUES.summaryStyle.includes(style)) return;
+      this.summaryStyle = style;
       this.saveState();
     },
 

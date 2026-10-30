@@ -28,6 +28,12 @@ export function useModals(t) {
     else modalStore.showModal('note', { taskId, day });
   };
 
+  /** Окно статистики по всем месяцам */
+  const openStats = () => modalStore.showModal('stats');
+
+  /** Поиск по всем месяцам и заметкам с начальным запросом */
+  const openSearch = (query = '') => modalStore.showModal('search', { query });
+
   /** Тост о только что сделанном изменении с кнопкой, которая отменяет именно его */
   const toastWithUndo = text => {
     const id = store.lastChangeId;
@@ -84,6 +90,8 @@ export function useModals(t) {
     openNewHabit,
     openHabit,
     openNote,
+    openStats,
+    openSearch,
     toastWithUndo,
     undoLast,
     redoLast,

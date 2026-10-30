@@ -47,7 +47,30 @@
   "stats": {
     "average": "Average",
     "grade": "Grade",
-    "today": "Today"
+    "today": "Today",
+    "title": "Statistics",
+    "open": "Statistics",
+    "yearAvg": "Average in {year}",
+    "doneMarks": "Marks done",
+    "bestStreak": "Best streak",
+    "heatMonth": "{month} by day",
+    "byMonth": "Average by month",
+    "heatYear": "Year by day",
+    "habits": "Habits in {year}",
+    "empty": "No habits in {year}",
+    "colAvg": "Avg",
+    "colDone": "Done",
+    "colBest": "Best",
+    "colMonths": "Months",
+    "less": "Less",
+    "more": "More",
+    "noData": "nothing to count",
+    "dayCell": "{date}: {done} of {total}",
+    "monthCell": "{month}: {pct}%",
+    "prevYear": "Previous year",
+    "nextYear": "Next year",
+    "days": "{count} d",
+    "weeks": "{count} wk"
   },
   "sync": {
     "state": {
@@ -77,7 +100,9 @@
     "newHabit": "Habit",
     "newHabitLong": "New habit",
     "newHabitHint": "New habit (N)",
-    "settingsHint": "Settings (S)"
+    "settingsHint": "Settings (S)",
+    "statsHint": "Statistics for all months",
+    "searchHint": "Filter habits (/)"
   },
   "archive": {
     "banner": "Archive for {month}. You can still fix marks, stats will be recalculated.",
@@ -98,22 +123,30 @@
     "legendClear": "Third click – clear",
     "legendDay": "Click a date – whole day",
     "paused": "paused",
-    "legendNote": "Alt+click – note for the day"
+    "legendNote": "Alt+click – note for the day",
+    "streak": "streak {value}"
   },
   "list": {
     "today": "Today",
-    "stat": "{month}: {avg}% · grade {grade}",
     "skipped": "skipped – the day is not counted",
     "streak": "{count}-day streak",
     "monthPct": "{pct}% in {month}",
     "ofSubs": "{done} of {total}",
-    "hint": "Tap a circle: done → skip (the day is not counted) → empty. Tap a name for habit settings and the month’s marks.",
+    "hint": "Tap a circle: done → skip (the day is not counted) → empty. Long-press a circle to skip. Swipe the list to change the day, swipe the month title to change the month. Tap a name for habit settings and statistics.",
     "paused": "paused",
-    "streakWeeks": "{count}-week streak"
+    "streakWeeks": "{count}-week streak",
+    "statAvg": "{month}: {avg}%",
+    "goToday": "Today",
+    "goYesterday": "Yesterday",
+    "goUnmarked": "Unmarked days: {count}",
+    "markAll": "Mark all done",
+    "clearAll": "Clear done",
+    "dayFilled": "Day {day}: all habits marked done",
+    "dayCleared": "Day {day}: done marks cleared"
   },
   "empty": {
     "title": "No habits yet",
-    "text": "Add your first one, like “Workout” or “Reading”. Mark it every day and see the percentage and grade at the end of the month.",
+    "text": "Add your first one, like “Workout” or “Reading”. Mark it every day and watch the percentage and streaks grow.",
     "openPrev": "Open {month}",
     "hotkey": "Press N for a new habit",
     "carry": "Move habits from {month}"
@@ -166,7 +199,11 @@
     "paused": "Paused",
     "pausedHint": "Not counted in the overall percentage. You can still mark it.",
     "notes": "Notes for {month}",
-    "addNote": "Note for {date}"
+    "addNote": "Note for {date}",
+    "statCurrent": "Current streak",
+    "statBest": "Best streak",
+    "statAvg": "All months",
+    "history": "By month"
   },
   "settings": {
     "title": "Settings",
@@ -228,9 +265,20 @@
       "t": "Current month",
       "escape": "Close window",
       "undo": "Undo",
-      "redo": "Redo"
+      "redo": "Redo",
+      "search": "Search habits"
     },
-    "showWelcome": "How it works"
+    "showWelcome": "How it works",
+    "summary": {
+      "title": "Month summary",
+      "hint": "Next to the average percentage",
+      "auto": "By language",
+      "percent": "Percentage only",
+      "stars": "Stars 0–5",
+      "letter": "Letter A–F",
+      "school": "Grade 2–5",
+      "hidden": "Hide"
+    }
   },
   "auth": {
     "login": "Sign in with Google",
@@ -254,7 +302,7 @@
   },
   "welcome": {
     "title": "A simple table to keep the rhythm",
-    "text": "Add habits and mark them every day. At the end of the month you get a percentage for each, an overall average and a grade on a five-point scale.",
+    "text": "Add habits and mark them every day. At the end of the month you get a percentage for each and an overall average; statistics show streaks and progress across months.",
     "done": "Done",
     "notDone": "Not done",
     "notDoneHint": "just leave it empty",
@@ -378,5 +426,22 @@
       "symbols": "Symbols",
       "flags": "Flags"
     }
+  },
+  "summary": {
+    "grade": "grade {grade}",
+    "stars": "{count} of 5 stars"
+  },
+  "search": {
+    "open": "Search",
+    "title": "Search",
+    "placeholder": "Habit or note",
+    "clear": "Clear search",
+    "archive": "Search “{query}” in all months",
+    "noneMonth": "No matching habits this month",
+    "habits": "Habits",
+    "notes": "Notes",
+    "none": "Nothing found",
+    "hint": "Searches habit names, emoji and notes in all months.",
+    "openMonth": "Open {month}"
   }
 }

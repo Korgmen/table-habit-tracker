@@ -19,6 +19,9 @@
   import ConflictSheet from '@/components/ConflictSheet.vue';
   import ImportSheet from '@/components/ImportSheet.vue';
   import NoteSheet from '@/components/NoteSheet.vue';
+  import StatsSheet from '@/components/StatsSheet.vue';
+  import SearchSheet from '@/components/SearchSheet.vue';
+  import { useSearch } from '@/composables/useSearch';
   import PaperSheet from '@/components/PaperSheet.vue';
   import PhotoImport from '@/components/PhotoImport.vue';
 
@@ -26,6 +29,7 @@
   const modalStore = useModalStore();
   const { currentTheme, canNextMonth, isDesktop, isCurrentMonth, monthKeyLabel } = useHabitUtils();
   const { t } = useI18n();
+  const { searchInput } = useSearch();
   const {
     openNewHabit,
     showWelcome,
@@ -86,6 +90,8 @@
     conflict: ConflictSheet,
     import: ImportSheet,
     note: NoteSheet,
+    stats: StatsSheet,
+    search: SearchSheet,
   };
 
   /** Ссылка на скрытый input для импорта файла */
@@ -122,6 +128,7 @@
       KeyN: openNewHabit,
       KeyS: () => modalStore.showModal('settings'),
       KeyT: () => store.goToToday(),
+      Slash: () => searchInput.value?.focus(),
       ArrowLeft: () => store.prevMonth(),
       ArrowRight: () => canNextMonth.value && store.nextMonth(),
     };
