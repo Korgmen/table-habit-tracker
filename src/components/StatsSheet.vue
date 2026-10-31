@@ -1,7 +1,7 @@
 <script setup>
   import { ref, computed } from 'vue';
   import { useHabitStore } from '@/stores/habitStore';
-  import { useModalStore } from '@/stores/modalStore';
+  import { useModalEntry } from '@/composables/useModals';
   import { useHabitUtils } from '@/composables/useHabitUtils';
   import { useI18n } from 'vue-i18n';
   import {
@@ -19,11 +19,10 @@
   import MonthHeat from '@/components/MonthHeat.vue';
 
   const store = useHabitStore();
-  const modalStore = useModalStore();
   const { currentMonthLabel, habitColorStyle } = useHabitUtils();
   const { t } = useI18n();
 
-  const close = () => modalStore.closeModal();
+  const { close, closeAll } = useModalEntry();
 
   /** Архив с рабочим списком открытого месяца и параметры расчёта */
   const archive = computed(() => store.archiveView);
@@ -58,11 +57,11 @@
   const yearDone = computed(() => habits.value.reduce((sum, habit) => sum + habit.done, 0));
 
   const streakText = ({ count, unit }) =>
-    t(unit === 'week' ? 'stats.weeks' : 'stats.days', { count });
+    t(unit === 'week' ? 'stats.weeks' : 'stats.days', { count }, count);
 
-  /** Клик по месяцу (график, карта) открывает его */
+  /** Клик по месяцу (график, карта) закрывает окна и открывает его */
   const openMonth = key => {
-    close();
+    closeAll();
     store.openMonthKey(key);
   };
 </script>
@@ -75,7 +74,7 @@
         <!-- Год -->
         <div class="flex items-center">
           <button
-            class="disabled:text-line2 flex size-9 items-center justify-center"
+            class="disabled:text-faint flex size-9 items-center justify-center"
             :disabled="yearIndex <= 0"
             :aria-label="t('stats.prevYear')"
             @click="year = years[yearIndex - 1]"
@@ -84,7 +83,7 @@
           </button>
           <span class="min-w-12 text-center text-[15px] font-semibold">{{ year }}</span>
           <button
-            class="disabled:text-line2 flex size-9 items-center justify-center"
+            class="disabled:text-faint flex size-9 items-center justify-center"
             :disabled="yearIndex >= years.length - 1"
             :aria-label="t('stats.nextYear')"
             @click="year = years[yearIndex + 1]"

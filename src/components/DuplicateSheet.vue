@@ -1,9 +1,8 @@
 <script setup>
   import { ref, computed, watch } from 'vue';
   import { useHabitStore } from '@/stores/habitStore';
-  import { useModalStore } from '@/stores/modalStore';
   import { useHabitUtils } from '@/composables/useHabitUtils';
-  import { useModals } from '@/composables/useModals';
+  import { useModals, useModalEntry } from '@/composables/useModals';
   import { useI18n } from 'vue-i18n';
   import { filledMonths, lastFilledBefore, MAX_TASKS } from '@/utils/archive';
   import Sheet from '@/components/Sheet.vue';
@@ -14,7 +13,6 @@
   });
 
   const store = useHabitStore();
-  const modalStore = useModalStore();
   const { realMonthLabel, monthKeyLabel } = useHabitUtils();
   const { t } = useI18n();
   const { toastWithUndo } = useModals(t);
@@ -62,7 +60,7 @@
   const segmentClass = active =>
     active ? 'bg-surface font-semibold shadow-[0_1px_3px_rgba(0,0,0,.12)]' : 'hover:bg-surface/50';
 
-  const close = () => modalStore.closeModal();
+  const { close } = useModalEntry();
 
   const confirm = () => {
     const month = realMonthLabel.value;
@@ -94,11 +92,11 @@
 
       <span class="text-muted text-[15px] leading-normal text-pretty">
         {{
-          t('duplicate.message', {
-            count: selected.size,
-            from: monthKeyLabel(source),
-            to: realMonthLabel,
-          })
+          t(
+            'duplicate.message',
+            { count: selected.size, from: monthKeyLabel(source), to: realMonthLabel },
+            selected.size
+          )
         }}
       </span>
 
@@ -118,7 +116,12 @@
       </div>
 
       <div v-if="current.length > 0" class="flex flex-col gap-2">
-        <div class="bg-soft grid grid-cols-2 gap-1 rounded-xl p-1" role="radiogroup">
+        <div
+          v-radio-group
+          class="bg-soft grid grid-cols-2 gap-1 rounded-xl p-1"
+          role="radiogroup"
+          :aria-label="t('duplicate.mode')"
+        >
           <button
             v-for="[value, label] in modeOptions"
             :key="value"
@@ -138,7 +141,7 @@
       </div>
 
       <span v-if="overLimit" class="text-danger text-xs leading-snug" role="alert">
-        {{ t('taskLimit', { max: MAX_TASKS }) }}
+        {{ t('taskLimit', { max: MAX_TASKS }, MAX_TASKS) }}
       </span>
     </div>
     <div class="flex justify-end gap-2 px-6 pt-4 pb-[max(env(safe-area-inset-bottom),24px)]">

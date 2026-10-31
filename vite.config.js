@@ -51,27 +51,34 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,woff2}'],
       },
+      /**
+       * Манифест один на все языки (локализованных манифестов браузеры не поддерживают): имя –
+       * название приложения без перевода, описание короткое. Цвета – светлый фон приложения
+       * (--bg), в тёмной теме строку состояния перекрашивает meta theme-color. Пути относительные,
+       * чтобы приложение работало и не в корне домена (base в vite).
+       */
       manifest: {
-        name: 'Table – Habit Tracker',
+        name: 'Table',
         short_name: 'Table',
-        description: 'Multifunctional habit tracker',
-        theme_color: '#0f172a',
-        background_color: '#0f172a',
+        description: 'Habit tracker',
+        theme_color: '#f7f7f5',
+        background_color: '#f7f7f5',
         display: 'standalone',
-        start_url: '/',
+        start_url: '.',
+        scope: '.',
         icons: [
           {
-            src: '/favicons/pwa-192x192.png',
+            src: 'favicons/pwa-192x192.png',
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: '/favicons/pwa-512x512.png',
+            src: 'favicons/pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
           },
           {
-            src: '/favicons/pwa-512x512-maskable.png',
+            src: 'favicons/pwa-512x512-maskable.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',

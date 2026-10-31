@@ -5,23 +5,20 @@
   import MarkCircle from '@/components/MarkCircle.vue';
   import { useHabitStore } from '@/stores/habitStore';
   import { useHabitUtils } from '@/composables/useHabitUtils';
-  import { useModals } from '@/composables/useModals';
+  import { useModals, useModalEntry } from '@/composables/useModals';
+  import Sheet from '@/components/Sheet.vue';
   import { loadPhoto, scanSheet, matchScannedTasks, ScanError } from '@/utils/sheetScan';
 
   const props = defineProps({
     /** Фото бланка */
-    file: Object,
+    file: { type: Object, required: true },
   });
-
-  const emit = defineEmits([
-    /** Закрытие окна */
-    'close',
-  ]);
 
   const store = useHabitStore();
   const { t } = useI18n();
   const { monthKeyLabel } = useHabitUtils();
   const { toastWithUndo } = useModals(t);
+  const { close } = useModalEntry();
 
   /** Этап: 'scanning' | 'error' | 'review' */
   const status = ref('scanning');
@@ -99,12 +96,13 @@
     cell.uncertain = false;
   };
 
-  /** Рамка кружка: синяя – отличается от текущих данных, жёлтая – стоит проверить */
+  /** Рамка кружка: сплошная – отличается от текущих данных, пунктирная – стоит проверить */
   const cellClass = (entry, row, dayIndex) => {
     const cell = entry.rows[row][dayIndex];
     return {
-      'ring-2 ring-blue-500': isChanged(entry, row, dayIndex),
-      'outline-2 outline-offset-2 outline-amber-500': cell.uncertain && isEditable(dayIndex),
+      'ring-accent ring-2': isChanged(entry, row, dayIndex),
+      'outline-warn outline-2 outline-offset-2 outline-dashed':
+        cell.uncertain && isEditable(dayIndex),
     };
   };
 
@@ -121,19 +119,14 @@
         rows: entry.rows.map(cells => cells.map(cell => cell.value)),
       }))
     );
-    emit('close');
+    close();
     toastWithUndo(t('scan.applied'));
   };
 </script>
 
 <template>
-  <div
-    class="bg-bg text-ink fixed inset-0 z-50 overflow-y-auto p-4 select-none md:p-8"
-    role="dialog"
-    aria-modal="true"
-    :aria-label="t('scan.title')"
-  >
-    <div class="mx-auto flex max-w-[1100px] flex-col gap-4">
+  <Sheet full :label="t('scan.title')" @close="close">
+    <div class="mx-auto flex max-w-[1100px] flex-col gap-4 p-4 select-none md:p-8">
       <div class="flex items-center justify-between gap-3">
         <h2 class="text-[22px] font-bold tracking-tight">
           {{ t('scan.title') }}
@@ -144,7 +137,7 @@
         <button
           class="bg-soft flex size-10 items-center justify-center rounded-full"
           :aria-label="t('common.close')"
-          @click="emit('close')"
+          @click="close"
         >
           <X class="size-5" />
         </button>
@@ -162,8 +155,8 @@
             {{ t('scan.summary', { changed: changedCount, uncertain: uncertainCount }) }}
           </p>
           <p>{{ t('scan.legend') }}</p>
-          <p v-if="missing > 0" class="text-amber-600">
-            {{ t('scan.missing', { count: missing }) }}
+          <p v-if="missing > 0" class="text-warn">
+            {{ t('scan.missing', { count: missing }, missing) }}
           </p>
         </div>
 
@@ -213,7 +206,7 @@
         <div class="flex justify-end gap-2">
           <button
             class="border-line hover:bg-soft h-11 rounded-xl border px-4 text-sm"
-            @click="emit('close')"
+            @click="close"
           >
             {{ t('common.cancel') }}
           </button>
@@ -223,5 +216,5 @@
         </div>
       </template>
     </div>
-  </div>
+  </Sheet>
 </template>

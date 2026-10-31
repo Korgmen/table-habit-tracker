@@ -34,7 +34,7 @@
       {{ store.monthName }} {{ store.currentYear }}
     </span>
     <button
-      class="hide-print disabled:text-line2 flex items-center justify-center"
+      class="hide-print disabled:text-faint flex items-center justify-center"
       :class="
         compact
           ? 'size-11'

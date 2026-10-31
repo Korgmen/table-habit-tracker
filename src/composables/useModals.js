@@ -1,6 +1,71 @@
+import { inject, shallowRef, watch, onMounted, onUnmounted } from 'vue';
 import { useHabitStore } from '@/stores/habitStore';
 import { useModalStore } from '@/stores/modalStore';
 import { MAX_TASKS } from '@/utils/archive';
+
+/** Ключ provide/inject: id окна в стеке modalStore для компонента окна (ModalEntry.vue) */
+export const MODAL_ID = Symbol('modalId');
+
+/** Функция применения обновления PWA, пока пользователь его не принял; null – обновления нет */
+const pendingUpdate = shallowRef(null);
+
+/**
+ * Управление окном изнутри его компонента: закрывается именно это окно (и окна поверх него),
+ * а не верхнее, так что watch нижнего окна не закроет чужое.
+ */
+export function useModalEntry() {
+  const modalStore = useModalStore();
+  const id = inject(MODAL_ID, null);
+  return {
+    id,
+    close: () => modalStore.closeModal(id),
+    closeAll: () => modalStore.closeAllModals(),
+  };
+}
+
+/**
+ * Кнопка «назад» (телефон, браузер) закрывает верхнее окно. Пока окна открыты, в истории лежит
+ * одна запись: «назад» закрывает верхнее и, если под ним есть ещё, кладёт запись снова; закрытие
+ * последнего окна кнопкой убирает запись через history.back(). Вызывается один раз в App.vue.
+ */
+export function useModalHistory() {
+  const modalStore = useModalStore();
+  /** В истории есть запись открытых окон */
+  let armed = false;
+  /** Следующий popstate вызван нашим history.back() */
+  let skipPop = false;
+
+  const arm = () => {
+    history.pushState({ modal: true }, '');
+    armed = true;
+  };
+
+  watch(
+    () => modalStore.isOpen,
+    open => {
+      if (open && !armed) arm();
+      else if (!open && armed) {
+        armed = false;
+        skipPop = true;
+        history.back();
+      }
+    }
+  );
+
+  const handlePopState = () => {
+    if (skipPop) {
+      skipPop = false;
+      return;
+    }
+    if (!armed) return;
+    armed = false;
+    modalStore.closeModal();
+    if (modalStore.isOpen) arm();
+  };
+
+  onMounted(() => window.addEventListener('popstate', handlePopState));
+  onUnmounted(() => window.removeEventListener('popstate', handlePopState));
+}
 
 export function useModals(t) {
   const store = useHabitStore();
@@ -9,10 +74,10 @@ export function useModals(t) {
   /** Открывает окно новой привычки или сообщает о лимите */
   const openNewHabit = () => {
     if (store.tasks.length >= MAX_TASKS) {
-      modalStore.showToast(t('taskLimit', { max: MAX_TASKS }));
+      modalStore.showToast(t('taskLimit', { max: MAX_TASKS }, MAX_TASKS));
       return;
     }
-    modalStore.showModal('habit');
+    modalStore.openModal('habit');
   };
 
   /**
@@ -20,19 +85,19 @@ export function useModals(t) {
    * @param {number} focusDay - число для заметки из окна (выбранный день на телефоне)
    */
   const openHabit = (taskId, focusDay = null) =>
-    modalStore.showModal('habit', { taskId, focusDay });
+    modalStore.openModal('habit', { taskId, focusDay });
 
-  /** Открывает заметку к дню привычки; back – после закрытия вернуться в окно привычки */
-  const openNote = (taskId, day, back = false) => {
-    if (back) modalStore.replaceModal('note', { taskId, day, back });
-    else modalStore.showModal('note', { taskId, day });
-  };
+  /** Открывает заметку к дню привычки поверх открытых окон */
+  const openNote = (taskId, day) => modalStore.openModal('note', { taskId, day });
+
+  /** Окно настроек */
+  const openSettings = () => modalStore.openModal('settings');
 
   /** Окно статистики по всем месяцам */
-  const openStats = () => modalStore.showModal('stats');
+  const openStats = () => modalStore.openModal('stats');
 
   /** Поиск по всем месяцам и заметкам с начальным запросом */
-  const openSearch = (query = '') => modalStore.showModal('search', { query });
+  const openSearch = (query = '') => modalStore.openModal('search', { query });
 
   /** Тост о только что сделанном изменении с кнопкой, которая отменяет именно его */
   const toastWithUndo = text => {
@@ -67,29 +132,42 @@ export function useModals(t) {
     if (store.deleteTask(taskId)) toastWithUndo(t('habit.deleted', { title }));
   };
 
-  /** Показывает приветствие, если пользователь его ещё не видел */
+  /**
+   * Показывает приветствие: при первом запуске – когда пользователь закончит с открытыми окнами,
+   * по кнопке в настройках (force) – сразу поверх них.
+   */
   const showWelcome = (force = false) => {
-    if (!force && localStorage.getItem('hasSeenWelcome') === 'true') return;
-    if (force) modalStore.replaceModal('welcome');
-    else modalStore.showModal('welcome');
+    if (force) modalStore.openModal('welcome');
+    else if (localStorage.getItem('hasSeenWelcome') !== 'true') modalStore.queueModal('welcome');
   };
 
-  /** Предлагает обновить PWA */
+  /** Применяет ожидающее обновление PWA */
+  const applyUpdate = () => pendingUpdate.value?.();
+
+  /**
+   * Предлагает обновить PWA. Закрытый тост не теряет обновление: в настройках остаётся строка
+   * «Доступно обновление».
+   */
   const showUpdatePrompt = updateSW => {
+    pendingUpdate.value = () => updateSW(true);
     modalStore.showToast(t('update.message'), {
       actionText: t('update.action'),
-      onAction: () => updateSW(true),
+      onAction: applyUpdate,
       persistent: true,
     });
   };
 
-  /** Предлагает выбрать между локальными и облачными данными при расхождении после входа */
-  const showCloudConflict = () => modalStore.showModal('conflict');
+  /** Приложение закэшировано и откроется без сети */
+  const showOfflineReady = () => modalStore.showToast(t('update.offlineReady'));
+
+  /** Предлагает выбрать между версиями устройства и облака, когда пользователь освободится */
+  const showCloudConflict = () => modalStore.queueModal('conflict');
 
   return {
     openNewHabit,
     openHabit,
     openNote,
+    openSettings,
     openStats,
     openSearch,
     toastWithUndo,
@@ -98,6 +176,9 @@ export function useModals(t) {
     deleteHabit,
     showWelcome,
     showUpdatePrompt,
+    showOfflineReady,
+    pendingUpdate,
+    applyUpdate,
     showCloudConflict,
   };
 }

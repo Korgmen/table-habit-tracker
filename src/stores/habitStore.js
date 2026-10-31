@@ -3,7 +3,7 @@ import { markRaw } from 'vue';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { auth, provider, db } from '@/firebase';
 import { doc, collection, getDoc, getDocs, writeBatch, onSnapshot } from 'firebase/firestore';
-import { resolveLang, applyLang, SUPPORTED_LANGS } from '@/i18n';
+import { resolveLang, intlLocale, applyLang, localeWeekStart, SUPPORTED_LANGS } from '@/i18n';
 import {
   monthKey,
   isValidArchive,
@@ -24,7 +24,14 @@ import {
   MAX_TITLE,
   MAX_NOTE,
 } from '@/utils/archive';
-import { taskProgress, applySchedule, goalWeeks, applyGoal } from '@/utils/habitMath';
+import {
+  taskProgress,
+  applySchedule,
+  goalWeeks,
+  applyGoal,
+  isDueOn,
+  weekdayAt,
+} from '@/utils/habitMath';
 import { archiveToCsv } from '@/utils/csv';
 import {
   CLOUD_SCHEMA_VERSION,
@@ -38,7 +45,7 @@ import {
 const SETTINGS_VALUES = {
   theme: ['system', 'light', 'dark'],
   lang: ['system', ...SUPPORTED_LANGS],
-  weekStart: ['monday', 'sunday'],
+  weekStart: ['auto', 'monday', 'sunday'],
   showWeekSeparators: [true, false],
   calculationMode: ['fullMonth', 'passedDays'],
   summaryStyle: ['auto', 'percent', 'stars', 'letter', 'school', 'hidden'],
@@ -49,7 +56,7 @@ const SETTINGS_VALUES = {
  * значение по умолчанию не входит в отпечаток настроек, поэтому отпечатки, сохранённые
  * прежними версиями, совпадают и настройки облака не считаются изменёнными на устройстве.
  */
-const LATE_SETTINGS = { summaryStyle: 'auto' };
+const LATE_SETTINGS = { summaryStyle: 'auto', weekStart: 'auto' };
 
 /** Ключи резервной копии архива в localStorage: копия и время её создания */
 const BACKUP_KEY = 'habitArchiveBackup';
@@ -240,7 +247,7 @@ export const useHabitStore = defineStore('habit', {
     const archive = readLocalArchive();
     const savedTheme = localStorage.getItem('theme') || 'system';
     const savedLang = localStorage.getItem('lang') || 'system';
-    const savedWeekStart = localStorage.getItem('weekStart') || 'monday';
+    const savedWeekStart = localStorage.getItem('weekStart') || 'auto';
     const savedShowWeekSeparators = localStorage.getItem('showWeekSeparators') !== 'false';
     const savedCalculationMode = localStorage.getItem('calculationMode') || 'fullMonth';
     const savedSummaryStyle = localStorage.getItem('summaryStyle') || 'auto';
@@ -258,7 +265,10 @@ export const useHabitStore = defineStore('habit', {
       theme: savedTheme,
       /** Язык интерфейса: 'ru' | 'en' | 'ar' | 'es' | 'zh' | 'system' */
       lang: savedLang,
-      /** День начала недели: 'monday' | 'sunday' */
+      /**
+       * День начала недели: 'auto' (по локали, localeWeekStart) | 'monday' | 'sunday'.
+       * До 3.2.0 по умолчанию был понедельник, сохранённый выбор остаётся.
+       */
       weekStart: savedWeekStart,
       /** Показывать ли вертикальные разделители недель */
       showWeekSeparators: savedShowWeekSeparators,
@@ -335,7 +345,7 @@ export const useHabitStore = defineStore('habit', {
     /** Название текущего месяца с заглавной буквы */
     monthName: state => {
       const month = new Date(state.currentYear, state.currentMonth).toLocaleString(
-        resolveLang(state.lang),
+        intlLocale(state.lang),
         {
           month: 'long',
         }
@@ -352,13 +362,17 @@ export const useHabitStore = defineStore('habit', {
         : state.daysInMonth;
     },
 
+    /** День начала недели с раскрытым 'auto': 'monday' | 'sunday' */
+    weekStartDay: state =>
+      state.weekStart === 'auto' ? localeWeekStart(state.lang) : state.weekStart,
+
     /** Месяц для расчётов по отметкам (src/utils/habitMath.js) */
     monthCtx: state => ({
       year: state.currentYear,
       month: state.currentMonth,
       days: state.daysInMonth,
       maxDay: state.calculationMode === 'fullMonth' ? state.daysInMonth : state.today,
-      firstWeekday: state.weekStart === 'monday' ? 1 : 0,
+      firstWeekday: state.weekStartDay === 'monday' ? 1 : 0,
     }),
 
     /** Средний процент выполнения задач; привычки на паузе не учитываются */
@@ -421,7 +435,7 @@ export const useHabitStore = defineStore('habit', {
     /** Параметры расчётов по архиву (src/utils/stats.js) */
     statsOptions: state => ({
       today: state.realDate,
-      weekStart: state.weekStart,
+      weekStart: state.weekStartDay,
       calculationMode: state.calculationMode,
     }),
 
@@ -599,15 +613,26 @@ export const useHabitStore = defineStore('habit', {
       this.updateMark(taskId, subtaskId, dayIndex, mark === false ? null : false);
     },
 
-    /** Ставит всем подзадачам за день отметку state, а если она уже стоит у всех, очищает день */
+    /**
+     * Ставит всем подзадачам за день отметку state, а если она уже стоит у всех, очищает день.
+     * Пропуск по расписанию в день вне расписания считается уже стоящей отметкой.
+     */
     toggleDay(dayIndex, state) {
+      const weekday = weekdayAt(this.monthCtx, dayIndex);
       const allSet = this.tasks.every(task =>
-        task.subtasks.every(s => s.marks[dayIndex] === state)
+        task.subtasks.every(
+          s =>
+            s.marks[dayIndex] === state ||
+            (s.marks[dayIndex] === false && !isDueOn(task.schedule, weekday))
+        )
       );
       this.updateHeaderDay(dayIndex, allSet ? null : state);
     },
 
-    /** Устанавливает одинаковую отметку для всех подзадач в выбранный день */
+    /**
+     * Устанавливает одинаковую отметку для всех подзадач в выбранный день. Очищенный день вне
+     * расписания снова получает пропуск, как после applySchedule.
+     */
     updateHeaderDay(dayIndex, state) {
       if (dayIndex >= this.today || this.tasks.length === 0) return;
       this.recordChange('day');
@@ -616,6 +641,7 @@ export const useHabitStore = defineStore('habit', {
         task.subtasks.forEach(subtask => {
           subtask.marks[dayIndex] = state;
         });
+        if (state === null) applySchedule(task, this.monthCtx);
         applyGoal(task, this.monthCtx, goalBefore);
       });
       this.tasks.forEach(task => this.updateTaskProgress(task.id));
@@ -1074,6 +1100,8 @@ export const useHabitStore = defineStore('habit', {
     setLang(newLang) {
       this.lang = newLang;
       applyLang(newLang);
+      /** Неделя по локали могла начаться с другого дня: недели цели считаются заново */
+      if (this.weekStart === 'auto') this.tasks.forEach(task => this.updateTaskProgress(task.id));
       this.saveState();
     },
 

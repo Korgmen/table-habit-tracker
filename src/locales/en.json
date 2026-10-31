@@ -3,7 +3,7 @@
     "title": "Marks from sheet photo",
     "scanning": "Recognizing the photo…",
     "summary": "Marks to change: {changed}, uncertain: {uncertain}",
-    "legend": "Blue marks differ from your current data, amber outlines are worth checking. Tap a mark to change it.",
+    "legend": "Marks with a solid ring differ from your current data, dashed outlines are worth checking. Tap a mark to change it.",
     "missing": "Tasks from the sheet not found in this month: {count}. They were deleted or recreated after printing.",
     "apply": "Import",
     "error": {
@@ -69,8 +69,8 @@
     "monthCell": "{month}: {pct}%",
     "prevYear": "Previous year",
     "nextYear": "Next year",
-    "days": "{count} d",
-    "weeks": "{count} wk"
+    "days": "{count} day | {count} days",
+    "weeks": "{count} week | {count} weeks"
   },
   "sync": {
     "state": {
@@ -116,7 +116,7 @@
     "addHabit": "Add habit",
     "drag": "Drag to reorder",
     "edit": "Edit habit",
-    "perDay": "{count} marks a day",
+    "perDay": "{count} mark a day | {count} marks a day",
     "dayHint": "Click to mark the day for all habits, right-click to skip",
     "legendDone": "Click – done",
     "legendSkip": "Right-click or second click – skip, the day is not counted",
@@ -127,7 +127,6 @@
     "streak": "streak {value}"
   },
   "list": {
-    "today": "Today",
     "skipped": "skipped – the day is not counted",
     "streak": "{count}-day streak",
     "monthPct": "{pct}% in {month}",
@@ -138,11 +137,12 @@
     "statAvg": "{month}: {avg}%",
     "goToday": "Today",
     "goYesterday": "Yesterday",
-    "goUnmarked": "Unmarked days: {count}",
+    "goUnmarked": "{count} unmarked day | {count} unmarked days",
     "markAll": "Mark all done",
     "clearAll": "Clear done",
     "dayFilled": "Day {day}: all habits marked done",
-    "dayCleared": "Day {day}: done marks cleared"
+    "dayCleared": "Day {day}: done marks cleared",
+    "todayDate": "Today, {date}"
   },
   "empty": {
     "title": "No habits yet",
@@ -170,7 +170,7 @@
     "up": "Up",
     "down": "Down",
     "deleteConfirm": "Delete “{title}” and all its marks for {month}?",
-    "limitLine": "{count} of {max} habits this month",
+    "limitLine": "{count} of {max} habit this month | {count} of {max} habits this month",
     "added": "Habit “{title}” added",
     "deleted": "“{title}” deleted",
     "subsRemoved": "Extra subtasks deleted along with their marks",
@@ -194,7 +194,7 @@
     "scheduleDays": "On days",
     "scheduleGoal": "Times a week",
     "scheduleHint": "Other days get a skip (cross), as when you skip a day yourself. Tap it to clear if you did the habit anyway.",
-    "goalCount": "{count} times a week",
+    "goalCount": "once a week | {count} times a week",
     "goalHint": "Each week counts up to the goal. When the goal is reached, the remaining empty days of the week get a skip (cross). Short weeks at the edges of the month have a proportionally lower goal.",
     "paused": "Paused",
     "pausedHint": "Not counted in the overall percentage. You can still mark it.",
@@ -226,7 +226,9 @@
     "weekStart": {
       "title": "Week starts on",
       "monday": "Mon",
-      "sunday": "Sun"
+      "sunday": "Sun",
+      "auto": "Auto",
+      "autoHint": "By your language and region: {day}"
     },
     "showWeek": {
       "title": "Week separators",
@@ -266,7 +268,10 @@
       "escape": "Close window",
       "undo": "Undo",
       "redo": "Redo",
-      "search": "Search habits"
+      "search": "Search habits",
+      "grid": "Move around the table",
+      "skip": "Skip in the table",
+      "note": "Note in the table"
     },
     "showWelcome": "How it works",
     "summary": {
@@ -298,7 +303,8 @@
     "done": "Habits moved to {month}",
     "from": "From month",
     "modeAppend": "Add to current",
-    "modeReplace": "Replace current"
+    "modeReplace": "Replace current",
+    "mode": "What to do with the current list"
   },
   "welcome": {
     "title": "A simple table to keep the rhythm",
@@ -330,14 +336,15 @@
   },
   "update": {
     "message": "A new version of the app is available",
-    "action": "Update"
+    "action": "Update",
+    "offlineReady": "The app is ready to work offline"
   },
   "toast": {
     "exported": "File {name} saved",
     "signedIn": "Signed in",
     "signedOut": "Signed out"
   },
-  "taskLimit": "Limit reached: {max} habits per month",
+  "taskLimit": "Limit reached: {max} habit per month | Limit reached: {max} habits per month",
   "history": {
     "undo": "Undo",
     "redo": "Redo",
@@ -379,7 +386,8 @@
     "safety": "A backup of the current data is saved first, and the import can be undone.",
     "confirm": "Import",
     "confirmReplace": "Replace",
-    "restored": "Backup restored"
+    "restored": "Backup restored",
+    "mode": "Import mode"
   },
   "backup": {
     "invalid": "The backup cannot be read",
@@ -443,5 +451,9 @@
     "none": "Nothing found",
     "hint": "Searches habit names, emoji and notes in all months.",
     "openMonth": "Open {month}"
+  },
+  "app": {
+    "name": "Table",
+    "license": "Apache-2.0 license"
   }
 }

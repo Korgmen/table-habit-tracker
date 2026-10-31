@@ -1,31 +1,25 @@
 <script setup>
-  import { ref, computed } from 'vue';
+  import { ref, computed, inject } from 'vue';
   import { useHabitStore } from '@/stores/habitStore';
   import { useModalStore } from '@/stores/modalStore';
   import { useHabitUtils } from '@/composables/useHabitUtils';
-  import { useModals } from '@/composables/useModals';
+  import { useModals, useModalEntry } from '@/composables/useModals';
   import { useI18n } from 'vue-i18n';
-  import { resolveLang } from '@/i18n';
+  import { resolveLang, intlLocale } from '@/i18n';
   import { X } from 'lucide-vue-next';
   import Sheet from '@/components/Sheet.vue';
   import SyncStatus from '@/components/SyncStatus.vue';
-
-  const emit = defineEmits([
-    /** Запрос импорта */
-    'import',
-    /** Запрос печати бланка для фото */
-    'printSheet',
-    /** Запрос переноса отметок с фото бланка */
-    'scanPhoto',
-  ]);
+  import AppLogo from '@/components/AppLogo.vue';
 
   const store = useHabitStore();
   const modalStore = useModalStore();
   const { isDesktop, modKey } = useHabitUtils();
   const { t } = useI18n();
-  const { showWelcome } = useModals(t);
+  const { showWelcome, pendingUpdate, applyUpdate } = useModals(t);
+  const { close } = useModalEntry();
 
-  const close = () => modalStore.closeModal();
+  /** Импорт файла, печать бланка и фото бланка: скрытые input и бланк живут в App.vue */
+  const appActions = inject('appActions');
 
   /** Сегментированный переключатель: варианты [value, label] */
   const themeOptions = computed(() => [
@@ -34,9 +28,17 @@
     ['dark', t('settings.theme.dark')],
   ]);
   const weekOptions = computed(() => [
+    ['auto', t('settings.weekStart.auto')],
     ['monday', t('settings.weekStart.monday')],
     ['sunday', t('settings.weekStart.sunday')],
   ]);
+  /** День, с которого начинается неделя в режиме «Авто»: «понедельник» */
+  const autoWeekStartName = computed(() =>
+    new Date(2026, 0, store.weekStartDay === 'monday' ? 5 : 4).toLocaleDateString(
+      intlLocale(store.lang),
+      { weekday: 'long' }
+    )
+  );
   const calcOptions = computed(() => [
     ['fullMonth', t('settings.calculationMode.fullMonth')],
     ['passedDays', t('settings.calculationMode.passedDays')],
@@ -110,12 +112,12 @@
       });
       return;
     }
-    modalStore.replaceModal('import');
+    modalStore.openModal('import');
   };
 
   const backupHint = computed(() => {
     if (!store.backupAt) return t('settings.data.backupHintNoDate');
-    const date = new Date(store.backupAt).toLocaleString(resolveLang(store.lang), {
+    const date = new Date(store.backupAt).toLocaleString(intlLocale(store.lang), {
       day: 'numeric',
       month: 'short',
       hour: '2-digit',
@@ -124,10 +126,10 @@
     return t('settings.data.backupHint', { date });
   });
 
-  /** Системный диалог файла или печати открывается после закрытия окна настроек */
-  const runAndClose = event => {
+  /** Печать и фото бланка открываются после закрытия окна настроек */
+  const runAndClose = action => {
     close();
-    emit(event);
+    appActions[action]();
   };
 
   const dataActions = computed(() => [
@@ -146,7 +148,7 @@
     {
       title: t('settings.data.import'),
       hint: t('settings.data.importHint'),
-      run: () => runAndClose('import'),
+      run: appActions.import,
     },
     {
       title: t('settings.data.sheet'),
@@ -165,17 +167,24 @@
       : [{ title: t('settings.data.backup'), hint: backupHint.value, run: restoreBackup }]),
   ]);
 
-  const hotkeys = computed(() => [
-    ['N', t('settings.hotkeys.n')],
-    ['S', t('settings.hotkeys.s')],
-    ['←', t('settings.hotkeys.arrowLeft')],
-    ['→', t('settings.hotkeys.arrowRight')],
-    ['T', t('settings.hotkeys.t')],
-    ['/', t('settings.hotkeys.search')],
-    [`${modKey}+Z`, t('settings.hotkeys.undo')],
-    [`${modKey}+Shift+Z`, t('settings.hotkeys.redo')],
-    ['Esc', t('settings.hotkeys.escape')],
-  ]);
+  /** В арабском (RTL) прошлый месяц – стрелка вправо, как в App.vue */
+  const hotkeys = computed(() => {
+    const [prev, next] = resolveLang(store.lang) === 'ar' ? ['→', '←'] : ['←', '→'];
+    return [
+      ['N', t('settings.hotkeys.n')],
+      ['S', t('settings.hotkeys.s')],
+      [prev, t('settings.hotkeys.arrowLeft')],
+      [next, t('settings.hotkeys.arrowRight')],
+      ['T', t('settings.hotkeys.t')],
+      ['/', t('settings.hotkeys.search')],
+      ['↑ ↓ ← →', t('settings.hotkeys.grid')],
+      ['X', t('settings.hotkeys.skip')],
+      ['Alt+Enter', t('settings.hotkeys.note')],
+      [`${modKey}+Z`, t('settings.hotkeys.undo')],
+      [`${modKey}+Shift+Z`, t('settings.hotkeys.redo')],
+      ['Esc', t('settings.hotkeys.escape')],
+    ];
+  });
 </script>
 
 <template>
@@ -192,6 +201,20 @@
     </div>
 
     <div class="flex flex-col gap-6 px-6 pt-1 pb-[max(env(safe-area-inset-bottom),24px)]">
+      <!-- Обновление PWA, если тост с ним закрыли -->
+      <div
+        v-if="pendingUpdate"
+        class="border-line flex items-center justify-between gap-3 rounded-[14px] border p-3"
+      >
+        <span class="text-sm font-medium">{{ t('update.message') }}</span>
+        <button
+          class="bg-ink text-bg h-9 shrink-0 rounded-[10px] px-3.5 text-[13px] font-semibold"
+          @click="applyUpdate"
+        >
+          {{ t('update.action') }}
+        </button>
+      </div>
+
       <!-- Аккаунт -->
       <section class="flex flex-col gap-2.5">
         <h3 class="text-muted text-xs font-semibold tracking-wider uppercase">
@@ -267,7 +290,12 @@
         </h3>
         <div class="flex flex-col gap-2">
           <span class="text-sm font-medium">{{ t('settings.theme.title') }}</span>
-          <div class="bg-soft grid grid-cols-3 gap-1 rounded-xl p-1" role="radiogroup">
+          <div
+            v-radio-group
+            class="bg-soft grid grid-cols-3 gap-1 rounded-xl p-1"
+            role="radiogroup"
+            :aria-label="t('settings.theme.title')"
+          >
             <button
               v-for="[value, label] in themeOptions"
               :key="value"
@@ -303,9 +331,19 @@
         <h3 class="text-muted text-xs font-semibold tracking-wider uppercase">
           {{ t('settings.table') }}
         </h3>
-        <div class="flex items-center justify-between gap-3">
-          <span class="text-sm font-medium">{{ t('settings.weekStart.title') }}</span>
-          <div class="bg-soft flex gap-1 rounded-xl p-1" role="radiogroup">
+        <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+          <span class="flex flex-col gap-0.5">
+            <span class="text-sm font-medium">{{ t('settings.weekStart.title') }}</span>
+            <span v-if="store.weekStart === 'auto'" class="text-muted text-xs">
+              {{ t('settings.weekStart.autoHint', { day: autoWeekStartName }) }}
+            </span>
+          </span>
+          <div
+            v-radio-group
+            class="bg-soft flex gap-1 rounded-xl p-1"
+            role="radiogroup"
+            :aria-label="t('settings.weekStart.title')"
+          >
             <button
               v-for="[value, label] in weekOptions"
               :key="value"
@@ -340,7 +378,12 @@
         </button>
         <div class="flex flex-col gap-2">
           <span class="text-sm font-medium">{{ t('settings.calculationMode.title') }}</span>
-          <div class="bg-soft grid grid-cols-2 gap-1 rounded-xl p-1" role="radiogroup">
+          <div
+            v-radio-group
+            class="bg-soft grid grid-cols-2 gap-1 rounded-xl p-1"
+            role="radiogroup"
+            :aria-label="t('settings.calculationMode.title')"
+          >
             <button
               v-for="[value, label] in calcOptions"
               :key="value"
@@ -422,7 +465,10 @@
         <button class="h-10 text-sm underline underline-offset-3" @click="showWelcome(true)">
           {{ t('settings.showWelcome') }}
         </button>
-        <span class="text-muted text-xs">Table · Apache-2.0</span>
+        <span class="text-muted flex items-center gap-2 text-xs">
+          <AppLogo size="sm" class="text-ink" />
+          {{ t('app.license') }}
+        </span>
       </div>
     </div>
   </Sheet>

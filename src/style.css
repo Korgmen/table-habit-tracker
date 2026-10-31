@@ -13,10 +13,12 @@
   --color-muted: var(--muted);
   --color-line: var(--line);
   --color-line2: var(--line2);
+  --color-faint: var(--faint);
   --color-soft: var(--soft);
   --color-accent: var(--accent);
   --color-danger: var(--danger);
   --color-ok: var(--ok);
+  --color-warn: var(--warn);
   --color-scrim: var(--scrim);
 }
 
@@ -26,16 +28,20 @@
   --ink: #151515;
   --muted: #6b6b68;
   --line: #e6e6e2;
-  --line2: #c9c9c4;
+  /* Границы элементов управления и пустых отметок: не ниже 3:1 к --bg, --surface и --soft */
+  --line2: #898984;
+  /* Недоступное и неважное (будущие дни, выключенные кнопки): контраст не требуется */
+  --faint: #c9c9c4;
   --soft: #efefec;
   --accent: oklch(0.62 0.2 30);
   --danger: oklch(0.55 0.2 25);
-  --ok: oklch(0.65 0.15 150);
+  --ok: oklch(0.6 0.15 150);
+  --warn: oklch(0.6 0.13 75);
   --scrim: rgba(20, 20, 18, 0.42);
   /* Цвета привычек (ключи HABIT_COLORS в src/utils/archive.js), элементы читают var(--habit-<цвет>) */
   --habit-red: oklch(0.6 0.2 25);
-  --habit-orange: oklch(0.66 0.17 55);
-  --habit-yellow: oklch(0.7 0.14 90);
+  --habit-orange: oklch(0.63 0.17 55);
+  --habit-yellow: oklch(0.62 0.13 85);
   --habit-green: oklch(0.6 0.15 150);
   --habit-teal: oklch(0.6 0.1 195);
   --habit-blue: oklch(0.57 0.16 255);
@@ -50,11 +56,13 @@
   --ink: #f1f1ee;
   --muted: #9a9a95;
   --line: #2a2a28;
-  --line2: #474744;
+  --line2: #706f6b;
+  --faint: #474744;
   --soft: #262624;
   --accent: oklch(0.68 0.19 30);
   --danger: oklch(0.65 0.19 25);
   --ok: oklch(0.65 0.15 150);
+  --warn: oklch(0.78 0.14 80);
   --scrim: rgba(0, 0, 0, 0.6);
   --habit-red: oklch(0.66 0.18 25);
   --habit-orange: oklch(0.72 0.15 55);
@@ -110,6 +118,7 @@ button:not(:disabled) {
     --muted: #444;
     --line: #bbb;
     --line2: #888;
+    --faint: #bbb;
     color-scheme: light;
   }
 

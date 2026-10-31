@@ -3,7 +3,8 @@
   import { useHabitStore } from '@/stores/habitStore';
   import { useModalStore } from '@/stores/modalStore';
   import { useI18n } from 'vue-i18n';
-  import { resolveLang } from '@/i18n';
+  import { useModalEntry } from '@/composables/useModals';
+  import { intlLocale } from '@/i18n';
   import { MAX_NOTE } from '@/utils/archive';
   import { X, ChevronLeft, ChevronRight } from 'lucide-vue-next';
   import Sheet from '@/components/Sheet.vue';
@@ -13,13 +14,12 @@
     taskId: { type: [Number, String], required: true },
     /** Число месяца, к которому заметка */
     day: { type: Number, required: true },
-    /** Окно открыто из окна привычки: после закрытия вернуться в него */
-    back: Boolean,
   });
 
   const store = useHabitStore();
   const modalStore = useModalStore();
   const { t } = useI18n();
+  const { close } = useModalEntry();
 
   const task = computed(() => store.tasks.find(item => item.id === props.taskId) || null);
 
@@ -39,23 +39,15 @@
 
   /** Привычку удалили или сменился месяц: заметку больше не к чему привязать */
   watch(task, value => {
-    if (!value) modalStore.closeModal();
+    if (!value) close();
   });
 
   const dateLabel = computed(() =>
     new Date(store.currentYear, store.currentMonth, day.value).toLocaleDateString(
-      resolveLang(store.lang),
+      intlLocale(store.lang),
       { weekday: 'short', day: 'numeric', month: 'long' }
     )
   );
-
-  const close = () => {
-    if (props.back) {
-      modalStore.replaceModal('habit', { taskId: props.taskId, focusDay: day.value });
-    } else {
-      modalStore.closeModal();
-    }
-  };
 
   const save = () => {
     const text = draft.value.trim();
@@ -96,7 +88,7 @@
         <div class="flex items-center gap-1">
           <button
             type="button"
-            class="disabled:text-line2 flex size-10 items-center justify-center rounded-full"
+            class="disabled:text-faint flex size-10 items-center justify-center rounded-full"
             :disabled="day <= 1"
             :aria-label="t('note.prevDay')"
             @click="day--"
@@ -108,7 +100,7 @@
           </span>
           <button
             type="button"
-            class="disabled:text-line2 flex size-10 items-center justify-center rounded-full"
+            class="disabled:text-faint flex size-10 items-center justify-center rounded-full"
             :disabled="day >= store.today"
             :aria-label="t('note.nextDay')"
             @click="day++"

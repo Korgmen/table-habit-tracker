@@ -3,6 +3,7 @@
   import { useHabitStore } from '@/stores/habitStore';
   import { useModalStore } from '@/stores/modalStore';
   import { useHabitUtils } from '@/composables/useHabitUtils';
+  import { useModalEntry } from '@/composables/useModals';
   import { useI18n } from 'vue-i18n';
   import { searchArchive } from '@/utils/stats';
   import { X, Search } from 'lucide-vue-next';
@@ -24,19 +25,18 @@
     () => text.value.trim() && !results.value.habits.length && !results.value.notes.length
   );
 
-  const close = () => modalStore.closeModal();
+  const { close, closeAll } = useModalEntry();
 
-  /** Месяц привычки из результатов */
+  /** Месяц привычки из результатов: окна закрываются, открывается месяц */
   const openMonth = key => {
-    close();
+    closeAll();
     store.openMonthKey(key);
   };
 
-  /** Заметка открывается в своём месяце */
+  /** Заметка открывается в своём месяце поверх поиска: закрытие возвращает к результатам */
   const openNote = note => {
-    close();
     store.openMonthKey(note.key);
-    modalStore.showModal('note', { taskId: note.taskId, day: note.day });
+    modalStore.openModal('note', { taskId: note.taskId, day: note.day });
   };
 </script>
 

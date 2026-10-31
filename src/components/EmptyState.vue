@@ -29,10 +29,13 @@
 </script>
 
 <template>
-  <div
+  <section
+    aria-labelledby="empty-title"
     class="border-line flex flex-1 flex-col items-center justify-center gap-2.5 border-t p-8 text-center md:gap-3"
   >
-    <span class="text-xl font-bold md:text-2xl md:tracking-tight">{{ t('empty.title') }}</span>
+    <h2 id="empty-title" class="text-xl font-bold md:text-2xl md:tracking-tight">
+      {{ t('empty.title') }}
+    </h2>
     <span class="text-muted max-w-[280px] text-[15px] leading-normal text-pretty md:max-w-[380px]">
       {{ t('empty.text') }}
     </span>
@@ -47,7 +50,7 @@
       <button
         v-if="carrySource"
         class="border-line bg-surface hover:bg-soft h-[42px] rounded-[10px] border px-[18px] text-sm"
-        @click="modalStore.showModal('duplicate', { from: carrySource })"
+        @click="modalStore.openModal('duplicate', { from: carrySource })"
       >
         {{ t('empty.carry', { month: monthKeyLabel(carrySource) }) }}
       </button>
@@ -60,5 +63,5 @@
       </button>
     </div>
     <span v-if="isDesktop" class="hide-print text-muted text-xs">{{ t('empty.hotkey') }}</span>
-  </div>
+  </section>
 </template>

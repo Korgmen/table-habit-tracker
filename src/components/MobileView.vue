@@ -5,7 +5,7 @@
   import { useHabitUtils } from '@/composables/useHabitUtils';
   import { useModals } from '@/composables/useModals';
   import { useI18n } from 'vue-i18n';
-  import { resolveLang } from '@/i18n';
+  import { intlLocale } from '@/i18n';
   import { dayTotals } from '@/utils/habitMath';
   import { currentStreak } from '@/utils/stats';
   import { monthKey } from '@/utils/archive';
@@ -25,6 +25,7 @@
     CalendarClock,
   } from 'lucide-vue-next';
   import MonthNav from '@/components/MonthNav.vue';
+  import AppLogo from '@/components/AppLogo.vue';
   import ArchiveBanner from '@/components/ArchiveBanner.vue';
   import EmptyState from '@/components/EmptyState.vue';
   import MarkCircle from '@/components/MarkCircle.vue';
@@ -158,7 +159,11 @@
       actions.push({
         id: 'unmarked',
         icon: CalendarClock,
-        label: t('list.goUnmarked', { count: store.unmarkedDays.length }),
+        label: t(
+          'list.goUnmarked',
+          { count: store.unmarkedDays.length },
+          store.unmarkedDays.length
+        ),
         run: () => showDay(store.currentMonthKey, unmarkedTarget.value),
       });
     }
@@ -234,12 +239,12 @@
   /** Заголовок выбранного дня: «Сегодня, четверг, 14 мая» */
   const dayTitle = computed(() => {
     const date = new Date(store.currentYear, store.currentMonth, selected.value);
-    const label = date.toLocaleDateString(resolveLang(store.lang), {
+    const label = date.toLocaleDateString(intlLocale(store.lang), {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
     });
-    if (selected.value === todayDay.value) return `${t('list.today')}, ${label}`;
+    if (selected.value === todayDay.value) return t('list.todayDate', { date: label });
     return label.charAt(0).toUpperCase() + label.slice(1);
   });
 
@@ -260,9 +265,9 @@
       index.value
     );
     if (streak.unit === 'week' && streak.count > 0) {
-      parts.push(t('list.streakWeeks', { count: streak.count }));
+      parts.push(t('list.streakWeeks', { count: streak.count }, streak.count));
     } else if (streak.count > 1) {
-      parts.push(t('list.streak', { count: streak.count }));
+      parts.push(t('list.streak', { count: streak.count }, streak.count));
     }
     parts.push(
       t('list.monthPct', {
@@ -287,9 +292,13 @@
 
 <template>
   <div class="flex h-dvh flex-col overflow-hidden">
+    <!-- Лого над шапкой: в одной строке с месяцем и кнопками ему не хватает места -->
+    <div class="flex px-4 pt-[max(env(safe-area-inset-top),10px)]">
+      <AppLogo size="sm" />
+    </div>
     <!-- Шапка: месяц, поиск и настройки; свайп по шапке меняет месяц -->
     <div
-      class="flex touch-pan-y items-center justify-between px-2 pt-[max(env(safe-area-inset-top),8px)] pb-1"
+      class="flex touch-pan-y items-center justify-between px-2 pt-0.5 pb-1"
       @touchstart.passive="monthSwipe.start"
       @touchend="monthSwipe.end"
       @touchcancel="monthSwipe.cancel"
@@ -308,7 +317,7 @@
         <button
           class="border-line bg-surface flex size-11 items-center justify-center rounded-full border"
           :aria-label="t('settings.title')"
-          @click="modalStore.showModal('settings')"
+          @click="modalStore.openModal('settings')"
         >
           <Ellipsis class="size-5" />
         </button>
@@ -394,7 +403,7 @@
           <!-- Отмена и повтор: в шапке телефона нет места рядом с месяцем -->
           <div class="flex shrink-0 items-center self-center">
             <button
-              class="disabled:text-line2 flex size-10 items-center justify-center"
+              class="disabled:text-faint flex size-10 items-center justify-center"
               :disabled="!store.canUndo"
               :aria-label="t('history.undo')"
               @click="undoLast"
@@ -402,7 +411,7 @@
               <Undo2 class="size-5 rtl:-scale-x-100" />
             </button>
             <button
-              class="disabled:text-line2 flex size-10 items-center justify-center"
+              class="disabled:text-faint flex size-10 items-center justify-center"
               :disabled="!store.canRedo"
               :aria-label="t('history.redo')"
               @click="redoLast"
@@ -410,8 +419,11 @@
               <Redo2 class="size-5 rtl:-scale-x-100" />
             </button>
           </div>
-          <!-- flex убирает пробел между числами, который prettier оставляет переносом строки -->
-          <span class="flex shrink-0 items-baseline text-[22px] font-bold tracking-tight">
+          <!--
+            flex убирает пробел между числами, который prettier оставляет переносом строки;
+            dir="ltr": в арабском flex иначе развернёт дробь в «5/0»
+          -->
+          <span class="flex shrink-0 items-baseline text-[22px] font-bold tracking-tight" dir="ltr">
             <span>{{ dayStats.done }}</span>
             <span class="text-muted font-medium">/{{ dayStats.total }}</span>
           </span>

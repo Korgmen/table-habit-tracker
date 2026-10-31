@@ -4,7 +4,7 @@
   import { useModalStore } from '@/stores/modalStore';
   import { useI18n } from 'vue-i18n';
 
-  const props = defineProps({
+  defineProps({
     /** Подробный вид для настроек: причина ошибки и кнопка действия текстом */
     detailed: Boolean,
   });
@@ -13,9 +13,8 @@
   const modalStore = useModalStore();
   const { t } = useI18n();
 
-  /** Из настроек окно выбора версии открывается вместо них, из шапки – как обычно */
-  const showCloudConflict = () =>
-    props.detailed ? modalStore.replaceModal('conflict') : modalStore.showModal('conflict');
+  /** Окно выбора версии открывается поверх открытых (из настроек – поверх них) */
+  const showCloudConflict = () => modalStore.openModal('conflict');
 
   /** Коды ошибок Firestore, для которых есть отдельное объяснение в словаре */
   const REASON_KEYS = {

@@ -2,8 +2,8 @@
   import { useHabitStore } from '@/stores/habitStore';
   import { useModalStore } from '@/stores/modalStore';
   import { useHabitUtils } from '@/composables/useHabitUtils';
-  import { useModals } from '@/composables/useModals';
-  import { ref, watch, watchEffect, nextTick, onMounted, onUnmounted } from 'vue';
+  import { useModals, useModalHistory } from '@/composables/useModals';
+  import { ref, watch, watchEffect, nextTick, provide, onMounted, onUnmounted } from 'vue';
   import { useI18n } from 'vue-i18n';
   import { registerSW } from 'virtual:pwa-register';
   import DesktopHeader from '@/components/DesktopHeader.vue';
@@ -12,18 +12,9 @@
   import EmptyState from '@/components/EmptyState.vue';
   import MobileView from '@/components/MobileView.vue';
   import Toast from '@/components/Toast.vue';
-  import SettingsSheet from '@/components/SettingsSheet.vue';
-  import HabitSheet from '@/components/HabitSheet.vue';
-  import DuplicateSheet from '@/components/DuplicateSheet.vue';
-  import WelcomeSheet from '@/components/WelcomeSheet.vue';
-  import ConflictSheet from '@/components/ConflictSheet.vue';
-  import ImportSheet from '@/components/ImportSheet.vue';
-  import NoteSheet from '@/components/NoteSheet.vue';
-  import StatsSheet from '@/components/StatsSheet.vue';
-  import SearchSheet from '@/components/SearchSheet.vue';
+  import ModalEntry from '@/components/ModalEntry.vue';
   import { useSearch } from '@/composables/useSearch';
   import PaperSheet from '@/components/PaperSheet.vue';
-  import PhotoImport from '@/components/PhotoImport.vue';
 
   const store = useHabitStore();
   const modalStore = useModalStore();
@@ -32,17 +23,31 @@
   const { searchInput } = useSearch();
   const {
     openNewHabit,
+    openSettings,
     showWelcome,
     showUpdatePrompt,
+    showOfflineReady,
     showCloudConflict,
     undoLast,
     redoLast,
     toastWithUndo,
   } = useModals(t);
 
-  /** Тема применяется к <html>, чтобы её видели и окна, вынесенные в body */
+  useModalHistory();
+
+  /** Цвет строки состояния и заголовка окна PWA – фон приложения (--bg в style.css) */
+  const THEME_COLORS = { light: '#f7f7f5', dark: '#121211' };
+
+  /**
+   * Тема применяется к <html>, чтобы её видели и окна, вынесенные в body. До загрузки скрипта
+   * её ставит inline-скрипт в index.html, здесь она следует за настройкой и системной темой.
+   */
   watchEffect(() => {
     document.documentElement.dataset.theme = currentTheme.value;
+    document.querySelectorAll('meta[name="theme-color"]').forEach(meta => {
+      meta.removeAttribute('media');
+      meta.content = THEME_COLORS[currentTheme.value];
+    });
   });
 
   /** Конфликт определяет стор, диалог показывается здесь, когда конфликт появился */
@@ -58,7 +63,9 @@
     () => store.lastCarry,
     carry => {
       if (!carry || store.lastChangeId !== carry.id) return;
-      toastWithUndo(t('carry.auto', { count: carry.count, month: monthKeyLabel(carry.from) }));
+      toastWithUndo(
+        t('carry.auto', { count: carry.count, month: monthKeyLabel(carry.from) }, carry.count)
+      );
     }
   );
 
@@ -82,33 +89,20 @@
     }
   );
 
-  /** Окна по имени из modalStore */
-  const sheets = {
-    habit: HabitSheet,
-    duplicate: DuplicateSheet,
-    welcome: WelcomeSheet,
-    conflict: ConflictSheet,
-    import: ImportSheet,
-    note: NoteSheet,
-    stats: StatsSheet,
-    search: SearchSheet,
-  };
-
   /** Ссылка на скрытый input для импорта файла */
   const importInput = ref(null);
 
   /** Печатается бланк для фото вместо интерфейса */
   const sheetPrinting = ref(false);
 
-  /** Ссылка на скрытый input для фото бланка и выбранное фото */
+  /** Ссылка на скрытый input для фото бланка */
   const photoInput = ref(null);
-  const photoFile = ref(null);
 
   /** Глобальные горячие клавиши; ввод в полях и открытые окна их не вызывают */
   const handleKeydown = event => {
-    if (modalStore.isOpen) return;
-    if (photoFile.value) {
-      if (event.code === 'Escape') photoFile.value = null;
+    if (modalStore.isOpen) {
+      /** Фокус ушёл из окна (например, на body после клика): Escape всё равно закрывает верхнее */
+      if (event.key === 'Escape') modalStore.closeModal();
       return;
     }
     if (['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)) return;
@@ -124,13 +118,18 @@
     }
     if (event.metaKey || event.ctrlKey || event.altKey) return;
 
+    /** Стрелки идут по направлению текста: в арабском (RTL) прошлый месяц справа */
+    const rtl = document.documentElement.dir === 'rtl';
+    const prevMonth = () => store.prevMonth();
+    const nextMonth = () => canNextMonth.value && store.nextMonth();
+
     const keyActions = {
       KeyN: openNewHabit,
-      KeyS: () => modalStore.showModal('settings'),
+      KeyS: openSettings,
       KeyT: () => store.goToToday(),
       Slash: () => searchInput.value?.focus(),
-      ArrowLeft: () => store.prevMonth(),
-      ArrowRight: () => canNextMonth.value && store.nextMonth(),
+      ArrowLeft: rtl ? nextMonth : prevMonth,
+      ArrowRight: rtl ? prevMonth : nextMonth,
     };
 
     const action = keyActions[event.code];
@@ -151,28 +150,51 @@
     if (error) {
       modalStore.showToast(t(error), { actionText: t('import.other'), onAction: triggerImport });
     } else {
-      modalStore.showModal('import');
+      modalStore.openModal('import');
     }
   };
 
-  /** Печатает бланк открытого месяца; обычный вид возвращает событие afterprint */
+  /** Бланк больше не нужен: обычный вид возвращается и при печати, и после неё */
+  const endSheetPrint = () => {
+    sheetPrinting.value = false;
+    window.removeEventListener('pointerdown', endSheetPrint, true);
+    window.removeEventListener('keydown', endSheetPrint, true);
+  };
+
+  /** Окно печати закрылось: в Safari на iOS afterprint бывает не приходит, но media query – да */
+  const printMedia = window.matchMedia('print');
+  const handlePrintMedia = event => {
+    if (!event.matches && sheetPrinting.value) endSheetPrint();
+  };
+
+  /**
+   * Печатает бланк открытого месяца. Обычный вид возвращают afterprint или выход из print media,
+   * а если браузер не прислал ни того, ни другого, – первое касание или клавиша после печати.
+   */
   const triggerSheetPrint = async () => {
     sheetPrinting.value = true;
     await nextTick();
     window.print();
-  };
-
-  const handleAfterPrint = () => {
-    sheetPrinting.value = false;
+    if (!sheetPrinting.value) return;
+    window.addEventListener('pointerdown', endSheetPrint, true);
+    window.addEventListener('keydown', endSheetPrint, true);
   };
 
   /** Открывает выбор фото бланка (на телефоне – с камерой) */
   const triggerPhotoImport = () => photoInput.value.click();
 
   const handlePhotoSelected = event => {
-    photoFile.value = event.target.files[0] || null;
+    const file = event.target.files[0];
     event.target.value = '';
+    if (file) modalStore.openModal('photo', { file });
   };
+
+  /** Действия, которым нужны скрытые input и бланк печати: их вызывает окно настроек */
+  provide('appActions', {
+    import: triggerImport,
+    printSheet: triggerSheetPrint,
+    scanPhoto: triggerPhotoImport,
+  });
 
   /** Свёрнутое приложение дописывает отложенные записи, вернувшееся сверяет дату */
   const handleVisibilityChange = () => {
@@ -201,11 +223,12 @@
         showUpdatePrompt(updateSW);
       },
       onOfflineReady() {
-        console.log('App ready to work offline');
+        showOfflineReady();
       },
     });
     window.addEventListener('keydown', handleKeydown);
-    window.addEventListener('afterprint', handleAfterPrint);
+    window.addEventListener('afterprint', endSheetPrint);
+    printMedia.addEventListener('change', handlePrintMedia);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('pagehide', handlePageHide);
     window.addEventListener('online', handleOnline);
@@ -219,7 +242,9 @@
 
   onUnmounted(() => {
     window.removeEventListener('keydown', handleKeydown);
-    window.removeEventListener('afterprint', handleAfterPrint);
+    window.removeEventListener('afterprint', endSheetPrint);
+    printMedia.removeEventListener('change', handlePrintMedia);
+    endSheetPrint();
     document.removeEventListener('visibilitychange', handleVisibilityChange);
     window.removeEventListener('pagehide', handlePageHide);
     window.removeEventListener('online', handleOnline);
@@ -264,26 +289,7 @@
   <!-- Бланк для печати и распознавания с фото -->
   <PaperSheet v-if="sheetPrinting" />
 
-  <!-- Проверка отметок, распознанных с фото бланка -->
-  <PhotoImport
-    v-if="photoFile"
-    :key="photoFile.name + photoFile.lastModified"
-    :file="photoFile"
-    @close="photoFile = null"
-  />
-
-  <!-- Глобальное окно и тост -->
-  <SettingsSheet
-    v-if="modalStore.modal.name === 'settings'"
-    @import="triggerImport"
-    @print-sheet="triggerSheetPrint"
-    @scan-photo="triggerPhotoImport"
-  />
-  <component
-    :is="sheets[modalStore.modal.name]"
-    v-else-if="modalStore.isOpen"
-    :key="modalStore.modal.name + JSON.stringify(modalStore.modal.props)"
-    v-bind="modalStore.modal.props"
-  />
+  <!-- Окна (стек modalStore, верхнее активно) и тост -->
+  <ModalEntry v-for="entry in modalStore.stack" :key="entry.id" :entry="entry" />
   <Toast />
 </template>

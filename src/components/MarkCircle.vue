@@ -32,9 +32,9 @@
         : 'border-2 border-ink bg-ink text-bg';
     }
     if (props.mark === false) return 'border-2 border-dashed border-muted text-muted';
-    if (props.future) return 'border-[1.5px] border-dotted border-line2 text-line2';
+    if (props.future) return 'border-[1.5px] border-dotted border-faint text-faint';
     if (props.today) return 'border-2 border-accent';
-    return props.size === 'lg' ? 'border-[1.5px] border-line' : 'border-2 border-line2';
+    return props.size === 'lg' ? 'border-[1.5px] border-line2' : 'border-2 border-line2';
   });
 
   const colorStyle = computed(() =>

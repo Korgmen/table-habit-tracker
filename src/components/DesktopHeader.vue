@@ -9,6 +9,7 @@
   import { dayTotals } from '@/utils/habitMath';
   import { Plus, Undo2, Redo2, Search, X, ChartColumn } from 'lucide-vue-next';
   import MonthNav from '@/components/MonthNav.vue';
+  import AppLogo from '@/components/AppLogo.vue';
   import SyncStatus from '@/components/SyncStatus.vue';
 
   const store = useHabitStore();
@@ -30,6 +31,7 @@
 
 <template>
   <div class="flex flex-wrap items-center gap-x-7 gap-y-3 px-8 pt-6 pb-[18px]">
+    <AppLogo class="hide-print" />
     <MonthNav />
 
     <div class="flex items-baseline gap-6">
@@ -45,7 +47,7 @@
         <span
           v-if="store.summaryKind === 'stars'"
           class="text-lg font-bold tracking-wider"
-          :aria-label="t('summary.stars', { count: store.overallGrade })"
+          :aria-label="t('summary.stars', { count: store.overallGrade }, store.overallGrade)"
         >
           {{ starsText(store.overallGrade) }}
         </span>
@@ -99,7 +101,7 @@
       </button>
       <div class="border-line bg-surface flex h-[38px] items-center rounded-[10px] border">
         <button
-          class="enabled:hover:bg-soft disabled:text-line2 flex h-full w-9 items-center justify-center rounded-s-[10px]"
+          class="enabled:hover:bg-soft disabled:text-faint flex h-full w-9 items-center justify-center rounded-s-[10px]"
           :disabled="!store.canUndo"
           :aria-label="t('history.undo')"
           :title="t('history.undoHint', { key: `${modKey}+Z` })"
@@ -108,7 +110,7 @@
           <Undo2 class="size-4 rtl:-scale-x-100" />
         </button>
         <button
-          class="enabled:hover:bg-soft disabled:text-line2 flex h-full w-9 items-center justify-center rounded-e-[10px]"
+          class="enabled:hover:bg-soft disabled:text-faint flex h-full w-9 items-center justify-center rounded-e-[10px]"
           :disabled="!store.canRedo"
           :aria-label="t('history.redo')"
           :title="t('history.redoHint', { key: `${modKey}+Shift+Z` })"
@@ -120,7 +122,7 @@
       <button
         class="border-line bg-surface hover:bg-soft h-[38px] rounded-[10px] border px-3.5 text-sm"
         :title="t('header.settingsHint')"
-        @click="modalStore.showModal('settings')"
+        @click="modalStore.openModal('settings')"
       >
         {{ t('settings.title') }}
       </button>

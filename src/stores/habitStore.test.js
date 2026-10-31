@@ -48,6 +48,8 @@ const createStore = (now, archive) => {
 beforeEach(() => {
   vi.useFakeTimers();
   localStorage.clear();
+  /** Как у пользователей до 3.2.0: начало недели сохранено явно; 'auto' проверяется отдельно */
+  localStorage.setItem('weekStart', 'monday');
   fs.commit = vi.fn(() => Promise.resolve());
   vi.mocked(getDoc).mockReset();
   vi.mocked(getDocs).mockReset();
@@ -243,6 +245,26 @@ describe('отметки', () => {
     expect(store.tasks.every(t => t.subtasks[0].marks[0] === true)).toBe(true);
     store.toggleDay(0, true);
     expect(store.tasks.every(t => t.subtasks[0].marks[0] === null)).toBe(true);
+  });
+
+  it('очистка дня возвращает пропуск в день вне расписания', () => {
+    /** 1 октября 2026 – четверг, привычка по расписанию только по понедельникам */
+    const scheduled = { ...task([false, ...Array(30).fill(null)]), schedule: [1] };
+    const store = createStore(new Date(2026, 9, 4, 12), {
+      '2026-10': { tasks: [scheduled, task(Array(31).fill(null), 5)] },
+    });
+    const dayMarks = () => store.tasks.map(t => t.subtasks[0].marks[0]);
+
+    store.toggleDay(0, true);
+    expect(dayMarks()).toEqual([true, true]);
+    store.toggleDay(0, true);
+    expect(dayMarks()).toEqual([false, null]);
+
+    /** Пропуск по расписанию не мешает повторному клику очистить день */
+    store.toggleDay(0, true);
+    store.updateMark(1, 2, 0, false);
+    store.toggleDay(0, true);
+    expect(dayMarks()).toEqual([false, null]);
   });
 });
 
@@ -1161,6 +1183,39 @@ describe('облако', () => {
     store.sync.meta = JSON.parse(localStorage.getItem('habitSyncMeta'));
     store.applyCloudSettings({ theme: 'dark' });
     expect(store.theme).toBe('dark');
+  });
+});
+
+describe('начало недели по локали', () => {
+  it('новый пользователь получает auto, оно не меняет отпечаток настроек 3.1.0', () => {
+    localStorage.removeItem('weekStart');
+    const store = createStore(new Date(2026, 9, 10, 12));
+    expect(store.weekStart).toBe('auto');
+    /** jsdom: язык браузера en-US, неделя с воскресенья */
+    expect(store.weekStartDay).toBe('sunday');
+    expect(store.monthCtx.firstWeekday).toBe(0);
+
+    store.setLang('ru');
+    expect(store.weekStartDay).toBe('monday');
+    store.setWeekStart('sunday');
+    expect(store.weekStartDay).toBe('sunday');
+  });
+
+  it('отпечаток с явным понедельником совпадает с отпечатком прежних версий', () => {
+    localStorage.setItem(
+      'habitSyncMeta',
+      JSON.stringify({
+        uid: 'u1',
+        months: {},
+        settingsHash: JSON.stringify(['system', 'system', 'monday', true, 'fullMonth']),
+        legacy: {},
+      })
+    );
+    const store = createStore(new Date(2026, 9, 10, 12));
+    store.user = { uid: 'u1' };
+    store.sync.meta = JSON.parse(localStorage.getItem('habitSyncMeta'));
+    store.applyCloudSettings({ theme: 'dark', weekStart: 'sunday' });
+    expect(store.weekStart).toBe('sunday');
   });
 });
 

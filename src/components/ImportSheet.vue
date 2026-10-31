@@ -1,18 +1,17 @@
 <script setup>
-  import { ref, computed } from 'vue';
+  import { ref, computed, onBeforeUnmount } from 'vue';
   import { useHabitStore } from '@/stores/habitStore';
-  import { useModalStore } from '@/stores/modalStore';
   import { useHabitUtils } from '@/composables/useHabitUtils';
-  import { useModals } from '@/composables/useModals';
+  import { useModals, useModalEntry } from '@/composables/useModals';
   import { useI18n } from 'vue-i18n';
   import { filledMonths, countTasks, MAX_TITLE } from '@/utils/archive';
   import Sheet from '@/components/Sheet.vue';
 
   const store = useHabitStore();
-  const modalStore = useModalStore();
   const { monthKeyLabel } = useHabitUtils();
   const { t } = useI18n();
   const { toastWithUndo } = useModals(t);
+  const { close } = useModalEntry();
 
   /** Файл разбирается до открытия окна и не меняется, пока оно открыто */
   const pending = store.pendingImport;
@@ -52,14 +51,19 @@
     takeIncoming.value = next;
   };
 
-  const close = () => {
+  const cancel = () => {
     store.cancelImport();
-    modalStore.closeModal();
+    close();
   };
+
+  /** Окно закрыли «назад» или поверх открыли другое: несостоявшийся импорт сбрасывается */
+  onBeforeUnmount(() => {
+    if (store.pendingImport) store.cancelImport();
+  });
 
   const confirm = () => {
     store.applyImport({ replace: mode.value === 'replace', takeIncoming: [...takeIncoming.value] });
-    modalStore.closeModal();
+    close();
     toastWithUndo(t(fromBackup ? 'importSheet.restored' : 'import.done'));
   };
 </script>
@@ -68,7 +72,7 @@
   <Sheet
     v-if="pending"
     :label="t(fromBackup ? 'importSheet.titleBackup' : 'importSheet.title')"
-    @close="close"
+    @close="cancel"
   >
     <div class="flex flex-col gap-4 px-6 pt-6 pb-2">
       <span class="text-[22px] font-bold tracking-tight">
@@ -76,11 +80,22 @@
       </span>
       <span class="text-muted text-[15px] leading-normal text-pretty">{{ summary }}</span>
       <span v-if="pending.truncated > 0" class="text-muted text-[13px] leading-snug">
-        {{ t('importSheet.truncated', { count: pending.truncated, max: MAX_TITLE }) }}
+        {{
+          t(
+            'importSheet.truncated',
+            { count: pending.truncated, max: MAX_TITLE },
+            pending.truncated
+          )
+        }}
       </span>
 
       <template v-if="hasCurrentData">
-        <div class="bg-soft grid grid-cols-2 gap-1 rounded-xl p-1" role="radiogroup">
+        <div
+          v-radio-group
+          class="bg-soft grid grid-cols-2 gap-1 rounded-xl p-1"
+          role="radiogroup"
+          :aria-label="t('importSheet.mode')"
+        >
           <button
             v-for="[value, label] in modeOptions"
             :key="value"
@@ -105,6 +120,7 @@
           <div v-for="key in overlap" :key="key" class="flex items-center justify-between gap-3">
             <span class="text-sm first-letter:uppercase">{{ monthKeyLabel(key) }}</span>
             <div
+              v-radio-group
               class="bg-soft flex gap-1 rounded-xl p-1"
               role="radiogroup"
               :aria-label="monthKeyLabel(key)"
@@ -136,7 +152,7 @@
     </div>
 
     <div class="flex justify-end gap-2 px-6 pt-4 pb-[max(env(safe-area-inset-bottom),24px)]">
-      <button class="border-line hover:bg-soft h-11 rounded-xl border px-4 text-sm" @click="close">
+      <button class="border-line hover:bg-soft h-11 rounded-xl border px-4 text-sm" @click="cancel">
         {{ t('common.cancel') }}
       </button>
       <button

@@ -4,9 +4,9 @@
   import { MAX_TASKS, MAX_SUBTASKS, MAX_TITLE, MAX_GOAL, HABIT_COLORS } from '@/utils/archive';
   import { useModalStore } from '@/stores/modalStore';
   import { useHabitUtils } from '@/composables/useHabitUtils';
-  import { useModals } from '@/composables/useModals';
+  import { useModals, useModalEntry } from '@/composables/useModals';
   import { useI18n } from 'vue-i18n';
-  import { resolveLang } from '@/i18n';
+  import { intlLocale } from '@/i18n';
   import { X, Minus, Plus, ArrowUp, ArrowDown, Ban, NotebookPen, Smile } from 'lucide-vue-next';
   import Sheet from '@/components/Sheet.vue';
   import MarkCircle from '@/components/MarkCircle.vue';
@@ -23,6 +23,7 @@
 
   const store = useHabitStore();
   const modalStore = useModalStore();
+  const { close } = useModalEntry();
   const {
     isDesktop,
     monthDays,
@@ -97,13 +98,13 @@
 
   const dayLabel = day =>
     new Date(store.currentYear, store.currentMonth, day).toLocaleDateString(
-      resolveLang(store.lang),
+      intlLocale(store.lang),
       { day: 'numeric', month: 'short' }
     );
 
   /** Привычку удалили или сменился месяц: окно правки больше не к чему привязать */
   watch(task, value => {
-    if (!isNew && !value) modalStore.closeModal();
+    if (!isNew && !value) close();
   });
 
   const canSave = computed(() => draftTitle.value.trim().length > 0);
@@ -126,8 +127,6 @@
 
   const position = computed(() => store.tasks.findIndex(item => item.id === props.taskId));
 
-  const close = () => modalStore.closeModal();
-
   /** Применяет черновик к существующей привычке */
   const applyDraft = () => {
     const removesMarks = draftSubs.value < task.value.subtasks.length;
@@ -139,7 +138,7 @@
     if (!canSave.value) return;
     if (isNew) {
       if (!store.addTask(draftTitle.value, draftSubs.value, draftFields.value)) {
-        modalStore.showToast(t('taskLimit', { max: MAX_TASKS }));
+        modalStore.showToast(t('taskLimit', { max: MAX_TASKS }, MAX_TASKS));
         return;
       }
       modalStore.showToast(t('habit.added', { title: draftTitle.value.trim() }));
@@ -152,7 +151,7 @@
   /** Заметка открывается вместо окна привычки: правки окна сначала сохраняются */
   const editNote = day => {
     if (canSave.value) applyDraft();
-    openNote(props.taskId, day, true);
+    openNote(props.taskId, day);
   };
 
   const remove = () => {
@@ -216,7 +215,12 @@
 
         <div class="flex flex-col gap-2">
           <span class="text-sm font-medium">{{ t('habit.color') }}</span>
-          <div class="flex flex-wrap gap-1.5" role="radiogroup" :aria-label="t('habit.color')">
+          <div
+            v-radio-group
+            class="flex flex-wrap gap-1.5"
+            role="radiogroup"
+            :aria-label="t('habit.color')"
+          >
             <button
               type="button"
               role="radio"
@@ -257,7 +261,7 @@
           <div class="border-line2 flex shrink-0 items-center rounded-xl border">
             <button
               type="button"
-              class="disabled:text-line2 flex size-11 items-center justify-center"
+              class="disabled:text-faint flex size-11 items-center justify-center"
               :disabled="draftSubs <= 1"
               :aria-label="t('habit.decrease')"
               @click="draftSubs--"
@@ -267,7 +271,7 @@
             <span class="min-w-7 text-center text-[17px] font-bold">{{ draftSubs }}</span>
             <button
               type="button"
-              class="disabled:text-line2 flex size-11 items-center justify-center"
+              class="disabled:text-faint flex size-11 items-center justify-center"
               :disabled="draftSubs >= MAX_SUBTASKS"
               :aria-label="t('habit.increase')"
               @click="draftSubs++"
@@ -286,6 +290,7 @@
         <div class="flex flex-col gap-2">
           <span class="text-sm font-medium">{{ t('habit.schedule') }}</span>
           <div
+            v-radio-group
             class="bg-soft grid grid-cols-3 gap-1 rounded-xl p-1"
             role="radiogroup"
             :aria-label="t('habit.schedule')"
@@ -317,11 +322,11 @@
             </button>
           </div>
           <div v-if="scheduleMode === 'goal'" class="flex items-center justify-between gap-4">
-            <span class="text-sm">{{ t('habit.goalCount', { count: draftGoal }) }}</span>
+            <span class="text-sm">{{ t('habit.goalCount', { count: draftGoal }, draftGoal) }}</span>
             <div class="border-line2 flex shrink-0 items-center rounded-xl border">
               <button
                 type="button"
-                class="disabled:text-line2 flex size-11 items-center justify-center"
+                class="disabled:text-faint flex size-11 items-center justify-center"
                 :disabled="draftGoal <= 1"
                 :aria-label="t('habit.decrease')"
                 @click="draftGoal--"
@@ -331,7 +336,7 @@
               <span class="min-w-7 text-center text-[17px] font-bold">{{ draftGoal }}</span>
               <button
                 type="button"
-                class="disabled:text-line2 flex size-11 items-center justify-center"
+                class="disabled:text-faint flex size-11 items-center justify-center"
                 :disabled="draftGoal >= MAX_GOAL"
                 :aria-label="t('habit.increase')"
                 @click="draftGoal++"
@@ -447,7 +452,7 @@
             <div class="flex gap-1.5">
               <button
                 type="button"
-                class="border-line disabled:text-line2 flex h-10 items-center gap-1 rounded-[10px] border px-3.5 text-sm"
+                class="border-line disabled:text-faint flex h-10 items-center gap-1 rounded-[10px] border px-3.5 text-sm"
                 :disabled="position <= 0"
                 @click="store.moveTask(task.id, -1)"
               >
@@ -456,7 +461,7 @@
               </button>
               <button
                 type="button"
-                class="border-line disabled:text-line2 flex h-10 items-center gap-1 rounded-[10px] border px-3.5 text-sm"
+                class="border-line disabled:text-faint flex h-10 items-center gap-1 rounded-[10px] border px-3.5 text-sm"
                 :disabled="position >= store.tasks.length - 1"
                 @click="store.moveTask(task.id, 1)"
               >
@@ -493,7 +498,7 @@
         </template>
 
         <span v-if="isNew" class="text-muted text-[13px]">
-          {{ t('habit.limitLine', { count: store.tasks.length, max: MAX_TASKS }) }}
+          {{ t('habit.limitLine', { count: store.tasks.length, max: MAX_TASKS }, MAX_TASKS) }}
         </span>
       </div>
 

@@ -3,7 +3,7 @@
     "title": "Marcas desde la foto de la hoja",
     "scanning": "Reconociendo la foto…",
     "summary": "Marcas que cambiarán: {changed}, dudosas: {uncertain}",
-    "legend": "En azul, las marcas que difieren de tus datos actuales; con borde ámbar, las que conviene revisar. Toca una marca para cambiarla.",
+    "legend": "Las marcas con borde continuo difieren de tus datos actuales; las de borde discontinuo conviene revisarlas. Toca una marca para cambiarla.",
     "missing": "Tareas de la hoja que no están en este mes: {count}. Se eliminaron o se volvieron a crear después de imprimir.",
     "apply": "Importar",
     "error": {
@@ -69,8 +69,8 @@
     "monthCell": "{month}: {pct}%",
     "prevYear": "Año anterior",
     "nextYear": "Año siguiente",
-    "days": "{count} d",
-    "weeks": "{count} sem."
+    "days": "{count} día | {count} días",
+    "weeks": "{count} semana | {count} semanas"
   },
   "sync": {
     "state": {
@@ -116,7 +116,7 @@
     "addHabit": "Añadir hábito",
     "drag": "Arrastra para reordenar",
     "edit": "Editar hábito",
-    "perDay": "{count} marcas al día",
+    "perDay": "{count} marca al día | {count} marcas al día",
     "dayHint": "Clic para marcar el día en todos los hábitos, clic derecho para omitir",
     "legendDone": "Clic – hecho",
     "legendSkip": "Clic derecho o segundo clic – omitido, el día no cuenta",
@@ -127,22 +127,22 @@
     "streak": "racha {value}"
   },
   "list": {
-    "today": "Hoy",
     "skipped": "omitido – el día no cuenta",
-    "streak": "racha de {count} días",
+    "streak": "racha de {count} día | racha de {count} días",
     "monthPct": "{pct}% en {month}",
     "ofSubs": "{done} de {total}",
     "hint": "Toca un círculo: hecho → omitido (el día no cuenta) → vacío. Mantén pulsado un círculo para omitir. Desliza la lista para cambiar de día y el nombre del mes para cambiar de mes. Toca un nombre para ver los ajustes y las estadísticas del hábito.",
     "paused": "en pausa",
-    "streakWeeks": "racha de {count} semanas",
+    "streakWeeks": "racha de {count} semana | racha de {count} semanas",
     "statAvg": "{month}: {avg}%",
     "goToday": "Hoy",
     "goYesterday": "Ayer",
-    "goUnmarked": "Días sin marcar: {count}",
+    "goUnmarked": "{count} día sin marcar | {count} días sin marcar",
     "markAll": "Marcar todo",
     "clearAll": "Quitar hechos",
     "dayFilled": "Día {day}: todos los hábitos hechos",
-    "dayCleared": "Día {day}: marcas de hecho quitadas"
+    "dayCleared": "Día {day}: marcas de hecho quitadas",
+    "todayDate": "Hoy, {date}"
   },
   "empty": {
     "title": "Aún no hay hábitos",
@@ -170,7 +170,7 @@
     "up": "Subir",
     "down": "Bajar",
     "deleteConfirm": "¿Eliminar «{title}» y todas sus marcas de {month}?",
-    "limitLine": "{count} de {max} hábitos este mes",
+    "limitLine": "{count} de {max} hábito este mes | {count} de {max} hábitos este mes",
     "added": "Hábito «{title}» añadido",
     "deleted": "«{title}» eliminado",
     "subsRemoved": "Se eliminaron las marcas de las subtareas quitadas",
@@ -194,7 +194,7 @@
     "scheduleDays": "Por días",
     "scheduleGoal": "Veces por semana",
     "scheduleHint": "Los demás días se marcan como omitidos (cruz), igual que al omitir un día a mano. Si practicaste ese día, quita la marca.",
-    "goalCount": "{count} veces por semana",
+    "goalCount": "{count} vez por semana | {count} veces por semana",
     "goalHint": "Cada semana cuenta hasta la meta. Al alcanzarla, los días vacíos que quedan de esa semana se marcan como omitidos (cruz). Las semanas incompletas al inicio y al final del mes tienen una meta proporcionalmente menor.",
     "paused": "En pausa",
     "pausedHint": "No cuenta en el porcentaje general. Puedes seguir marcándolo.",
@@ -226,7 +226,9 @@
     "weekStart": {
       "title": "La semana empieza el",
       "monday": "Lun",
-      "sunday": "Dom"
+      "sunday": "Dom",
+      "auto": "Auto",
+      "autoHint": "Según tu idioma y región: {day}"
     },
     "showWeek": {
       "title": "Separadores de semanas",
@@ -266,7 +268,10 @@
       "escape": "Cerrar ventana",
       "undo": "Deshacer",
       "redo": "Rehacer",
-      "search": "Buscar hábitos"
+      "search": "Buscar hábitos",
+      "grid": "Moverse por la tabla",
+      "skip": "Saltar en la tabla",
+      "note": "Nota en la tabla"
     },
     "showWelcome": "Cómo funciona",
     "summary": {
@@ -298,7 +303,8 @@
     "done": "Hábitos pasados a {month}",
     "from": "Del mes",
     "modeAppend": "Añadir a los actuales",
-    "modeReplace": "Reemplazar los actuales"
+    "modeReplace": "Reemplazar los actuales",
+    "mode": "Qué hacer con la lista actual"
   },
   "welcome": {
     "title": "Una tabla sencilla para mantener el ritmo",
@@ -330,14 +336,15 @@
   },
   "update": {
     "message": "Hay una nueva versión de la aplicación",
-    "action": "Actualizar"
+    "action": "Actualizar",
+    "offlineReady": "La app ya funciona sin conexión"
   },
   "toast": {
     "exported": "Archivo {name} guardado",
     "signedIn": "Sesión iniciada",
     "signedOut": "Sesión cerrada"
   },
-  "taskLimit": "Límite alcanzado: {max} hábitos al mes",
+  "taskLimit": "Límite alcanzado: {max} hábito al mes | Límite alcanzado: {max} hábitos al mes",
   "history": {
     "undo": "Deshacer",
     "redo": "Rehacer",
@@ -379,7 +386,8 @@
     "safety": "Antes se guarda una copia de los datos actuales, y la importación se puede deshacer.",
     "confirm": "Importar",
     "confirmReplace": "Reemplazar",
-    "restored": "Copia restaurada"
+    "restored": "Copia restaurada",
+    "mode": "Modo de importación"
   },
   "backup": {
     "invalid": "No se puede leer la copia de seguridad",
@@ -443,5 +451,9 @@
     "none": "No se encontró nada",
     "hint": "Busca en nombres de hábitos, emoji y notas de todos los meses.",
     "openMonth": "Abrir {month}"
+  },
+  "app": {
+    "name": "Table",
+    "license": "Licencia Apache-2.0"
   }
 }

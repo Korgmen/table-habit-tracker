@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue';
 import { useHabitStore } from '@/stores/habitStore';
 import { monthKey } from '@/utils/archive';
-import { resolveLang } from '@/i18n';
+import { resolveLang, intlLocale } from '@/i18n';
 
 /** Подписка на media query: один слушатель на всё приложение */
 const mediaRef = query => {
@@ -44,7 +44,7 @@ export function useHabitUtils() {
   const weekdayOf = day => new Date(store.currentYear, store.currentMonth, day).getDay();
 
   /** День недели, с которого начинается неделя (0 – воскресенье, 1 – понедельник) */
-  const firstWeekday = computed(() => (store.weekStart === 'monday' ? 1 : 0));
+  const firstWeekday = computed(() => (store.weekStartDay === 'monday' ? 1 : 0));
 
   /** Номер дня, с которого начинается неделя: перед ним рисуется разделитель */
   const isWeekStart = day => day > 1 && weekdayOf(day) === firstWeekday.value;
@@ -64,20 +64,27 @@ export function useHabitUtils() {
   /** День ещё не наступил: отмечать нельзя */
   const isFuture = day => day > store.today;
 
-  /** Короткое название дня недели на языке интерфейса; длинные (арабский) сжимаются до буквы */
-  const weekdayLabel = day => {
-    const date = new Date(store.currentYear, store.currentMonth, day);
-    const locale = resolveLang(store.lang);
-    const short = date.toLocaleDateString(locale, { weekday: 'short' }).replace('.', '');
+  /**
+   * Сокращённое название дня недели для узких колонок (шапка таблицы, календарь). В арабском
+   * короткой формы нет, а узкая (одна буква) неоднозначна: берётся название без артикля «ال»
+   * («أحد», «اثنين»), оно помещается в колонку.
+   */
+  const compactWeekday = date => {
+    const locale = intlLocale(store.lang);
     const label =
-      short.length <= 3 ? short : date.toLocaleDateString(locale, { weekday: 'narrow' });
+      resolveLang(store.lang) === 'ar'
+        ? date.toLocaleDateString(locale, { weekday: 'long' }).replace(/^ال/, '')
+        : date.toLocaleDateString(locale, { weekday: 'short' }).replace('.', '');
     return label.charAt(0).toUpperCase() + label.slice(1);
   };
+
+  /** Короткое название дня недели для числа открытого месяца */
+  const weekdayLabel = day => compactWeekday(new Date(store.currentYear, store.currentMonth, day));
 
   /** Короткое название дня недели по номеру (0 – воскресенье) */
   const weekdayName = weekday => {
     /** 4 января 2026 – воскресенье */
-    const label = new Date(2026, 0, 4 + weekday).toLocaleDateString(resolveLang(store.lang), {
+    const label = new Date(2026, 0, 4 + weekday).toLocaleDateString(intlLocale(store.lang), {
       weekday: 'short',
     });
     return label.charAt(0).toUpperCase() + label.slice(1);
@@ -93,15 +100,12 @@ export function useHabitUtils() {
     task?.color ? { '--habit': `var(--habit-${task.color})` } : undefined;
 
   /** Подписи дней недели для календаря, начиная с первого дня недели */
-  const weekHeaders = computed(() => {
-    const locale = resolveLang(store.lang);
+  const weekHeaders = computed(() =>
     /** 4 января 2026 – воскресенье */
-    return Array.from({ length: 7 }, (_, i) => {
-      const date = new Date(2026, 0, 4 + ((i + firstWeekday.value) % 7));
-      const label = date.toLocaleDateString(locale, { weekday: 'narrow' });
-      return label.charAt(0).toUpperCase() + label.slice(1);
-    });
-  });
+    Array.from({ length: 7 }, (_, i) =>
+      compactWeekday(new Date(2026, 0, 4 + ((i + firstWeekday.value) % 7)))
+    )
+  );
 
   /** Сколько пустых клеток в календаре перед первым числом */
   const leadingBlanks = computed(() => (weekdayOf(1) - firstWeekday.value + 7) % 7);
@@ -115,6 +119,12 @@ export function useHabitUtils() {
   });
 
   /**
+   * Цифра на клетке тепловой карты светлая (text-bg), а не тёмная (text-ink): порог – доля, при
+   * которой контраст обоих цветов с клеткой одинаков (около 4:1), для каждой темы свой.
+   */
+  const heatTextLight = ratio => ratio > (currentTheme.value === 'dark' ? 0.35 : 0.43);
+
+  /**
    * Определяет, можно ли перейти к следующему месяцу.
    * Доступно только для месяцев не позже текущего реального.
    */
@@ -123,12 +133,12 @@ export function useHabitUtils() {
   );
 
   /** Название месяца для середины фразы: регистр как принято в языке («апрель», «April») */
-  const monthWord = date => date.toLocaleString(resolveLang(store.lang), { month: 'long' });
+  const monthWord = date => date.toLocaleString(intlLocale(store.lang), { month: 'long' });
 
   /** Месяц с годом по ключу 'YYYY-MM': «октябрь 2026 г.» */
   const monthKeyLabel = key => {
     const [year, month] = key.split('-').map(Number);
-    return new Date(year, month - 1, 1).toLocaleString(resolveLang(store.lang), {
+    return new Date(year, month - 1, 1).toLocaleString(intlLocale(store.lang), {
       month: 'long',
       year: 'numeric',
     });
@@ -137,7 +147,7 @@ export function useHabitUtils() {
   /** Короткое название месяца по ключу 'YYYY-MM' для подписей графиков: «окт.» */
   const monthShortLabel = key => {
     const [year, month] = key.split('-').map(Number);
-    return new Date(year, month - 1, 1).toLocaleString(resolveLang(store.lang), {
+    return new Date(year, month - 1, 1).toLocaleString(intlLocale(store.lang), {
       month: 'short',
     });
   };
@@ -145,7 +155,7 @@ export function useHabitUtils() {
   /** Дата по ключу месяца и числу: «12 окт.» */
   const dayDateLabel = (key, day) => {
     const [year, month] = key.split('-').map(Number);
-    return new Date(year, month - 1, day).toLocaleDateString(resolveLang(store.lang), {
+    return new Date(year, month - 1, day).toLocaleDateString(intlLocale(store.lang), {
       day: 'numeric',
       month: 'short',
     });
@@ -183,6 +193,7 @@ export function useHabitUtils() {
     monthShortLabel,
     dayDateLabel,
     heatColor,
+    heatTextLight,
     starsText,
   };
 }

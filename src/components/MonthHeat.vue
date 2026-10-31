@@ -9,7 +9,8 @@
     days: { type: Array, required: true },
   });
 
-  const { weekHeaders, leadingBlanks, todayDay, heatColor, dayDateLabel } = useHabitUtils();
+  const { weekHeaders, leadingBlanks, todayDay, heatColor, heatTextLight, dayDateLabel } =
+    useHabitUtils();
   const { t } = useI18n();
 
   /** Подсказка клетки: «12 окт.: 5 из 7» */
@@ -22,12 +23,13 @@
 </script>
 
 <template>
-  <!-- Календарь открытого месяца: цвет дня – доля выполненного -->
+  <!-- Календарь открытого месяца: цвет дня – доля выполненного; скринридер читает подписи дней -->
   <div class="grid grid-cols-7 gap-1">
     <span
       v-for="(header, headerIndex) in weekHeaders"
       :key="headerIndex"
       class="text-muted pb-0.5 text-center text-[11px]"
+      aria-hidden="true"
     >
       {{ header }}
     </span>
@@ -37,11 +39,18 @@
       :key="cell.day"
       class="flex h-9 items-center justify-center rounded-lg text-xs font-semibold"
       :class="[
-        cell.future ? 'border-line text-line2 border' : cell.ratio > 0.5 ? 'text-bg' : 'text-ink',
+        cell.future
+          ? 'border-line text-faint border'
+          : heatTextLight(cell.ratio)
+            ? 'text-bg'
+            : 'text-ink',
         cell.day === todayDay ? 'ring-accent ring-2' : '',
       ]"
       :style="cell.future ? undefined : { background: heatColor(cell.ratio) }"
       :title="cell.future ? undefined : cellLabel(cell)"
+      :role="cell.future ? undefined : 'img'"
+      :aria-label="cell.future ? undefined : cellLabel(cell)"
+      :aria-hidden="cell.future || undefined"
     >
       {{ cell.day }}
     </span>

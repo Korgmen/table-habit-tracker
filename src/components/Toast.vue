@@ -15,8 +15,13 @@
       role="status"
       aria-live="polite"
     >
+      <!-- Пока курсор или фокус на тосте, он не скрывается -->
       <div
         class="bg-ink text-bg pointer-events-auto flex min-h-12 max-w-[440px] items-center gap-3 rounded-[14px] py-1.5 ps-4 pe-1.5 shadow-[0_10px_30px_rgba(0,0,0,.25)]"
+        @mouseenter="modalStore.pauseToast()"
+        @mouseleave="modalStore.resumeToast()"
+        @focusin="modalStore.pauseToast()"
+        @focusout="modalStore.resumeToast()"
       >
         <span class="flex-1 text-sm leading-snug">{{ modalStore.toast.text }}</span>
         <button

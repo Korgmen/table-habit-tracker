@@ -4,11 +4,12 @@
   import { useHabitUtils } from '@/composables/useHabitUtils';
   import { useModals } from '@/composables/useModals';
   import { useSearch } from '@/composables/useSearch';
+  import { useGridNavigation } from '@/composables/useGridNavigation';
   import { useI18n } from 'vue-i18n';
-  import { computed } from 'vue';
+  import { ref, computed, watch, nextTick, onMounted } from 'vue';
   import { currentStreak } from '@/utils/stats';
-  import { GripVertical, Plus, Search } from 'lucide-vue-next';
-  import MarkCircle from '@/components/MarkCircle.vue';
+  import { Plus, Search } from 'lucide-vue-next';
+  import HabitRow from '@/components/HabitRow.vue';
 
   const store = useHabitStore();
   const {
@@ -18,13 +19,43 @@
     isFuture,
     todayDay,
     weekdayLabel,
-    habitColorStyle,
     weekdayName,
     weekOrder,
+    currentMonthLabel,
   } = useHabitUtils();
   const { t } = useI18n();
-  const { openNewHabit, openHabit, openNote, openSearch, toastWithUndo } = useModals(t);
+  const { openNewHabit, openNote, openSearch, toastWithUndo } = useModals(t);
   const { query, filteredTasks, isFiltering } = useSearch();
+
+  /** Таблица: стрелки ходят по клеткам, X – пропуск, Alt+Enter – заметка */
+  const grid = ref(null);
+  useGridNavigation(grid, {
+    skip: el => {
+      const taskId = store.tasks.find(task => String(task.id) === el.dataset.task)?.id;
+      const subtask = store.tasks
+        .find(task => task.id === taskId)
+        ?.subtasks.find(item => String(item.id) === el.dataset.sub);
+      if (subtask) store.toggleSkip(taskId, subtask.id, Number(el.dataset.col) - 1);
+    },
+    note: el => {
+      const task = store.tasks.find(item => String(item.id) === el.dataset.task);
+      if (task) openNote(task.id, Number(el.dataset.col));
+    },
+  });
+
+  /**
+   * Сегодняшний день виден без прокрутки: на узком экране таблица сдвигается к нему.
+   * scrollIntoView считает направление сам, в RTL сдвиг идёт влево.
+   */
+  const showToday = async () => {
+    await nextTick();
+    if (!todayDay.value) return;
+    grid.value
+      ?.querySelector(`[data-row="-1"][data-col="${todayDay.value}"]`)
+      ?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+  };
+  onMounted(showToday);
+  watch(() => store.currentMonthKey, showToday);
 
   /** Порядок меняется перетаскиванием только в полном списке, не в отфильтрованном */
   const reorder = list => {
@@ -46,22 +77,17 @@
     const { count, unit } = streaks.value[task.id];
     if (unit === 'week' ? count < 1 : count < 2) return '';
     return t('grid.streak', {
-      value: t(unit === 'week' ? 'stats.weeks' : 'stats.days', { count }),
+      value: t(unit === 'week' ? 'stats.weeks' : 'stats.days', { count }, count),
     });
-  };
-
-  /** Клик по отметке меняет её, Alt+клик открывает заметку к дню */
-  const clickMark = (event, task, subtask, day) => {
-    if (isFuture(day)) return;
-    if (event.altKey) openNote(task.id, day);
-    else store.cycleMark(task.id, subtask.id, day - 1);
   };
 
   /** Вторая строка под названием: пауза, отметок в день, расписание или цель */
   const habitMeta = task => {
     const parts = [];
     if (task.paused) parts.push(t('grid.paused'));
-    if (task.subtasks.length > 1) parts.push(t('grid.perDay', { count: task.subtasks.length }));
+    if (task.subtasks.length > 1) {
+      parts.push(t('grid.perDay', { count: task.subtasks.length }, task.subtasks.length));
+    }
     if (task.schedule) {
       parts.push(
         weekOrder.value
@@ -70,9 +96,22 @@
           .join(', ')
       );
     }
-    if (task.goal) parts.push(t('habit.goalCount', { count: task.goal }));
+    if (task.goal) parts.push(t('habit.goalCount', { count: task.goal }, task.goal));
     return parts.join(' · ');
   };
+
+  /**
+   * Строки таблицы: привычка, номер её первой строки отметок (для стрелок) и подписи.
+   * Строкам уходят строки и числа: перерисовывается только строка, у которой они изменились.
+   */
+  const rows = computed(() => {
+    let rowStart = 0;
+    return filteredTasks.value.map(task => {
+      const row = { task, rowStart, meta: habitMeta(task), streak: streakLabel(task) };
+      rowStart += task.subtasks.length;
+      return row;
+    });
+  });
 
   /** Отметка всего дня меняет много клеток сразу: тост предлагает отменить */
   const markDay = (day, state) => {
@@ -82,169 +121,99 @@
     if (store.lastChangeId !== before) toastWithUndo(t('history.dayChanged', { day }));
   };
 
-  /** Колонка дня: разделитель недели и подсветка сегодняшнего дня */
-  const columnClass = day => [
-    store.showWeekSeparators && isWeekStart(day) ? 'border-line' : 'border-transparent',
-    day === todayDay.value ? 'bg-accent/9' : '',
-  ];
+  /** Колонки дней: разделитель недели и подсветка сегодняшнего дня; один массив на все строки */
+  const columns = computed(() =>
+    monthDays.value.map(day => [
+      store.showWeekSeparators && isWeekStart(day) ? 'border-line' : 'border-transparent',
+      day === todayDay.value ? 'bg-accent/9' : '',
+    ])
+  );
 
   /** Номер дня в шапке */
   const dayNumberClass = day => {
     if (day === todayDay.value) return 'bg-accent text-white';
-    if (isFuture(day)) return 'text-line2';
+    if (isFuture(day)) return 'text-faint';
     if (isWeekend(day)) return 'text-muted';
     return 'text-ink';
   };
-
-  /** Состояние отметки для озвучки */
-  const markState = mark =>
-    t(mark === true ? 'mark.done' : mark === false ? 'mark.skip' : 'mark.notDone');
 </script>
 
 <template>
   <div class="border-line relative flex-1 overflow-auto border-t print:overflow-visible">
     <div class="inline-flex min-w-full flex-col pb-4 select-none">
-      <!-- Шапка: дни месяца -->
-      <div class="border-line bg-bg sticky top-0 z-[3] flex border-b">
-        <div
-          class="border-line bg-bg text-muted sticky start-0 z-[4] flex w-[220px] shrink-0 items-end border-e ps-4 pb-2.5 text-xs"
-        >
-          {{ t('grid.habit') }}
-        </div>
-        <button
-          v-for="day in monthDays"
-          :key="day"
-          class="enabled:hover:bg-soft flex w-7 shrink-0 flex-col items-center gap-[3px] border-s pt-2 pb-1.5 pointer-coarse:w-10"
-          :class="columnClass(day)"
-          :disabled="isFuture(day) || store.tasks.length === 0"
-          :title="isFuture(day) ? undefined : t('grid.dayHint')"
-          :aria-label="t('mark.headerDay', { day })"
-          @click="markDay(day, true)"
-          @contextmenu.prevent="markDay(day, false)"
-        >
-          <span class="text-muted text-[10px]">{{ weekdayLabel(day) }}</span>
-          <span
-            class="flex size-6 items-center justify-center rounded-full text-xs font-semibold"
-            :class="dayNumberClass(day)"
-          >
-            {{ day }}
-          </span>
-        </button>
-        <div class="text-muted flex w-[110px] shrink-0 items-end px-4 pb-2.5 text-xs">
-          {{ t('grid.month') }}
-        </div>
-      </div>
-
-      <!-- Строки привычек -->
-      <VueDraggableNext
-        :model-value="filteredTasks"
-        item-key="id"
-        handle=".drag-handle"
-        ghost-class="opacity-40"
-        @update:model-value="reorder"
+      <!-- Таблица отметок: в порядке Tab одна клетка, по клеткам – стрелками -->
+      <div
+        ref="grid"
+        role="grid"
+        :aria-label="t('habit.marksFor', { month: currentMonthLabel })"
+        class="flex flex-col"
       >
-        <div v-for="task in filteredTasks" :key="task.id" class="border-line flex border-b">
+        <!-- Шапка: дни месяца -->
+        <div class="border-line bg-bg sticky top-0 z-[3] flex border-b" role="row">
           <div
-            class="border-line bg-bg sticky start-0 z-[2] flex w-[220px] shrink-0 items-center gap-1.5 border-e ps-2 pe-1.5"
+            class="border-line bg-bg text-muted sticky start-0 z-[4] flex w-[220px] shrink-0 items-end border-e ps-4 pb-2.5 text-xs"
+            role="columnheader"
           >
-            <span
-              v-if="!isFiltering"
-              class="drag-handle hide-print text-line2 hover:text-muted flex w-4 cursor-grab items-center justify-center"
-              :title="t('grid.drag')"
-            >
-              <GripVertical class="size-4" />
-            </span>
-            <span v-else class="w-4 shrink-0"></span>
-            <button
-              class="hover:bg-soft flex min-w-0 flex-1 flex-col gap-px rounded-md px-1 py-1.5 text-start"
-              :title="t('grid.edit')"
-              @click="openHabit(task.id)"
-            >
-              <span
-                class="flex items-start gap-1.5 text-sm leading-tight font-medium break-words"
-                :class="task.paused ? 'text-muted' : ''"
-              >
-                <span
-                  v-if="task.color"
-                  class="mt-1 size-2 shrink-0 rounded-full bg-(--habit)"
-                  :style="habitColorStyle(task)"
-                ></span>
-                <span class="min-w-0">
-                  <template v-if="task.emoji">{{ task.emoji }}&nbsp;</template>
-                  {{ task.title }}
-                </span>
-              </span>
-              <span v-if="habitMeta(task)" class="text-muted text-[11px]">
-                {{ habitMeta(task) }}
-              </span>
-            </button>
+            {{ t('grid.habit') }}
           </div>
-
           <div
             v-for="day in monthDays"
             :key="day"
-            class="relative flex w-7 shrink-0 flex-col justify-center border-s py-0.5 pointer-coarse:w-10"
-            :class="columnClass(day)"
+            class="flex w-7 shrink-0 border-s pointer-coarse:w-10"
+            :class="columns[day - 1]"
+            role="columnheader"
           >
-            <!-- Заметка к дню: точка в углу клетки, текст в подсказке -->
             <button
-              v-if="task.notes?.[day - 1]"
-              class="hide-print absolute end-0 top-0 z-[1] flex size-3 items-center justify-center"
-              :title="task.notes[day - 1]"
-              :aria-label="t('note.open', { title: task.title, day })"
-              @click="openNote(task.id, day)"
+              class="enabled:hover:bg-soft flex w-full flex-col items-center gap-[3px] pt-2 pb-1.5"
+              tabindex="-1"
+              data-row="-1"
+              :data-col="day"
+              :disabled="isFuture(day) || store.tasks.length === 0"
+              :title="isFuture(day) ? undefined : t('grid.dayHint')"
+              :aria-label="t('mark.headerDay', { day })"
+              @click="markDay(day, true)"
+              @contextmenu.prevent="markDay(day, false)"
             >
-              <span class="bg-accent size-1.5 rounded-full"></span>
-            </button>
-            <button
-              v-for="(subtask, index) in task.subtasks"
-              :key="subtask.id"
-              class="flex w-full items-center justify-center disabled:cursor-default"
-              :class="
-                task.subtasks.length > 1 ? 'h-8 pointer-coarse:h-10' : 'h-10 pointer-coarse:h-11'
-              "
-              :disabled="isFuture(day)"
-              :aria-label="
-                t('mark.cell', {
-                  title: task.title,
-                  day,
-                  subtask: index + 1,
-                  state: markState(subtask.marks[day - 1]),
-                })
-              "
-              @click="clickMark($event, task, subtask, day)"
-              @contextmenu.prevent="
-                !isFuture(day) && store.toggleSkip(task.id, subtask.id, day - 1)
-              "
-            >
-              <MarkCircle
-                :mark="subtask.marks[day - 1]"
-                :future="isFuture(day)"
-                :color="task.color"
-              />
+              <span class="text-muted text-[10px]">{{ weekdayLabel(day) }}</span>
+              <span
+                class="flex size-6 items-center justify-center rounded-full text-xs font-semibold"
+                :class="dayNumberClass(day)"
+              >
+                {{ day }}
+              </span>
             </button>
           </div>
-
-          <div class="flex w-[110px] shrink-0 flex-col justify-center gap-[5px] px-4">
-            <span class="text-[13px] font-semibold" :class="task.paused ? 'text-muted' : ''">
-              {{ task.progress }}%
-            </span>
-            <span class="bg-line flex h-1 rounded-full">
-              <span
-                class="rounded-full"
-                :class="task.color ? 'bg-(--habit)' : 'bg-ink'"
-                :style="{
-                  ...habitColorStyle(task),
-                  width: `${Math.min(100, parseFloat(task.progress) || 0)}%`,
-                }"
-              ></span>
-            </span>
-            <span v-if="streakLabel(task)" class="text-muted text-[11px] leading-none">
-              {{ streakLabel(task) }}
-            </span>
+          <div
+            class="text-muted flex w-[110px] shrink-0 items-end px-4 pb-2.5 text-xs"
+            role="columnheader"
+          >
+            {{ t('grid.month') }}
           </div>
         </div>
-      </VueDraggableNext>
+
+        <!-- Строки привычек -->
+        <VueDraggableNext
+          :model-value="filteredTasks"
+          item-key="id"
+          handle=".drag-handle"
+          ghost-class="opacity-40"
+          role="rowgroup"
+          @update:model-value="reorder"
+        >
+          <HabitRow
+            v-for="row in rows"
+            :key="row.task.id"
+            :task="row.task"
+            :row-start="row.rowStart"
+            :days="monthDays"
+            :columns="columns"
+            :today="store.today"
+            :filtering="isFiltering"
+            :meta="row.meta"
+            :streak="row.streak"
+          />
+        </VueDraggableNext>
+      </div>
 
       <!-- Поиск: ничего в месяце или переход к поиску по всем месяцам и заметкам -->
       <div v-if="isFiltering" class="hide-print sticky start-0 flex w-fit flex-col gap-2 ps-8 pt-3">

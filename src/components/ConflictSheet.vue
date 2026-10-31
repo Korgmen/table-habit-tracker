@@ -3,9 +3,9 @@
   import { useHabitStore } from '@/stores/habitStore';
   import { useModalStore } from '@/stores/modalStore';
   import { useHabitUtils } from '@/composables/useHabitUtils';
-  import { useModals } from '@/composables/useModals';
+  import { useModals, useModalEntry } from '@/composables/useModals';
   import { useI18n } from 'vue-i18n';
-  import { resolveLang } from '@/i18n';
+  import { intlLocale } from '@/i18n';
   import Sheet from '@/components/Sheet.vue';
 
   const store = useHabitStore();
@@ -13,6 +13,7 @@
   const { monthKeyLabel } = useHabitUtils();
   const { t } = useI18n();
   const { toastWithUndo } = useModals(t);
+  const { close } = useModalEntry();
 
   /** Разошедшиеся месяцы по порядку; данные снимаются при открытии и обновляются вместе со стором */
   const months = computed(() => Object.keys(store.cloudConflict?.months || {}).sort());
@@ -50,7 +51,7 @@
     const parts = [summary(remote.tasks)];
     if (remote.source === 'legacy') parts.push(t('conflict.legacy'));
     else if (remote.updatedAt) {
-      const date = new Date(remote.updatedAt).toLocaleString(resolveLang(store.lang), {
+      const date = new Date(remote.updatedAt).toLocaleString(intlLocale(store.lang), {
         day: 'numeric',
         month: 'long',
         hour: '2-digit',
@@ -68,14 +69,14 @@
     if (!allChosen.value) return;
     const anyCloud = months.value.some(key => choices.value[key] === 'cloud');
     store.resolveCloudConflict({ ...choices.value });
-    modalStore.closeModal();
+    close();
     if (anyCloud) toastWithUndo(t('conflict.loadedCloud'));
     else modalStore.showToast(t('conflict.keptLocal'));
   };
 
   /** Закрытие без выбора откладывает решение: статус синхронизации предлагает вернуться к нему */
   const dismiss = () => {
-    modalStore.closeModal();
+    close();
     if (store.cloudConflict) modalStore.showToast(t('conflict.postponed'));
   };
 </script>
@@ -110,7 +111,12 @@
         class="border-line flex flex-col gap-2.5 rounded-[14px] border p-3.5"
       >
         <span class="text-[15px] font-semibold">{{ monthKeyLabel(key) }}</span>
-        <div class="bg-soft grid grid-cols-2 gap-1 rounded-xl p-1" role="radiogroup">
+        <div
+          v-radio-group
+          class="bg-soft grid grid-cols-2 gap-1 rounded-xl p-1"
+          role="radiogroup"
+          :aria-label="monthKeyLabel(key)"
+        >
           <button
             role="radio"
             :aria-checked="choices[key] === 'local'"

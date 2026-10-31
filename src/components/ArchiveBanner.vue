@@ -16,7 +16,9 @@
 </script>
 
 <template>
+  <!-- status: при переходе в прошлый месяц скринридер сообщает, что это архив -->
   <div
+    role="status"
     class="hide-print bg-soft flex items-center gap-2.5 rounded-[14px] py-2.5 ps-3.5 pe-2.5 md:gap-3 md:rounded-xl md:ps-4"
   >
     <span class="text-muted flex-1 text-[13px] leading-snug md:text-sm">
@@ -25,7 +27,7 @@
     <button
       v-if="store.tasks.length > 0"
       class="border-line2 bg-surface hover:bg-soft h-9 rounded-[10px] border px-3 text-[13px] font-semibold whitespace-nowrap md:h-[34px] md:px-3.5"
-      @click="modalStore.showModal('duplicate', { from: store.currentMonthKey })"
+      @click="modalStore.openModal('duplicate', { from: store.currentMonthKey })"
     >
       {{
         compact

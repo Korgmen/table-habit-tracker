@@ -9,7 +9,7 @@
 export const weekdayAt = (ctx, dayIndex) => new Date(ctx.year, ctx.month, dayIndex + 1).getDay();
 
 /** В этот день недели привычка ожидается по расписанию; без расписания (null) – каждый день */
-const isDueOn = (schedule, weekday) => !schedule || schedule.includes(weekday);
+export const isDueOn = (schedule, weekday) => !schedule || schedule.includes(weekday);
 
 /**
  * Расписание по дням недели ставит пропуск (false) во все пустые дни вне расписания, включая

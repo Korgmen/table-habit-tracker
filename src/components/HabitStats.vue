@@ -1,7 +1,7 @@
 <script setup>
   import { computed } from 'vue';
   import { useHabitStore } from '@/stores/habitStore';
-  import { useModalStore } from '@/stores/modalStore';
+  import { useModalEntry } from '@/composables/useModals';
   import { useHabitUtils } from '@/composables/useHabitUtils';
   import { useI18n } from 'vue-i18n';
   import { currentStreak, bestStreak, habitMonths } from '@/utils/stats';
@@ -13,7 +13,7 @@
   });
 
   const store = useHabitStore();
-  const modalStore = useModalStore();
+  const { closeAll } = useModalEntry();
   const { currentMonthLabel } = useHabitUtils();
   const { t } = useI18n();
 
@@ -50,7 +50,7 @@
   );
 
   const streakText = ({ count, unit }) =>
-    t(unit === 'week' ? 'stats.weeks' : 'stats.days', { count });
+    t(unit === 'week' ? 'stats.weeks' : 'stats.days', { count }, count);
 
   const tiles = computed(() => [
     [t('habit.statMonth', { month: currentMonthLabel.value }), `${props.task.progress}%`],
@@ -63,7 +63,7 @@
 
   /** Клик по месяцу графика открывает его, окно привычки закрывается */
   const openMonth = key => {
-    modalStore.closeModal();
+    closeAll();
     store.openMonthKey(key);
   };
 </script>

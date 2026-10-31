@@ -1,18 +1,20 @@
 <script setup>
+  import { onBeforeUnmount } from 'vue';
   import { useHabitStore } from '@/stores/habitStore';
   import { useModalStore } from '@/stores/modalStore';
+  import { useModalEntry } from '@/composables/useModals';
   import { useI18n } from 'vue-i18n';
   import Sheet from '@/components/Sheet.vue';
   import MarkCircle from '@/components/MarkCircle.vue';
+  import AppLogo from '@/components/AppLogo.vue';
 
   const store = useHabitStore();
   const modalStore = useModalStore();
+  const { close } = useModalEntry();
   const { t } = useI18n();
 
-  const close = () => {
-    localStorage.setItem('hasSeenWelcome', 'true');
-    modalStore.closeModal();
-  };
+  /** Приветствие считается увиденным при любом закрытии: кнопкой, Escape, «назад» */
+  onBeforeUnmount(() => localStorage.setItem('hasSeenWelcome', 'true'));
 
   const login = async () => {
     close();
@@ -34,7 +36,7 @@
 <template>
   <Sheet :label="t('welcome.title')" @close="close">
     <div class="flex flex-col gap-4 px-6 pt-7 pb-2">
-      <span class="text-accent text-[13px] font-semibold tracking-wide uppercase">Table</span>
+      <AppLogo size="md" />
       <span class="text-[28px] leading-[1.1] font-bold tracking-tight text-balance">
         {{ t('welcome.title') }}
       </span>

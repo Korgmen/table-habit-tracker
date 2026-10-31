@@ -7,7 +7,8 @@ const LONG_PRESS_DELAY = 450;
 const LONG_PRESS_SLOP = 10;
 
 /**
- * Долгое нажатие пальцем и правый клик мышью: bind(payload) даёт обработчики для v-on,
+ * Долгое нажатие пальцем, правый клик мышью и клавиша X (как в таблице): bind(payload) даёт
+ * обработчики для v-on,
  * onLongPress(payload) вызывается один раз. Клик, который браузер присылает после долгого нажатия
  * (iOS), нужно погасить: обработчик клика сначала спрашивает consumeClick().
  * Android сам открывает контекстное меню по удержанию: кто сработал первым, таймер
@@ -48,6 +49,11 @@ export function useLongPress(onLongPress) {
     pointerup: cancel,
     pointercancel: cancel,
     pointerleave: cancel,
+    keydown: event => {
+      if (event.code !== 'KeyX' || event.altKey || event.ctrlKey || event.metaKey) return;
+      event.preventDefault();
+      onLongPress(payload);
+    },
     contextmenu: event => {
       event.preventDefault();
       if (pointerType === 'mouse') {
