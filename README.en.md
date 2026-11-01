@@ -61,7 +61,7 @@ Stack: Vue 3, Vite, Pinia, Tailwind CSS 4, vue-i18n, Firebase (Auth and Firestor
 
 ### Sheet and photo
 
-- Printing an A4 month sheet with ArUco corner markers and a QR code.
+- Printing a month sheet on landscape A4 with ArUco corner markers and a QR code: habit names on the left, days of the month on the right, up to 20 habits on one sheet.
 - A photo of the filled sheet is recognized in the browser. On the review screen, differences from the current data are outlined with a solid frame, uncertain marks with a dashed one, and a tap changes a mark. After review, the marks are transferred to the table.
 - The sheet is tied to the month and the habits it was printed for. The app warns about a sheet for another month and about habits deleted after printing.
 
@@ -167,7 +167,7 @@ The full list is in `package.json`.
 - Habit: `{ id, title, progress, subtasks: [{ id, marks }], color?, emoji?, schedule?, goal?, paused?, notes? }`. `marks` has one element per day of the month: `true` — done, `null` — not done, `false` — skip.
 - Firestore: `users/{uid}` holds the settings and service fields, months are in `users/{uid}/months/{YYYY-MM}`. The local Firestore cache is stored in IndexedDB.
 - Windows: the stack is in `modalStore`, windows are rendered by `ModalEntry.vue`, and the "back" button closes the top window.
-- The sheet layout in `src/utils/sheetLayout.js` is shared by printing and recognition. `js-aruco2` and `jsqr` are loaded on the first recognition.
+- The sheet layout in `src/utils/sheetLayout.js` is shared by printing and recognition. Recognition reads both the landscape sheet and the portrait sheet of versions before 3.4.0; the format is detected by the marker IDs. `js-aruco2` and `jsqr` are loaded on the first recognition.
 
 ## Contribution
 

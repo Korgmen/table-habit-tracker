@@ -1,17 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { encode } from 'uqr';
 import {
-  PAGE_WIDTH,
-  PAGE_HEIGHT,
-  MARKERS,
+  SHEETS,
+  PRINT_SHEET,
   MARKER_SIZE,
   MARKER_CELL,
   QR_SIZE,
-  QR_SLOTS,
-  TABLE,
   CIRCLE_RADIUS,
   CIRCLE_STROKE,
-  pageLayout,
   encodePayload,
   taskHash,
 } from '@/utils/sheetLayout';
@@ -30,9 +26,9 @@ const PX = 12;
  * Растеризует бланк с отметками ручкой: 1 – краска, 0 – бумага.
  * Текст не рисуется, остальное повторяет PaperSheet.vue.
  */
-const renderSheet = ({ month, subtaskCounts, marks, hideMarker }) => {
-  const width = PAGE_WIDTH * PX;
-  const height = PAGE_HEIGHT * PX;
+const renderSheet = ({ sheet = PRINT_SHEET, month, subtaskCounts, marks, hideMarker }) => {
+  const width = sheet.width * PX;
+  const height = sheet.height * PX;
   const ink = new Uint8Array(width * height);
   const paint = (x0, y0, x1, y1, test, value = 1) => {
     for (let py = Math.floor(y0 * PX); py < Math.ceil(y1 * PX); py++) {
@@ -62,7 +58,7 @@ const renderSheet = ({ month, subtaskCounts, marks, hideMarker }) => {
       }
     );
 
-  MARKERS.forEach(marker => {
+  sheet.markers.forEach(marker => {
     rect(marker.x, marker.y, MARKER_SIZE, MARKER_SIZE);
     [...marker.bits].forEach((bit, i) => {
       if (bit === '1') {
@@ -77,11 +73,12 @@ const renderSheet = ({ month, subtaskCounts, marks, hideMarker }) => {
     });
   });
   if (hideMarker !== undefined) {
-    const { x, y } = MARKERS[hideMarker];
+    const { x, y } = sheet.markers[hideMarker];
     rect(x - 1, y - 1, MARKER_SIZE + 2, MARKER_SIZE + 2, 0);
   }
 
   const chunks = encodePayload({
+    version: sheet.version,
     month,
     page: 1,
     pages: 1,
@@ -90,7 +87,7 @@ const renderSheet = ({ month, subtaskCounts, marks, hideMarker }) => {
   chunks.forEach((text, i) => {
     const qr = encode(text, { ecc: 'M', border: 0 });
     const module = QR_SIZE / qr.size;
-    const slot = QR_SLOTS[i];
+    const slot = sheet.qrSlots[i];
     qr.data.forEach((row, y) =>
       row.forEach(
         (black, x) => black && rect(slot.x + x * module, slot.y + y * module, module, module)
@@ -99,20 +96,26 @@ const renderSheet = ({ month, subtaskCounts, marks, hideMarker }) => {
   });
 
   const days = marks[0][0].length;
-  const layout = pageLayout(days, subtaskCounts);
-  const border = TABLE.border;
-  rect(TABLE.x, layout.header.top, TABLE.width, border);
-  rect(TABLE.x, layout.bottom - border, TABLE.width, border);
-  rect(TABLE.x, layout.header.top, border, layout.bottom - layout.header.top);
+  const layout = sheet.layout(days, subtaskCounts);
+  const { table } = sheet;
+  const border = table.border;
+  const tableHeight = layout.bottom - layout.header.top;
+  rect(table.x - border / 2, layout.header.top - border / 2, table.width + border, border);
+  rect(table.x - border / 2, layout.bottom - border / 2, table.width + border, border);
+  rect(table.x - border / 2, layout.header.top - border / 2, border, tableHeight + border);
   rect(
-    TABLE.x + TABLE.width - border,
-    layout.header.top,
+    table.x + table.width - border / 2,
+    layout.header.top - border / 2,
     border,
-    layout.bottom - layout.header.top
+    tableHeight + border
   );
+  if (sheet.namesRight) {
+    rect(sheet.namesRight - border / 2, layout.header.top, border, tableHeight);
+  }
   layout.columnsX.forEach(x => ring(x, layout.header.circlesY, CIRCLE_RADIUS, CIRCLE_STROKE));
   layout.blocks.forEach((block, taskIndex) => {
-    rect(TABLE.x, block.top - border / 2, TABLE.width, border);
+    const line = taskIndex === 0 ? border : sheet.blockLine;
+    rect(table.x, block.top - line / 2, table.width, line);
     block.rowsY.forEach((y, row) =>
       layout.columnsX.forEach((x, day) => {
         ring(x, y, CIRCLE_RADIUS, CIRCLE_STROKE);
@@ -126,7 +129,7 @@ const renderSheet = ({ month, subtaskCounts, marks, hideMarker }) => {
     );
   });
 
-  return { ink, width, height };
+  return { ink, width, height, pageWidth: sheet.width, pageHeight: sheet.height };
 };
 
 /**
@@ -136,21 +139,22 @@ const renderSheet = ({ month, subtaskCounts, marks, hideMarker }) => {
  * Возвращает image (как уменьшенное фото) и readRegion – участок с вдвое большим разрешением,
  * как исходник с камеры в loadPhoto.
  */
-const photograph = (sheet, corners, size = [1500, 2000], { bend = 0, blur = 0 } = {}) => {
+const photograph = (sheet, corners, size, { bend = 0, blur = 0 } = {}) => {
   const [width, height] = size;
+  const { pageWidth, pageHeight } = sheet;
   const pageCorners = [
     [0, 0],
-    [PAGE_WIDTH, 0],
-    [PAGE_WIDTH, PAGE_HEIGHT],
-    [0, PAGE_HEIGHT],
+    [pageWidth, 0],
+    [pageWidth, pageHeight],
+    [0, pageHeight],
   ];
   const toSheet = computeHomography(corners.map((corner, i) => [corner, pageCorners[i]]));
   const noise = random(7);
   const shade = (u, v) => {
     const [x, flatY] = toSheet(u, v);
-    const y = flatY + bend * Math.sin((Math.PI * x) / PAGE_WIDTH);
+    const y = flatY + bend * Math.sin((Math.PI * x) / pageWidth);
     let value = 70;
-    if (x >= 0 && y >= 0 && x < PAGE_WIDTH && y < PAGE_HEIGHT) {
+    if (x >= 0 && y >= 0 && x < pageWidth && y < pageHeight) {
       const index = Math.floor(y * PX) * sheet.width + Math.floor(x * PX);
       value = sheet.ink[index] ? 45 : 175 + 50 * (u / width);
     }
@@ -213,75 +217,100 @@ const randomMarks = (seed, counts = SUBTASKS) => {
   );
 };
 
-const STRAIGHT = [
-  [140, 110],
-  [1380, 150],
-  [1430, 1900],
-  [80, 1860],
-];
+/** Углы листа на фото: альбомный бланк снят «боком» к кадру, книжный – вертикально */
+const LANDSCAPE = {
+  size: [2000, 1500],
+  corners: [
+    [110, 140],
+    [1900, 110],
+    [1860, 1430],
+    [150, 1380],
+  ],
+};
+const PORTRAIT = {
+  size: [1500, 2000],
+  corners: [
+    [140, 110],
+    [1380, 150],
+    [1430, 1900],
+    [80, 1860],
+  ],
+};
+
+const shoot = (sheet, frame = LANDSCAPE, options) =>
+  photograph(sheet, frame.corners, frame.size, options);
+
+const valuesOf = result =>
+  result.tasks.map(task => task.rows.map(row => row.map(cell => cell.value)));
 
 describe('scanSheet', () => {
   it('распознаёт все отметки на фото с перспективой', async () => {
     const marks = randomMarks(1);
     const sheet = renderSheet({ month: MONTH, subtaskCounts: SUBTASKS, marks });
-    const result = await scan(photograph(sheet, STRAIGHT));
+    const result = await scan(shoot(sheet));
 
     expect(result.month).toBe(MONTH);
     expect(result.tasks.map(task => task.hash)).toEqual(SUBTASKS.map((_, i) => taskHash(i + 1)));
-    const values = result.tasks.map(task => task.rows.map(row => row.map(cell => cell.value)));
-    expect(values).toEqual(marks);
+    expect(valuesOf(result)).toEqual(marks);
     const uncertain = result.tasks.flatMap(task => task.rows.flat()).filter(cell => cell.uncertain);
     expect(uncertain).toHaveLength(0);
   });
 
-  it('собирает QR из двух частей на полной странице', async () => {
-    const counts = new Array(11).fill(1);
+  it('собирает QR из трёх частей на странице с 20 задачами', async () => {
+    const counts = new Array(20).fill(1);
     const marks = randomMarks(5, counts);
     const sheet = renderSheet({ month: MONTH, subtaskCounts: counts, marks });
-    const result = await scan(photograph(sheet, STRAIGHT));
+    const result = await scan(shoot(sheet));
 
     expect(result.tasks.map(task => task.hash)).toEqual(counts.map((_, i) => taskHash(i + 1)));
-    expect(result.tasks.map(task => task.rows.map(row => row.map(cell => cell.value)))).toEqual(
-      marks
-    );
+    expect(valuesOf(result)).toEqual(marks);
   });
 
   it('распознаёт изогнутый лист на размытом фото', async () => {
     const marks = randomMarks(4);
     const sheet = renderSheet({ month: MONTH, subtaskCounts: SUBTASKS, marks });
-    const result = await scan(photograph(sheet, STRAIGHT, undefined, { bend: 2, blur: 1 }));
+    const result = await scan(shoot(sheet, LANDSCAPE, { bend: 2, blur: 1 }));
 
-    expect(result.tasks.map(task => task.rows.map(row => row.map(cell => cell.value)))).toEqual(
-      marks
-    );
+    expect(valuesOf(result)).toEqual(marks);
   });
 
   it('распознаёт перевёрнутое фото', async () => {
     const marks = randomMarks(2);
     const sheet = renderSheet({ month: MONTH, subtaskCounts: SUBTASKS, marks });
-    const upsideDown = [STRAIGHT[2], STRAIGHT[3], STRAIGHT[0], STRAIGHT[1]];
-    const result = await scan(photograph(sheet, upsideDown));
+    const [a, b, c, d] = LANDSCAPE.corners;
+    const result = await scan(shoot(sheet, { ...LANDSCAPE, corners: [c, d, a, b] }));
 
-    expect(result.tasks.map(task => task.rows.map(row => row.map(cell => cell.value)))).toEqual(
-      marks
-    );
+    expect(valuesOf(result)).toEqual(marks);
   });
 
   it('обходится тремя маркерами', async () => {
     const marks = randomMarks(3);
     const sheet = renderSheet({ month: MONTH, subtaskCounts: SUBTASKS, marks, hideMarker: 2 });
-    const result = await scan(photograph(sheet, STRAIGHT));
+    const result = await scan(shoot(sheet));
 
-    expect(result.tasks.map(task => task.rows.map(row => row.map(cell => cell.value)))).toEqual(
-      marks
-    );
+    expect(valuesOf(result)).toEqual(marks);
+  });
+
+  it('читает книжный бланк прежнего формата', async () => {
+    const portrait = SHEETS.find(sheet => sheet.version === 2);
+    const marks = randomMarks(6);
+    const sheet = renderSheet({ sheet: portrait, month: MONTH, subtaskCounts: SUBTASKS, marks });
+    const result = await scan(shoot(sheet, PORTRAIT));
+
+    expect(result.month).toBe(MONTH);
+    expect(valuesOf(result)).toEqual(marks);
   });
 
   it('сообщает, что лист не найден', async () => {
     const blank = photograph(
-      { ink: new Uint8Array(PAGE_WIDTH * PX * PAGE_HEIGHT * PX), width: PAGE_WIDTH * PX },
-      STRAIGHT,
-      [400, 500]
+      {
+        ink: new Uint8Array(PRINT_SHEET.width * PX * PRINT_SHEET.height * PX),
+        width: PRINT_SHEET.width * PX,
+        pageWidth: PRINT_SHEET.width,
+        pageHeight: PRINT_SHEET.height,
+      },
+      LANDSCAPE.corners,
+      [500, 400]
     );
     await expect(scan(blank)).rejects.toThrow(ScanError);
   });

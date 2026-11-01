@@ -61,7 +61,7 @@ Stack: Vue 3, Vite, Pinia, Tailwind CSS 4, vue-i18n, Firebase (Auth y Firestore)
 
 ### Hoja y foto
 
-- Impresión de la hoja del mes en formato A4 con marcadores ArUco en las esquinas y un código QR.
+- Impresión de la hoja del mes en A4 horizontal con marcadores ArUco en las esquinas y un código QR: nombres de los hábitos a la izquierda, días del mes a la derecha, hasta 20 hábitos en una hoja.
 - La foto de la hoja rellena se reconoce en el navegador. En la pantalla de revisión, las diferencias con los datos actuales tienen un marco continuo, las marcas dudosas uno discontinuo, y un toque cambia la marca. Tras la revisión, las marcas se pasan a la tabla.
 - La hoja está ligada al mes y a los hábitos para los que se imprimió. La aplicación avisa de una hoja de otro mes y de los hábitos eliminados después de imprimir.
 
@@ -167,7 +167,7 @@ La lista completa está en `package.json`.
 - Hábito: `{ id, title, progress, subtasks: [{ id, marks }], color?, emoji?, schedule?, goal?, paused?, notes? }`. `marks` tiene un elemento por cada día del mes: `true` — hecho, `null` — no hecho, `false` — omitido.
 - Firestore: `users/{uid}` contiene los ajustes y campos de servicio, los meses están en `users/{uid}/months/{YYYY-MM}`. La caché local de Firestore se guarda en IndexedDB.
 - Ventanas: la pila está en `modalStore`, las ventanas las renderiza `ModalEntry.vue` y el botón «atrás» cierra la ventana superior.
-- La disposición de la hoja en `src/utils/sheetLayout.js` es común a la impresión y al reconocimiento. `js-aruco2` y `jsqr` se cargan en el primer reconocimiento.
+- La disposición de la hoja en `src/utils/sheetLayout.js` es común a la impresión y al reconocimiento. El reconocimiento lee tanto la hoja horizontal como la hoja vertical de las versiones anteriores a 3.4.0; el formato se detecta por los números de los marcadores. `js-aruco2` y `jsqr` se cargan en el primer reconocimiento.
 
 ## Contribución
 

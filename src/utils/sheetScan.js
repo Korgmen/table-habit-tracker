@@ -1,10 +1,8 @@
 import {
-  MARKERS,
+  SHEETS,
   MARKER_SIZE,
   QR_SIZE,
-  QR_SLOTS,
   CIRCLE_RADIUS,
-  pageLayout,
   decodePayload,
   daysInMonthKey,
   taskHash,
@@ -33,7 +31,7 @@ const UNCERTAIN_MARGIN = 0.06;
 const MIN_CONTRAST = 25;
 
 /** Поиск центра кружка вокруг расчётной точки (мм) и окно сглаживания сдвигов по строке (дней) */
-const SEARCH_RADIUS = 1.2;
+const SEARCH_RADIUS = 1.8;
 const SEARCH_STEP = 0.3;
 const SMOOTH_WINDOW = 3;
 
@@ -154,22 +152,33 @@ const sampleGray = ({ gray, width, height }, u, v) => {
   return top * (1 - fy) + bottom * fy;
 };
 
-/** Ищет маркеры ArUco и строит гомографию по углам найденных (нужно минимум 3) */
+/**
+ * Ищет маркеры ArUco, по их номерам определяет формат бланка
+ * и строит гомографию по углам найденных маркеров этого формата (нужно минимум 3)
+ */
 const locateSheet = async imageData => {
   const { AR } = (await import('js-aruco2')).default;
   const detector = new AR.Detector({ dictionaryName: 'ARUCO_MIP_36h12' });
+  const known = new Map(
+    SHEETS.flatMap(sheet => sheet.markers.map(marker => [marker.id, { sheet, marker }]))
+  );
   const found = new Map();
   detector.detect(imageData).forEach(marker => {
-    const known = found.get(marker.id);
-    if (marker.id < MARKERS.length && (!known || known.hammingDistance > marker.hammingDistance)) {
+    const previous = found.get(marker.id);
+    if (known.has(marker.id) && (!previous || previous.hammingDistance > marker.hammingDistance)) {
       found.set(marker.id, marker);
     }
   });
-  if (found.size < 3) throw new ScanError('markers');
+  const [sheet, count] = SHEETS.map(sheet => [
+    sheet,
+    sheet.markers.filter(marker => found.has(marker.id)).length,
+  ]).reduce((best, entry) => (entry[1] > best[1] ? entry : best));
+  if (count < 3) throw new ScanError('markers');
 
   const pairs = [];
-  found.forEach((marker, id) => {
-    const { x, y } = MARKERS[id];
+  sheet.markers.forEach(({ id, x, y }) => {
+    const marker = found.get(id);
+    if (!marker) return;
     const sheetCorners = [
       [x, y],
       [x + MARKER_SIZE, y],
@@ -180,20 +189,21 @@ const locateSheet = async imageData => {
       pairs.push([sheetCorners[index], [corner.x, corner.y]])
     );
   });
-  return computeHomography(pairs);
+  return { sheet, project: computeHomography(pairs) };
 };
 
 /**
  * Выпрямляет каждое место под часть QR (с полями) и читает части.
  * Если доступен readRegion, участок берётся из фото в исходном разрешении.
+ * QR другого формата, чем маркеры, считается чужим.
  */
-const readQr = async (image, project, readRegion) => {
+const readQr = async (sheet, image, project, readRegion) => {
   const jsQR = (await import('jsqr')).default;
   const margin = 2;
   const pxPerMm = 12;
   const side = Math.round((QR_SIZE + margin * 2) * pxPerMm);
   const chunks = [];
-  for (const slot of QR_SLOTS) {
+  for (const slot of sheet.qrSlots) {
     let source = { gray: image, x: 0, y: 0, scale: 1 };
     if (readRegion) {
       const corners = [
@@ -225,7 +235,7 @@ const readQr = async (image, project, readRegion) => {
     if (code) chunks.push(code.data);
   }
   const payload = decodePayload(chunks);
-  if (!payload) throw new ScanError('qr');
+  if (!payload || payload.version !== sheet.version) throw new ScanError('qr');
   return payload;
 };
 
@@ -269,11 +279,11 @@ const median = values => percentile(values, 0.5);
  * readRegion из loadPhoto необязателен: если его нет, QR читается с того же imageData.
  */
 export const scanSheet = async (imageData, readRegion = null) => {
-  const project = await locateSheet(imageData);
+  const { sheet, project } = await locateSheet(imageData);
   const image = toGray(imageData);
-  const payload = await readQr(image, project, readRegion);
+  const payload = await readQr(sheet, image, project, readRegion);
   const days = daysInMonthKey(payload.month);
-  const layout = pageLayout(
+  const layout = sheet.layout(
     days,
     payload.tasks.map(task => task.subtasks)
   );

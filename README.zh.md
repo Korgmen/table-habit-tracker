@@ -61,7 +61,7 @@
 
 ### 表单与照片
 
-- 打印 A4 格式的月度表单，带有 ArUco 角标和二维码。
+- 在横向 A4 纸上打印月度表单，带有 ArUco 角标和二维码：习惯名称在左侧，当月日期在右侧，一张纸最多 20 个习惯。
 - 已填写表单的照片在浏览器中识别。在核对界面上，与当前数据不同的标记用实线框标出，不确定的标记用虚线框标出，点按可更改标记。核对后，标记转入表格。
 - 表单与打印时的月份和习惯绑定。对于其他月份的表单以及打印后删除的习惯，应用会给出提示。
 
@@ -167,7 +167,7 @@ Service Worker 和 PWA 安装在构建版本中生效：先运行 `pnpm build`�
 - 习惯：`{ id, title, progress, subtasks: [{ id, marks }], color?, emoji?, schedule?, goal?, paused?, notes? }`。`marks` 中每个元素对应月内的一天：`true` — 已完成，`null` — 未完成，`false` — 跳过。
 - Firestore：`users/{uid}` 存放设置和服务字段，月份位于 `users/{uid}/months/{YYYY-MM}`。Firestore 的本地缓存保存在 IndexedDB 中。
 - 窗口：窗口栈位于 `modalStore`，由 `ModalEntry.vue` 渲染，“返回”键关闭最上层窗口。
-- `src/utils/sheetLayout.js` 中的表单布局由打印和识别共用。`js-aruco2` 和 `jsqr` 在首次识别时加载。
+- `src/utils/sheetLayout.js` 中的表单布局由打印和识别共用。识别既能读取横向表单，也能读取 3.4.0 之前版本的纵向表单，格式由标记编号确定。`js-aruco2` 和 `jsqr` 在首次识别时加载。
 
 ## 贡献
 

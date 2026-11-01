@@ -1,6 +1,6 @@
 {
   "name": "table-habit-tracker",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "description": "Table – multifunctional habit tracker",
   "type": "module",
   "scripts": {
