@@ -26,4 +26,15 @@ export default [
       'vue/multi-word-component-names': 'off',
     },
   },
+  {
+    files: ['scripts/**/*.js', 'deploy.config.js'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+    rules: {
+      'no-console': 'off',
+    },
+  },
 ];

@@ -8,6 +8,11 @@ pnpm-debug.log*
 lerna-debug.log*
 
 *.command
+
+# Доступы и кэш выгрузки на сервер
+.env
+.deploy-cache.json
+.deploy-cache.json.tmp
 pnpm-lock.yaml
 node_modules
 dist
