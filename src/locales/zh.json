@@ -42,7 +42,10 @@
     "prev": "上个月",
     "next": "下个月",
     "prevHint": "上个月（←）",
-    "nextHint": "下个月（→）"
+    "nextHint": "下个月（→）",
+    "current": "当前月份",
+    "currentHint": "当前月份（T）",
+    "currentShort": "本月"
   },
   "stats": {
     "average": "平均",

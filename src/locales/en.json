@@ -42,7 +42,10 @@
     "prev": "Previous month",
     "next": "Next month",
     "prevHint": "Previous month (←)",
-    "nextHint": "Next month (→)"
+    "nextHint": "Next month (→)",
+    "current": "Current month",
+    "currentHint": "Current month (T)",
+    "currentShort": "This month"
   },
   "stats": {
     "average": "Average",

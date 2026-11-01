@@ -42,7 +42,10 @@
     "prev": "Mes anterior",
     "next": "Mes siguiente",
     "prevHint": "Mes anterior (←)",
-    "nextHint": "Mes siguiente (→)"
+    "nextHint": "Mes siguiente (→)",
+    "current": "Mes actual",
+    "currentHint": "Mes actual (T)",
+    "currentShort": "Mes actual"
   },
   "stats": {
     "average": "Promedio",

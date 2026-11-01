@@ -2,7 +2,6 @@
   import { computed } from 'vue';
   import { encode } from 'uqr';
   import { useHabitStore } from '@/stores/habitStore';
-  import { useHabitUtils } from '@/composables/useHabitUtils';
   import {
     PAGE_WIDTH,
     PAGE_HEIGHT,
@@ -13,7 +12,6 @@
     QR_SLOTS,
     MONTH_BOX,
     TABLE,
-    COLUMN_PITCH,
     CIRCLE_RADIUS,
     CIRCLE_STROKE,
     DAY_FONT,
@@ -25,7 +23,6 @@
   } from '@/utils/sheetLayout';
 
   const store = useHabitStore();
-  const { isWeekStart } = useHabitUtils();
 
   /** Белые клетки маркера ArUco */
   const markerCells = marker =>
@@ -54,15 +51,6 @@
         );
       })
       .join('');
-
-  /** Дни, после которых рисуется разделитель недели */
-  const weekEnds = computed(() =>
-    store.showWeekSeparators
-      ? Array.from({ length: store.daysInMonth - 1 }, (_, i) => i + 1).filter(day =>
-          isWeekStart(day + 1)
-        )
-      : []
-  );
 
   /** Страницы бланка: задачи, раскладка и QR */
   const pages = computed(() => {
@@ -187,16 +175,6 @@
             :stroke-width="CIRCLE_STROKE"
           />
         </template>
-        <line
-          v-for="day in weekEnds"
-          :key="day"
-          :x1="page.layout.columnsX[day - 1] + COLUMN_PITCH / 2"
-          :x2="page.layout.columnsX[day - 1] + COLUMN_PITCH / 2"
-          :y1="page.layout.header.numbersY - DAY_FONT"
-          :y2="page.layout.header.circlesY + CIRCLE_RADIUS"
-          stroke="black"
-          stroke-width="0.4"
-        />
       </g>
 
       <!-- Блоки задач -->
@@ -239,16 +217,6 @@
             :stroke-width="CIRCLE_STROKE"
           />
         </template>
-        <line
-          v-for="day in weekEnds"
-          :key="day"
-          :x1="page.layout.columnsX[day - 1] + COLUMN_PITCH / 2"
-          :x2="page.layout.columnsX[day - 1] + COLUMN_PITCH / 2"
-          :y1="page.layout.blocks[taskIndex].numbersY - DAY_FONT"
-          :y2="page.layout.blocks[taskIndex].rowsY.at(-1) + CIRCLE_RADIUS"
-          stroke="black"
-          stroke-width="0.4"
-        />
       </g>
     </svg>
   </div>
