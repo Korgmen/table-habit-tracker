@@ -20,12 +20,12 @@ export class ScanError extends Error {
 const MAX_IMAGE_SIDE = 2400;
 
 /**
- * Пороги: доля тёмного внутри кружка ниже MARK_FILL – пусто.
- * Иначе по точкам на горизонтали и вертикали: закрашенный кружок тёмный и там (выполнено),
- * у крестика они светлые (пропуск).
+ * Пороги по доле тёмного внутри кружка: до MARK_FILL – пусто, от DONE_FILL – закрашен (выполнено),
+ * между ними – крестик (пропуск). Крестик толстой ручкой от руки закрывает до ~3/4 кружка
+ * и задевает любые точки внутри, поэтому отличается от закрашенного кружка только долей.
  */
 const MARK_FILL = 0.12;
-const AXIS_FILL = 0.5;
+const DONE_FILL = 0.83;
 /** Отметка считается сомнительной, если доля ближе этого к порогу или контраст слишком мал */
 const UNCERTAIN_MARGIN = 0.06;
 const MIN_CONTRAST = 25;
@@ -258,13 +258,6 @@ const INNER_POINTS = (() => {
   }
   return points;
 })();
-const AXIS_POINTS = [0.75, 0.95, 1.1].flatMap(radius =>
-  [0, 1, 2, 3].map(quarter => {
-    const angle = (quarter * Math.PI) / 2;
-    return [Math.cos(angle) * radius, Math.sin(angle) * radius];
-  })
-);
-
 const percentile = (values, p) => {
   const sorted = [...values].sort((a, b) => a - b);
   return sorted[Math.min(sorted.length - 1, Math.floor(p * sorted.length))];
@@ -310,21 +303,11 @@ export const scanSheet = async (imageData, readRegion = null) => {
     const ink = percentile(sampleAt(x, y, STROKE_RING), 0.25);
     const contrast = paper - ink;
     const threshold = paper - contrast * 0.35;
-    const darkShare = points => {
-      const values = sampleAt(x, y, points);
-      return values.filter(value => value < threshold).length / values.length;
-    };
-    const fill = darkShare(INNER_POINTS);
-    if (fill <= MARK_FILL) {
-      return {
-        value: null,
-        uncertain: contrast < MIN_CONTRAST || MARK_FILL - fill < UNCERTAIN_MARGIN,
-      };
-    }
-    const axis = darkShare(AXIS_POINTS);
-    const margin = Math.min(fill - MARK_FILL, Math.abs(axis - AXIS_FILL));
+    const values = sampleAt(x, y, INNER_POINTS);
+    const fill = values.filter(value => value < threshold).length / values.length;
+    const margin = Math.min(Math.abs(fill - MARK_FILL), Math.abs(fill - DONE_FILL));
     return {
-      value: axis >= AXIS_FILL,
+      value: fill <= MARK_FILL ? null : fill >= DONE_FILL,
       uncertain: contrast < MIN_CONTRAST || margin < UNCERTAIN_MARGIN,
     };
   };

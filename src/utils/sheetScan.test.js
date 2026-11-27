@@ -25,8 +25,17 @@ const PX = 12;
 /**
  * Растеризует бланк с отметками ручкой: 1 – краска, 0 – бумага.
  * Текст не рисуется, остальное повторяет PaperSheet.vue.
+ * handDrawn – крестики толстой ручкой (0,7 мм) от руки: повёрнутые, смещённые, разной длины.
  */
-const renderSheet = ({ sheet = PRINT_SHEET, month, subtaskCounts, marks, hideMarker }) => {
+const renderSheet = ({
+  sheet = PRINT_SHEET,
+  month,
+  subtaskCounts,
+  marks,
+  hideMarker,
+  handDrawn = false,
+}) => {
+  const jitter = random(11);
   const width = sheet.width * PX;
   const height = sheet.height * PX;
   const ink = new Uint8Array(width * height);
@@ -121,9 +130,19 @@ const renderSheet = ({ sheet = PRINT_SHEET, month, subtaskCounts, marks, hideMar
         ring(x, y, CIRCLE_RADIUS, CIRCLE_STROKE);
         const mark = marks[taskIndex][row][day];
         if (mark === true) disc(x + 0.1, y - 0.1, CIRCLE_RADIUS - 0.1);
-        if (mark === false) {
+        if (mark === false && !handDrawn) {
           segment(x - 1.8, y - 1.8, x + 1.8, y + 1.8, 0.45);
           segment(x - 1.8, y + 1.8, x + 1.8, y - 1.8, 0.45);
+        }
+        if (mark === false && handDrawn) {
+          const cx = x + (jitter() - 0.5) * 0.6;
+          const cy = y + (jitter() - 0.5) * 0.6;
+          [Math.PI / 4, -Math.PI / 4].forEach(base => {
+            const angle = base + (jitter() - 0.5) * 0.7;
+            const half = 1.6 + jitter() * 0.5;
+            const [dx, dy] = [Math.cos(angle) * half, Math.sin(angle) * half];
+            segment(cx - dx, cy - dy, cx + dx, cy + dy, 0.7);
+          });
         }
       })
     );
@@ -279,6 +298,14 @@ describe('scanSheet', () => {
     const sheet = renderSheet({ month: MONTH, subtaskCounts: SUBTASKS, marks });
     const [a, b, c, d] = LANDSCAPE.corners;
     const result = await scan(shoot(sheet, { ...LANDSCAPE, corners: [c, d, a, b] }));
+
+    expect(valuesOf(result)).toEqual(marks);
+  });
+
+  it('отличает крестик толстой ручкой от закрашенного кружка', async () => {
+    const marks = randomMarks(8);
+    const sheet = renderSheet({ month: MONTH, subtaskCounts: SUBTASKS, marks, handDrawn: true });
+    const result = await scan(shoot(sheet));
 
     expect(valuesOf(result)).toEqual(marks);
   });
